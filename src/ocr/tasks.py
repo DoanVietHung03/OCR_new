@@ -6,7 +6,7 @@ from pathlib import Path
 from celery import Celery
 
 from .jobs import JobStore, TERMINAL, now
-from .runner import request_page
+from .runner import is_terminal_page_error, request_page
 
 celery_app = Celery(
     "ocr",
@@ -59,6 +59,8 @@ def process_job(job_id: str) -> dict:
                 except Exception as exc:
                     failures += 1
                     document.setdefault("errors", []).append(str(exc))
+                    if is_terminal_page_error(exc):
+                        break
                 store.update(job_id, page_count=sum(len(item.get("pages", [])) for item in documents) + index + 1, failed_pages=failures, documents=documents)
             if page_successes:
                 document["status"] = "completed" if not document.get("errors") else "completed_with_warnings"
