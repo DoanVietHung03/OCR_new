@@ -106,7 +106,7 @@ class JobStore:
         job = {
             "id": job_id, "status": "uploading", "created_at": now(), "updated_at": now(),
             "ocr_method": method, "model": options.get("model", ""),
-            "prompt_version": "1", "expected_files": count, "uploaded_files": 0,
+            "prompt_version": str(options.get("prompt_version", "1")), "expected_files": count, "uploaded_files": 0,
             "upload_name": str(options.get("upload_name", "")), "documents": [], "logs": [],
             "correction_count": 0, "page_count": 0, "failed_pages": 0,
             "vlm_task": options.get("vlm_task", "full_ocr"),

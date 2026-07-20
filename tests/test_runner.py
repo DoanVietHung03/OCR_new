@@ -1,6 +1,6 @@
 import unittest
 
-from ocr.runner import FIELD_ALIASES, message_text, is_terminal_page_error, request_body, validate_result
+from ocr.runner import FIELD_ALIASES, PROMPT, message_text, is_terminal_page_error, request_body, validate_result
 
 
 class RunnerTest(unittest.TestCase):
@@ -32,6 +32,11 @@ class RunnerTest(unittest.TestCase):
         payload = {"fields": {name: {"value": name, "confidence": 0.9, "bbox": [0, 0, 1, 1], "page_index": 0} for name in FIELD_ALIASES}}
         result = validate_result(payload)
         self.assertEqual(set(result["fields"]), set(FIELD_ALIASES.values()))
+
+    def test_prompt_targets_header_and_signature_fields(self):
+        self.assertIn("upper-center national title", PROMPT)
+        self.assertIn("Ignore dates in the body", PROMPT)
+        self.assertIn("TM., Q., KT., TL., TUQ.", PROMPT)
 
 
 if __name__ == "__main__":

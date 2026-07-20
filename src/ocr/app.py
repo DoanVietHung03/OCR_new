@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .jobs import FIELDS, MAX_BYTES, MAX_FILES, JobStore, TERMINAL, now
-from .runner import configured, request_page
+from .runner import PROMPT_VERSION, configured, request_page
 
 BASE = Path(__file__).resolve().parents[2]
 store = JobStore(os.getenv("OCR_DATA_DIR", str(BASE / "data" / "jobs")))
@@ -75,6 +75,7 @@ def state(page: int = 1, page_size: int = 25, status: str = "all", method: str =
 async def create_job(request: Request):
     payload = await request.json()
     payload.setdefault("model", os.getenv("OCR_MODEL", ""))
+    payload.setdefault("prompt_version", PROMPT_VERSION)
     try: return store.create(payload)
     except ValueError as exc: fail(400, str(exc))
 
@@ -112,7 +113,7 @@ def cancel(job_id: str): return public_job(store.cancel(job_id))
 async def rerun(job_id: str, request: Request):
     source = job_or_404(job_id)
     options = await request.json()
-    new = store.create({**source, **options, "file_count": source["expected_files"]})
+    new = store.create({**source, **options, "file_count": source["expected_files"], "prompt_version": PROMPT_VERSION})
     for pdf in (store.path(job_id) / "uploads").glob("*.pdf"):
         store.add_pdf(new["id"], pdf.name, pdf.read_bytes())
     return await start(new["id"])

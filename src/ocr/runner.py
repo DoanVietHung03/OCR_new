@@ -10,6 +10,7 @@ import urllib.request
 
 from .jobs import FIELDS
 
+PROMPT_VERSION = "2"
 FIELD_ALIASES = {
     "co_quan": "co_quan_ban_hanh", "so_hieu": "so_van_ban",
     "so_ky_hieu": "so_van_ban", "ma_van_ban": "so_van_ban",
@@ -22,13 +23,14 @@ FIELD_ALIASES = {
 }
 
 PROMPT = (
-    "Return one JSON object only, with no Markdown or explanation. "
-    "Its only top-level key is fields. Each fields entry uses an existing "
-    "archival field name and has value (string), confidence (number 0..1), "
+    "Return one JSON object only, with no Markdown or explanation. Its only top-level key is fields. "
+    "Each fields entry uses an existing archival field name and has value (string), confidence (number 0..1), "
     "bbox ([left, top, right, bottom]), and page_index (integer). "
-    "Example: {\"fields\": {\"so_van_ban\": {\"value\": \"24\", "
-    "\"confidence\": 0.9, \"bbox\": [0, 0, 1, 1], \"page_index\": 0}}}. "
-    "Do not invent fields. Use {\"fields\": {}} when nothing is found."
+    "Example: {\"fields\": {\"so_van_ban\": {\"value\": \"24\", \"confidence\": 0.9, \"bbox\": [0, 0, 1, 1], \"page_index\": 0}}}. "
+    "quoc_hieu_tieu_ngu is the full upper-center national title and motto. "
+    "ngay_ban_hanh is the issue date in the header near the top-right; Ignore dates in the body, summary, citations, and references. "
+    "quyen_han_ky_thay is the signing-authority line immediately above the signer title, including TM., Q., KT., TL., TUQ. when present. "
+    "Do not put the signer title in quyen_han_ky_thay. Do not invent fields. Use {\"fields\": {}} when nothing is found."
 )
 
 
