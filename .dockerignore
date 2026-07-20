@@ -1,0 +1,13 @@
+.git
+.env
+data/jobs
+**/__pycache__
+**/*.py[cod]
+**/.venv
+**/venv
+**/node_modules
+**/.next
+**/*.tsbuildinfo
+frontend/test-results
+frontend/playwright-report
+.pnpm-store
