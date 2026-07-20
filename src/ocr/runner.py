@@ -10,7 +10,12 @@ import urllib.request
 
 from .jobs import FIELDS
 
-PROMPT_VERSION = "2"
+PROMPT_VERSION = "3"
+ADMIN_FIELDS = (
+    "co_quan_ban_hanh", "so_van_ban", "quoc_hieu_tieu_ngu", "dia_diem_ban_hanh",
+    "ngay_ban_hanh", "loai_van_ban", "trich_yeu", "quyen_han_ky_thay",
+    "chuc_vu_nguoi_ky", "nguoi_ky", "ma_luu_tru",
+)
 FIELD_ALIASES = {
     "co_quan": "co_quan_ban_hanh", "so_hieu": "so_van_ban",
     "so_ky_hieu": "so_van_ban", "ma_van_ban": "so_van_ban",
@@ -27,6 +32,7 @@ PROMPT = (
     "Each fields entry uses an existing archival field name and has value (string), confidence (number 0..1), "
     "bbox ([left, top, right, bottom]), and page_index (integer). "
     "Example: {\"fields\": {\"so_van_ban\": {\"value\": \"24\", \"confidence\": 0.9, \"bbox\": [0, 0, 1, 1], \"page_index\": 0}}}. "
+    f"Extract every visible field from this administrative-document schema: {', '.join(ADMIN_FIELDS)}. Do not stop after the highlighted fields. "
     "quoc_hieu_tieu_ngu is the full upper-center national title and motto. "
     "ngay_ban_hanh is the issue date in the header near the top-right; Ignore dates in the body, summary, citations, and references. "
     "quyen_han_ky_thay is the signing-authority line immediately above the signer title, including TM., Q., KT., TL., TUQ. when present. "

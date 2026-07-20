@@ -1,6 +1,6 @@
 import unittest
 
-from ocr.runner import FIELD_ALIASES, PROMPT, message_text, is_terminal_page_error, request_body, validate_result
+from ocr.runner import ADMIN_FIELDS, FIELD_ALIASES, PROMPT, message_text, is_terminal_page_error, request_body, validate_result
 
 
 class RunnerTest(unittest.TestCase):
@@ -34,6 +34,7 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(set(result["fields"]), set(FIELD_ALIASES.values()))
 
     def test_prompt_targets_header_and_signature_fields(self):
+        self.assertTrue(all(name in PROMPT for name in ADMIN_FIELDS))
         self.assertIn("upper-center national title", PROMPT)
         self.assertIn("Ignore dates in the body", PROMPT)
         self.assertIn("TM., Q., KT., TL., TUQ.", PROMPT)
