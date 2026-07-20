@@ -1,0 +1,11 @@
+{
+  "name": "ocr-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.12.1",
+  "scripts": {
+    "api:generate": "uv run --project backend python scripts/export_openapi.py && pnpm --dir frontend api:types",
+    "api:check": "uv run --project backend python scripts/export_openapi.py --check && pnpm --dir frontend api:types",
+    "dev": "pnpm --dir frontend dev",
+    "build": "pnpm --dir frontend build"
+  }
+}

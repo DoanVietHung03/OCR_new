@@ -1,127 +1,65 @@
 # OCR service
 
-Dịch vụ OCR nội bộ cho PDF tiếng Việt. FastAPI phục vụ giao diện web, Celery
-thực hiện OCR nền, Redis làm broker, còn dữ liệu bền vững nằm trong
-`data/jobs/`.
+> Migration status: planning only. The legacy FastAPI/static-web application
+> remains the production source until Phase 3 in `implementation_plan.md`.
 
-## Yêu cầu server
+## Target monorepo
 
-- Linux khuyến nghị (Ubuntu 22.04+)
-- Python 3.12+
-- Redis đang chạy và cho phép server kết nối
-- Một endpoint OCR tương thích OpenAI Chat Completions có vision
-- Tài khoản có quyền đọc repo và ghi vào thư mục dự án
+- `frontend/` — Next.js App Router + TypeScript, Node 22 and pnpm.
+- `backend/` — Python 3.12, async FastAPI + Pydantic v2.
+- `worker` — Celery + Redis for long OCR work.
 
-PyMuPDF chỉ dùng để mở/render/crop PDF. OCR thật được gửi tới endpoint trong
-`OCR_BASE_URL`.
+Production uses one domain. Nginx routes `/api/*` to FastAPI and all other
+paths to the standalone Next frontend. TLS stays outside the Compose stack.
 
-## Triển khai sau khi `git pull`
+These commands are available for the Phase 2/3 isolated migration stack:
 
 ```bash
-git clone <REPO_URL> OCR
-cd OCR
+# frontend
+pnpm install
+pnpm --dir frontend dev
+pnpm --dir frontend build
+pnpm --dir frontend e2e:smoke
 
-python3.12 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m pip install -e . --no-deps
+# backend
+uv sync --project backend
+uv run --project backend pytest backend/tests -q
+uv run --project backend uvicorn app.main:app --reload
+uv run --project backend celery -A app.workers.tasks:celery_app worker --loglevel=INFO
 
-mkdir -p data/jobs
+# generated API types
+pnpm api:generate
+pnpm api:check
+
+# strong server
+docker compose up --build
 ```
 
-Lần cập nhật sau:
+Use one root server `.env` for backend/worker secrets only; browser code calls
+relative `/api/*` and receives no API key. `OCR_DATA_DIR` is a host bind mount
+shared by backend and worker, and must be backed up before cutover.
 
-```bash
-cd /path/to/OCR
-git pull --ff-only
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m pip install -e . --no-deps
-```
+## Migration guarantees
 
-## Cấu hình
+- Existing `/api/*` contracts, `data/jobs/` layout, jobs, and artifacts remain
+  compatible. No data migration is required.
+- Cutover pauses new jobs and drains Celery. Never run legacy and new workers
+  against the same job directory.
+- The legacy deployment remains rollback-ready for one day.
+- The frontend keeps visual parity, adds valid VI/EN UTF-8 text, and preserves
+  `intellidoc.language` in localStorage.
 
-Tạo `.env` trên server; không commit file này:
+## Current legacy application
 
-```dotenv
-OCR_PROVIDER=qwen
-OCR_BASE_URL=https://your-ocr-endpoint.example/v1
-OCR_API_KEY=replace-me
-OCR_MODEL=your-vision-model
-OCR_TIMEOUT_SECONDS=120
+Until the monorepo packages exist, run the checked-in application as follows:
 
-CELERY_BROKER_URL=redis://127.0.0.1:6379/0
-CELERY_RESULT_BACKEND=redis://127.0.0.1:6379/1
-OCR_DATA_DIR=/path/to/OCR/data/jobs
-```
-
-Giá trị `OCR_PROVIDER` hiện hỗ trợ `qwen`, `openai`, và `azure_openai`.
-Endpoint phải nhận `POST {OCR_BASE_URL}/chat/completions` và hỗ trợ ảnh
-base64 trong message. Với `openai` hoặc `azure_openai`, người dùng phải xác
-nhận việc gửi dữ liệu ra ngoài trước khi chạy job.
-
-Nạp biến môi trường trước khi chạy cả API và worker:
-
-```bash
-set -a
-source .env
-set +a
-```
-
-## Chạy production thủ công
-
-Mở ba terminal, tất cả đều chạy từ thư mục repo và đã `source .venv/bin/activate`.
-
-Terminal 1 — API:
-
-```bash
-set -a; source .env; set +a
+```powershell
+python -m pip install -e .
+$env:PYTHONPATH = "src"
+python -m unittest discover -s tests
 python -m ocr
 ```
 
-API lắng nghe tại `http://0.0.0.0:8000`.
-
-Terminal 2 — Celery worker:
-
-```bash
-set -a; source .env; set +a
-celery -A ocr.tasks:celery_app worker --loglevel=INFO
-```
-
-Terminal 3 — kiểm tra Redis:
-
-```bash
-redis-cli ping
-```
-
-Kết quả đúng là `PONG`. Mở firewall/reverse proxy tới cổng 8000 nếu cần;
-không mở Redis ra Internet.
-
-## Kiểm tra trước khi nhận job
-
-```bash
-source .venv/bin/activate
-PYTHONPATH=src python -m unittest discover -s tests
-PYTHONPATH=src python -m compileall -q src
-curl -i http://127.0.0.1:8000/
-curl -s http://127.0.0.1:8000/api/engines
-```
-
-`/api/engines` trả `not_configured` nếu thiếu `OCR_BASE_URL` hoặc
-`OCR_MODEL`; đó là trạng thái an toàn, không phải lỗi Redis.
-
-## Dữ liệu và vận hành
-
-- `data/jobs/` chứa PDF upload, PNG trang, artifact, JSON job và audit correction.
-- Thư mục này không nằm trong git; cần backup riêng nếu dữ liệu quan trọng.
-- Không ghi API key vào source, log, job JSON hoặc artifact.
-- Redis có thể restart; trạng thái job vẫn nằm trên filesystem.
-- Không xóa `data/jobs/` khi cập nhật code.
-
-## Giới hạn MVP
-
-- Chỉ nhận PDF.
-- Tối đa 15 PDF/job, 200 MB/job, 100 trang/PDF.
-- Không có authentication; chỉ triển khai trong mạng nội bộ hoặc sau reverse proxy có kiểm soát.
-- Không cần GPU cho API/worker nếu endpoint VLM chạy trên server khác.
+Local checks must not require Redis, Celery, GPU, Docker, or a real OCR
+provider. See `implementation_plan.md` for the complete mapping, milestones,
+and validation gates.

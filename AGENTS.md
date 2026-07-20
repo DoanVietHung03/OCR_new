@@ -1,88 +1,73 @@
-# Repository Guidelines
+# OCR monorepo handoff
 
-This is a Python 3.12 OCR service with a static HTML/CSS/JS frontend. Keep the
-project boring: use the standard library first and add only selected runtime
-dependencies needed by the workflow.
+## Current state
 
-## Chosen tech stack
+The repository now has an isolated Phase 2/3 two-package migration stack. The
+current production runtime remains `src/ocr/` plus static `web/`; do not move
+or delete it until the Phase 4 cutover gate in `implementation_plan.md` passes.
 
-- Python 3.12.
-- FastAPI + Uvicorn for JSON APIs, static `web/` files, reports, and read-only
-  OCR artifacts.
-- Celery + Redis for background OCR work. FastAPI must not run long OCR work
-  inside an HTTP request.
-- JSON plus job filesystem is persistent state. Redis is only a broker/result
-  backend; do not add a database without a real requirement.
-- One OpenAI API Compatible HTTP OCR runner, configured for Qwen, OpenAI, or
-  Azure OpenAI with environment variables. Do not add provider SDKs per engine.
-- HTML, CSS, and vanilla JavaScript stay in `web/`; no frontend framework or
-  build pipeline.
+## Target stack
 
-## Project structure
+- `frontend/`: Next.js App Router + TypeScript.
+- `backend/`: Python 3.12, async FastAPI, Pydantic v2, Celery + Redis.
+- Filesystem state under `data/jobs/` remains durable; Redis is broker/result
+  backend only.
+- OCR uses one OpenAI-compatible HTTP endpoint. Do not add provider SDKs or a
+  database without an approved requirement.
 
-- `src/ocr/` - Python application package.
-- `web/` - browser entrypoint and static assets.
-- `tests/` - focused `unittest` checks.
-- `pyproject.toml` - package metadata and build configuration.
-- `data/jobs/` - runtime job data only; never commit it.
+## Architecture rules
 
-Do not add a database layer, provider-specific SDK wrappers, frontend asset
-directories, or framework-specific frontend code without a real feature need.
-Keep frontend assets in `web/`.
+- FastAPI must never execute long OCR work in an HTTP request; Celery owns it.
+- Preserve current `/api/*` routes, response fields, statuses, job layout,
+  artifact paths, crop ownership validation, correction audit, and safe errors
+  through cutover. The current UI depends on them.
+- Pydantic v2/OpenAPI is the source of truth for shared API types. Generate
+  frontend types from OpenAPI; do not duplicate backend DTOs by hand.
+- Keep frontend dependency-light: Next/React, CSS, and native browser APIs
+  first. Use CSS and minimal React state/context; do not add a UI kit, state
+  manager, database, or a second type package by default.
+- Do not put API keys in source, generated artifacts, job JSON, or logs.
 
-## Development flow
+## Expected layout after Phase 0
 
-Install the package in editable mode once per environment:
-
-```powershell
-python -m pip install -e .
+```text
+backend/app/{api,schemas,services,workers}/
+backend/tests/
+frontend/{app,components,lib,public}/
+package.json
+pnpm-workspace.yaml
+docker-compose.yml
 ```
 
-Run the API locally when dependencies are available:
+Use Node 22/pnpm for `frontend` and Python 3.12/`uv --project backend` for
+Python. A Python workspace is unnecessary while there is one backend package.
 
-```powershell
-python -m ocr
-```
+## Locked rollout decisions
 
-Then open `http://localhost:62472`. The FastAPI app serves `web/` and injects
-frontend server data at `/` and `/jobs/{job_id}`.
+- Production Compose runs Nginx, frontend, backend, worker, and Redis under
+  one domain. Nginx routes `/api/*` to FastAPI; TLS is handled outside Compose.
+- Frontend uses Next standalone output and relative browser API calls. One root
+  server `.env` supplies backend/worker secrets; frontend has none.
+- `OCR_DATA_DIR` is a host bind mount shared by backend/worker. Back it up,
+  pause incoming work, and drain Celery before cutover. Never run two worker
+  versions against it. Legacy rollback window is one day.
+- Preserve internal-only access, API compatibility, existing job/artifact data,
+  polling, Celery/Redis, and sequential job processing. Do not add auth,
+  WebSocket, auto-retention, persistent code catalog, or host telemetry.
+- Port UI with visual parity and valid VI/EN UTF-8. Preserve the existing
+  `intellidoc.language` localStorage preference; Vietnamese is default.
+- Commit generated OpenAPI TypeScript types and check they are current. Add a
+  fake-provider Playwright smoke test; provider-real testing is strong-server
+  acceptance only.
 
-The current workstation is development-only. Do not require Redis, Celery, GPU
-software, or a real OCR provider for local checks. Run the complete stack and
-end-to-end OCR flow only on the designated strong server. Configure `.env` on
-that server; never expose API keys in source, artifacts, job JSON, or logs.
+## Working rules
 
-## Checks
-
-Run the focused test suite:
-
-```powershell
-$env:PYTHONPATH = "src"
-python -m unittest discover -s tests
-```
-
-Add one small regression test for non-trivial behavior. Keep tests focused on
-observable behavior; avoid fixtures and test frameworks until needed. Local
-checks must not call a real OCR endpoint.
-
-## Conventions
-
-- Python: standard formatting, four-space indentation, descriptive `snake_case`
-  names.
-- HTML/CSS/JS: keep files small, semantic, accessible, and dependency-free.
-- Preserve the existing source layout and public API unless the task requires a
-  change.
-- Validate inputs and handle errors at trust boundaries; do not hide failures.
-- Keep API behavior aligned with `web/app.js`: job lifecycle, polling, upload,
-  cancellation/rerun, crop, corrections, delete preview, and metrics.
-- Persist job metadata, uploads, artifacts, and correction audit trails beneath
-  each job directory. Treat paths, state transitions, and crop ownership as
-  trust boundaries.
-- A provider failure must become a clear terminal job error with safe logs, not
-  an HTTP request failure.
-
-## Changes and reviews
-
-Use short imperative commit summaries, such as `Add OCR image loader`. A change
-description should state what changed and list the validation command that was
-run. Include screenshots or sample output for visible UI changes.
+1. Read `implementation_plan.md` and crawl `.codegraph/codegraph.db` before
+   proposing a structural migration change. Confirm caller/route flow, not just
+   filenames.
+2. Keep a milestone independently runnable before starting the next one.
+3. Add focused tests for non-trivial behavior. Local tests must not require
+   Redis, Celery, GPU, Docker, or a real provider.
+4. Do not delete legacy `src/`/`web/` until an explicit post-cutover cleanup.
+5. Update this file, `README.md`, and the plan when architecture or commands
+   materially change.

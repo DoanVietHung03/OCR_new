@@ -4,3 +4,10 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+node_modules/
+.pnpm-store/
+.next/
+*.tsbuildinfo
+.pytest-tmp/
+frontend/test-results/
+frontend/playwright-report/
