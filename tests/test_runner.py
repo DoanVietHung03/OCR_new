@@ -1,6 +1,6 @@
 import unittest
 
-from ocr.runner import message_text, is_terminal_page_error, request_body, validate_result
+from ocr.runner import FIELD_ALIASES, message_text, is_terminal_page_error, request_body, validate_result
 
 
 class RunnerTest(unittest.TestCase):
@@ -27,6 +27,11 @@ class RunnerTest(unittest.TestCase):
     def test_document_type_is_an_existing_ui_field(self):
         result = validate_result({"fields": {"document_type": {"value": "cong_van", "confidence": 0.9, "bbox": [0, 0, 1, 1], "page_index": 0}}})
         self.assertEqual(result["fields"]["document_type"]["value"], "cong_van")
+
+    def test_all_known_aliases_are_normalized_to_schema_fields(self):
+        payload = {"fields": {name: {"value": name, "confidence": 0.9, "bbox": [0, 0, 1, 1], "page_index": 0} for name in FIELD_ALIASES}}
+        result = validate_result(payload)
+        self.assertEqual(set(result["fields"]), set(FIELD_ALIASES.values()))
 
 
 if __name__ == "__main__":

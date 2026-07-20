@@ -10,6 +10,17 @@ import urllib.request
 
 from .jobs import FIELDS
 
+FIELD_ALIASES = {
+    "co_quan": "co_quan_ban_hanh", "so_hieu": "so_van_ban",
+    "so_ky_hieu": "so_van_ban", "ma_van_ban": "so_van_ban",
+    "quoc_hieu": "quoc_hieu_tieu_ngu", "tieu_ngu": "quoc_hieu_tieu_ngu",
+    "dia_diem": "dia_diem_ban_hanh", "noi_ban_hanh": "dia_diem_ban_hanh",
+    "ngay": "ngay_ban_hanh", "ngay_thang": "ngay_ban_hanh",
+    "dia_diem_ngay_thang": "ngay_ban_hanh", "ten_loai": "loai_van_ban",
+    "chuc_vu": "chuc_vu_nguoi_ky", "chuc_vu_ky": "chuc_vu_nguoi_ky",
+    "nguoi_ky_ten": "nguoi_ky", "ten_nguoi_ky": "nguoi_ky",
+}
+
 PROMPT = (
     "Return one JSON object only, with no Markdown or explanation. "
     "Its only top-level key is fields. Each fields entry uses an existing "
@@ -25,12 +36,14 @@ def validate_result(payload: object) -> dict:
     if not isinstance(payload, dict) or not isinstance(payload.get("fields"), dict):
         raise ValueError("invalid_model_json: expected fields object")
     fields = {}
-    for name, item in payload["fields"].items():
+    for raw_name, item in payload["fields"].items():
+        name = FIELD_ALIASES.get(str(raw_name).strip().casefold().replace("-", "_").replace(" ", "_"), raw_name)
         if name not in FIELDS or not isinstance(item, dict):
-            raise ValueError(f"invalid_model_json: invalid field {name}")
+            raise ValueError(f"invalid_model_json: invalid field {raw_name}")
         if not {"value", "confidence", "bbox", "page_index"}.issubset(item):
             raise ValueError("invalid_model_json: incomplete field")
-        fields[name] = item
+        if name not in fields or float(item["confidence"]) > float(fields[name]["confidence"]):
+            fields[name] = item
     return {"fields": fields}
 
 
