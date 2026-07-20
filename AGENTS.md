@@ -44,7 +44,7 @@ Run the API locally when dependencies are available:
 python -m ocr
 ```
 
-Then open `http://localhost:8000`. The FastAPI app serves `web/` and injects
+Then open `http://localhost:62472`. The FastAPI app serves `web/` and injects
 frontend server data at `/` and `/jobs/{job_id}`.
 
 The current workstation is development-only. Do not require Redis, Celery, GPU
