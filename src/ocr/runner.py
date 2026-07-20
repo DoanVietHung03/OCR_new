@@ -54,7 +54,7 @@ def message_text(response: object) -> str:
 
 
 def request_body(encoded_image: str, model: str) -> dict:
-    return {"model": model, "temperature": 0, "response_format": {"type": "json_object"}, "messages": [{"role": "user", "content": [
+    return {"model": model, "temperature": 0, "thinking": {"type": "disabled"}, "response_format": {"type": "json_object"}, "messages": [{"role": "user", "content": [
         {"type": "text", "text": PROMPT},
         {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded_image}"}},
     ]}]}
