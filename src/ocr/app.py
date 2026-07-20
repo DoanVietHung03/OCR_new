@@ -73,7 +73,9 @@ def state(page: int = 1, page_size: int = 25, status: str = "all", method: str =
 
 @app.post("/api/jobs")
 async def create_job(request: Request):
-    try: return store.create(await request.json())
+    payload = await request.json()
+    payload.setdefault("model", os.getenv("OCR_MODEL", ""))
+    try: return store.create(payload)
     except ValueError as exc: fail(400, str(exc))
 
 

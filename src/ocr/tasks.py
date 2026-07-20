@@ -45,6 +45,7 @@ def process_job(job_id: str) -> dict:
         try:
             pages = _render(pdf, store.path(job_id) / "artifacts" / pdf.stem)
             document["pages"] = [{"page_index": i, "image_url": f"/api/jobs/{job_id}/artifacts/{pdf.stem}/page-{i + 1}.png"} for i in range(len(pages))]
+            page_successes = 0
             for index, page in enumerate(pages):
                 if (store.path(job_id) / "cancel").exists():
                     store.update(job_id, status="cancelled", documents=documents)
@@ -54,12 +55,17 @@ def process_job(job_id: str) -> dict:
                     for name, field in result["fields"].items():
                         if name not in document["fields"] or float(field.get("confidence", 0)) > float(document["fields"][name].get("confidence", 0)):
                             document["fields"][name] = field
+                    page_successes += 1
                 except Exception as exc:
                     failures += 1
                     document.setdefault("errors", []).append(str(exc))
-                store.update(job_id, page_count=sum(len(item.get("pages", [])) for item in documents) + index + 1, documents=documents)
-            document["status"] = "completed" if not document.get("errors") else "completed_with_warnings"
-            successes += 1
+                store.update(job_id, page_count=sum(len(item.get("pages", [])) for item in documents) + index + 1, failed_pages=failures, documents=documents)
+            if page_successes:
+                document["status"] = "completed" if not document.get("errors") else "completed_with_warnings"
+                successes += 1
+            else:
+                document["status"] = "error"
+                document["error"] = "No page produced valid OCR JSON."
         except Exception as exc:
             failures += 1
             document["status"] = "error"

@@ -10,6 +10,14 @@ import urllib.request
 
 from .jobs import FIELDS
 
+PROMPT = (
+    "Return one JSON object only, with no Markdown or explanation. "
+    "Its only top-level key is fields. Each fields entry uses an existing "
+    "archival field name and has value (string), confidence (number 0..1), "
+    "bbox ([left, top, right, bottom]), and page_index (integer). "
+    "Do not invent fields. Use {\"fields\": {}} when nothing is found."
+)
+
 
 def validate_result(payload: object) -> dict:
     if not isinstance(payload, dict) or not isinstance(payload.get("fields"), dict):
@@ -24,12 +32,15 @@ def validate_result(payload: object) -> dict:
     return {"fields": fields}
 
 
-def request_page(image: bytes, *, base_url: str, api_key: str, model: str, timeout: float = 120) -> dict:
-    encoded = base64.b64encode(image).decode()
-    body = {"model": model, "temperature": 0, "messages": [{"role": "user", "content": [
-        {"type": "text", "text": "Return strict JSON with fields only from the known archival schema. Use {\\\"fields\\\":{}} when empty."},
-        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},
+def request_body(encoded_image: str, model: str) -> dict:
+    return {"model": model, "temperature": 0, "response_format": {"type": "json_object"}, "messages": [{"role": "user", "content": [
+        {"type": "text", "text": PROMPT},
+        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded_image}"}},
     ]}]}
+
+
+def request_page(image: bytes, *, base_url: str, api_key: str, model: str, timeout: float = 120) -> dict:
+    body = request_body(base64.b64encode(image).decode(), model)
     request = urllib.request.Request(
         base_url.rstrip("/") + "/chat/completions", data=json.dumps(body).encode(),
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, method="POST",

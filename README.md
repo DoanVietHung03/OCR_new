@@ -98,54 +98,6 @@ redis-cli ping
 Kết quả đúng là `PONG`. Mở firewall/reverse proxy tới cổng 8000 nếu cần;
 không mở Redis ra Internet.
 
-## Chạy bằng systemd
-
-Tạo `/etc/ocr/ocr.env` với nội dung giống `.env`, sau đó tạo hai service.
-
-`/etc/systemd/system/ocr-api.service`:
-
-```ini
-[Unit]
-After=network.target redis-server.service
-
-[Service]
-WorkingDirectory=/path/to/OCR
-EnvironmentFile=/etc/ocr/ocr.env
-ExecStart=/path/to/OCR/.venv/bin/python -m ocr
-Restart=always
-User=ocr
-
-[Install]
-WantedBy=multi-user.target
-```
-
-`/etc/systemd/system/ocr-worker.service`:
-
-```ini
-[Unit]
-After=network.target redis-server.service
-
-[Service]
-WorkingDirectory=/path/to/OCR
-EnvironmentFile=/etc/ocr/ocr.env
-ExecStart=/path/to/OCR/.venv/bin/celery -A ocr.tasks:celery_app worker --loglevel=INFO
-Restart=always
-User=ocr
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Khởi động:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now ocr-api ocr-worker
-sudo systemctl status ocr-api ocr-worker
-sudo journalctl -u ocr-api -f
-sudo journalctl -u ocr-worker -f
-```
-
 ## Kiểm tra trước khi nhận job
 
 ```bash
