@@ -55,7 +55,7 @@ def engines() -> list[dict]:
 def home() -> str:
     html = (BASE / "web" / "index.html").read_text(encoding="utf-8")
     data = json.dumps(state_payload(), ensure_ascii=False).replace("</", "<\\/")
-    return html.replace('<script src="i18n.js"></script>', f'<script>window.INTELLIDOC_DATA={data};</script><script src="i18n.js"></script>')
+    return html.replace('<script src="/web/i18n.js"></script>', f'<script>window.INTELLIDOC_DATA={data};</script><script src="/web/i18n.js"></script>')
 
 
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
@@ -63,7 +63,7 @@ def report(job_id: str) -> str:
     job_or_404(job_id)
     html = (BASE / "web" / "index.html").read_text(encoding="utf-8")
     data = json.dumps({**state_payload(), "server_mode": True, "documents": store.read(job_id).get("documents", []), "jobs": [store.read(job_id)]}, ensure_ascii=False).replace("</", "<\\/")
-    return html.replace('<script src="i18n.js"></script>', f'<script>window.INTELLIDOC_DATA={data};</script><script src="i18n.js"></script>')
+    return html.replace('<script src="/web/i18n.js"></script>', f'<script>window.INTELLIDOC_DATA={data};</script><script src="/web/i18n.js"></script>')
 
 
 @app.get("/api/state")
