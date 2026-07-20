@@ -38,6 +38,21 @@ def is_terminal_page_error(error: Exception) -> bool:
     return str(error).startswith("invalid_model_json")
 
 
+def message_text(response: object) -> str:
+    if not isinstance(response, dict):
+        return ""
+    choices = response.get("choices")
+    if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+        return ""
+    message = choices[0].get("message")
+    content = message.get("content") if isinstance(message, dict) else ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(str(item.get("text") or "") for item in content if isinstance(item, dict) and item.get("type") == "text")
+    return ""
+
+
 def request_body(encoded_image: str, model: str) -> dict:
     return {"model": model, "temperature": 0, "response_format": {"type": "json_object"}, "messages": [{"role": "user", "content": [
         {"type": "text", "text": PROMPT},
@@ -57,9 +72,11 @@ def request_page(image: bytes, *, base_url: str, api_key: str, model: str, timeo
     except (urllib.error.URLError, TimeoutError) as exc:
         raise RuntimeError("provider_network_error") from exc
     try:
-        content = result["choices"][0]["message"]["content"]
+        content = message_text(result)
+        if not content:
+            raise ValueError("invalid_model_json: missing message text")
         payload = json.loads(content)
-    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+    except json.JSONDecodeError as exc:
         raise ValueError("invalid_model_json: malformed provider response") from exc
     return validate_result(payload)
 
