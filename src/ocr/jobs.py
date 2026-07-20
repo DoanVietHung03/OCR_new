@@ -22,7 +22,7 @@ FIELDS = (
     "ngay_ban_hanh", "loai_van_ban", "trich_yeu", "quyen_han_ky_thay",
     "chuc_vu_nguoi_ky", "nguoi_ky", "ma_luu_tru", "co_quan_luu_tru", "nhiem_ky",
     "tieu_de_ho_so", "hop_so", "phong_so", "muc_luc_so", "bat_dau", "ho_so_dvbq",
-    "ket_thuc", "so_tai_lieu", "thoi_han_bao_quan", "so_trang",
+    "ket_thuc", "so_tai_lieu", "thoi_han_bao_quan", "so_trang", "document_type",
 )
 
 

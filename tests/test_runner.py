@@ -24,6 +24,10 @@ class RunnerTest(unittest.TestCase):
         result = validate_result({"fields": {"so_van_ban": {"value": "24", "confidence": 0.9, "bbox": [0, 0, 1, 1], "page_index": 0}}})
         self.assertEqual(result["fields"]["so_van_ban"]["value"], "24")
 
+    def test_document_type_is_an_existing_ui_field(self):
+        result = validate_result({"fields": {"document_type": {"value": "cong_van", "confidence": 0.9, "bbox": [0, 0, 1, 1], "page_index": 0}}})
+        self.assertEqual(result["fields"]["document_type"]["value"], "cong_van")
+
 
 if __name__ == "__main__":
     unittest.main()

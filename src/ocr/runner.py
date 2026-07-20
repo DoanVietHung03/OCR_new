@@ -27,7 +27,7 @@ def validate_result(payload: object) -> dict:
     fields = {}
     for name, item in payload["fields"].items():
         if name not in FIELDS or not isinstance(item, dict):
-            raise ValueError("invalid_model_json: invalid field")
+            raise ValueError(f"invalid_model_json: invalid field {name}")
         if not {"value", "confidence", "bbox", "page_index"}.issubset(item):
             raise ValueError("invalid_model_json: incomplete field")
         fields[name] = item
