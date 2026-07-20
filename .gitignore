@@ -1,13 +1,5 @@
+.env
+data/jobs/
 __pycache__/
 *.py[cod]
 .venv/
-venv/
-.env
-.pytest_cache/
-dist/
-build/
-*.egg-info/
-node_modules/
-.DS_Store
-
-.codegraph/

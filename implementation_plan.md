@@ -1,67 +1,82 @@
-# OCR implementation plan
+# OCR MVP implementation plan
 
 ## Objective
 
-Implement the backend required by the existing frontend in `web/`: create an asynchronous OCR job from uploaded archive/PDF/images, expose progress/result data, and persist manual crops and human corrections.
+Implement the backend used by `web/` for internal OCR of Vietnamese archival and administrative PDFs. The UI keeps its current dashboard, report, crop, correction, polling, cancellation, rerun, and deletion flows; only the upload UI becomes PDF-only.
 
-The current computer is development-only. It only needs source checks and unit tests. Redis, Celery, GPU support, and calls to a real OCR endpoint are only required on the strong deployment server.
+The development workstation needs only source checks and unit tests. Redis, Celery, PyMuPDF rendering, and a real VLM endpoint run only on the strong server.
 
-## Selected stack
+## Locked MVP scope
 
-| Area | Choice | Responsibility |
-| --- | --- | --- |
-| Runtime | Python 3.12 | API and workers |
-| HTTP | FastAPI + Uvicorn | APIs, `web/`, job report and artifacts |
-| Background jobs | Celery | Run OCR outside request handlers |
-| Broker/result backend | Redis | Celery messaging/task state |
-| Persistent state | JSON + filesystem | Jobs, uploads, artifacts, logs, corrections |
-| OCR | OpenAI API Compatible HTTP | Qwen, OpenAI, Azure OpenAI |
-| Frontend | HTML/CSS/JS in `web/` | Existing UI, unchanged |
-| Tests | `unittest` | Local behavior/contract checks |
+- Input is PDF-only: up to 15 PDFs/job, 200 MB total, and 100 pages/PDF.
+- One uploaded PDF is one document. A PDF containing several logical documents is not split automatically.
+- Documents follow the existing Vietnamese archival/admin field schema in `web/app.js`. Fields may be empty; the model must not invent new fields.
+- One configured engine is exposed at a time: `qwen`, `openai`, or `azure_openai`. Do not advertise PaddleOCR until it has a verified OpenAI-compatible endpoint.
+- The service is internal-only. No application authentication is added in this MVP.
+- Do not add a database, provider SDK, generic parser, HTML export, rate limiter, or worker-concurrency policy.
 
-No database, WebSocket layer, frontend framework, or provider SDK is needed. The current UI polls, so Celery and persisted job JSON is sufficient.
+## PDF to VLM flow
+
+PyMuPDF is a **local PDF/image utility**, not an OCR engine and not a VLM client.
+
+```text
+uploaded PDF
+  -> PyMuPDF opens PDF locally
+  -> PyMuPDF renders each page to PNG at 200 DPI
+  -> runner sends one page PNG per request to the configured OpenAI-compatible VLM API
+  -> VLM returns strict JSON for that page
+  -> backend validates and merges field candidates into normalized job JSON
+  -> /jobs/{job_id} reads the JSON/artifacts and renders the existing UI
+```
+
+PyMuPDF also crops the stored page PNG for manual-crop requests. It never calls a model and never performs OCR. Sending page images, rather than PDFs, makes the VLM input consistent across Qwen, OpenAI, and Azure OpenAI compatible endpoints.
 
 ## Runtime architecture
 
 ```text
-Browser -> FastAPI -> data/jobs/<job-id>/...
-                    -> Redis <-> Celery worker -> OpenAI-compatible endpoint
+Browser -> FastAPI -> data/jobs/<job-id>/ (durable JSON, PDF, PNGs, artifacts)
+                       |             ^
+                       v             |
+                   Redis <-> Celery worker -> OpenAI-compatible VLM API
 ```
 
-The filesystem is the durable source of truth. Redis must not hold uploaded files, OCR artifacts, or corrections; completed jobs must still work after a Redis restart.
+FastAPI never performs long OCR work in a request. Redis is only the Celery broker/result backend; filesystem state survives Redis and API restarts.
 
-## Minimal source layout
+## Source layout
 
 ```text
 src/ocr/
-  __main__.py  # start Uvicorn
-  app.py       # FastAPI routes, static/report responses
-  jobs.py      # storage, validation, state transitions
-  tasks.py     # Celery application and OCR task
-  runner.py    # OpenAI-compatible HTTP call and normalized OCR output
-web/           # current frontend
+  __main__.py  # starts Uvicorn
+  app.py       # FastAPI routes and UI/static responses
+  jobs.py      # filesystem storage, validation, transitions, atomic writes
+  tasks.py     # Celery task and worker orchestration
+  runner.py    # PyMuPDF page rendering plus OpenAI-compatible VLM request
+web/           # existing dependency-free frontend
 tests/         # focused unittest checks
-data/jobs/     # runtime only; gitignored
+data/jobs/     # runtime only; ignored by git
 ```
 
-Do not add model/repository/service layers unless the listed modules become genuinely difficult to maintain.
+## Durable job model
 
-## Job model and lifecycle
+Each job directory contains `job.json`, `uploads/`, `artifacts/`, `corrections/`, and a per-job lock/cancellation marker. `job.json` snapshots provider, model, and `prompt_version`; it never contains an API key or raw provider response.
 
-Each job stores `job.json`, `uploads/`, `artifacts/`, `reports/`, and `corrections/` below `data/jobs/<id>/`. `job.json` contains identity, selected engine/VLM options, expected/uploaded files, status, progress/stage, logs, timings, failure, report URL, documents, and correction/dataset counts.
+All job updates use a per-job lock plus atomic JSON replacement. Cancellation is a separate marker so the worker can observe it while it is processing pages.
 
-1. `POST /api/jobs` creates an `uploading` job.
-2. `PUT /api/jobs/{id}/files` writes each selected file into `uploads/`.
-3. `POST /api/jobs/{id}/start` verifies all files arrived, marks it `queued`, and submits a Celery task.
-4. The worker marks `running`, writes progress/log/artifacts, and invokes OCR.
-5. The job ends as `completed`, `completed_with_warnings`, `error`, or `cancelled`.
-6. Cancel requests revoke the task when possible. Rerun creates a new job from the old upload/options and never overwrites the old result.
+Lifecycle:
 
-The complete frontend status vocabulary remains supported: `uploading`, `ready`, `queued`, `running`, `starting`, `cancelling`, `completed`, `completed_with_warnings`, `error`, `cancelled`, and `interrupted`.
+1. `POST /api/jobs` creates an `uploading` job after validating options.
+2. `PUT /api/jobs/{id}/files?path=` stores one PDF under `uploads/`; reject traversal, duplicate names, non-PDFs, and quota excess.
+3. `POST /api/jobs/{id}/start` requires every expected upload, requires external-data consent for the configured external engine, marks `queued`, and submits Celery work.
+4. The worker renders and processes one PDF page at a time, persisting progress after each safe boundary.
+5. A job is `completed_with_warnings` if one or more PDFs/pages fail but at least one PDF succeeds; it is `error` only when every PDF fails.
+6. Cancellation becomes `cancelling`; an in-flight VLM request may finish, then the worker stops before the next page and marks `cancelled`.
+7. Rerun creates a new job from the source upload/options and never changes the old job.
 
-## OCR runner
+Keep frontend status values supported: `uploading`, `ready`, `queued`, `running`, `starting`, `cancelling`, `completed`, `completed_with_warnings`, `error`, `cancelled`, and `interrupted`.
 
-Use one Python function to call an OpenAI API Compatible endpoint and normalize its response into the document/page/field payload already consumed by `web/app.js`. Provider choice changes endpoint configuration, not the job flow.
+## VLM contract
+
+Environment configuration:
 
 ```text
 OCR_PROVIDER=qwen|openai|azure_openai
@@ -76,54 +91,43 @@ CELERY_RESULT_BACKEND=redis://redis:6379/1
 OCR_DATA_DIR=data/jobs
 ```
 
-Use a standard-library HTTP client where practical. Azure URL/query details are limited to `runner.py`. API keys never appear in source, job JSON, reports, artifacts, responses, or logs.
+The runner uses standard-library HTTP. It sends one rendered page PNG per VLM request and accepts only strict JSON containing the existing field names and per-field `value`, `confidence`, `bbox`, and `page_index`. Invalid model JSON is a safe terminal page/document failure; do not add a best-effort parser.
 
-## API contract required by the frontend
+When candidates disagree, keep their evidence and choose the highest-confidence value. Mark that field `review_only`; the completed job gets warnings. Retry once only for network failures, timeout, `408`, `429`, or `5xx`. Treat `400`, `401`, `403`, `404`, and `413` as terminal.
 
-| Route | Responsibility |
-| --- | --- |
-| `GET /` | Serve the UI with injected `window.INTELLIDOC_DATA` in server mode |
-| `GET /jobs/{id}` | Serve the same UI with one job report payload |
-| `GET /api/state` | Paginated/filtered jobs, metrics, logs, reports, limits |
-| `POST /api/jobs` | Create job and validate engine/options |
-| `GET /api/jobs/{id}` | Latest status and report data |
-| `PUT /api/jobs/{id}/files?path=` | Upload one raw file body |
-| `POST /api/jobs/{id}/start` | Queue Celery work |
-| `POST /api/jobs/{id}/cancel` | Request cancellation |
-| `POST /api/jobs/{id}/rerun` | Create and queue a new job from a prior job |
-| `GET /api/engines` | Available engines and readiness |
-| `POST /api/engines/{id}/check` | Check provider/engine configuration |
-| `POST /api/jobs/{id}/manual-crop` | Validate and save a page crop artifact |
-| `POST /api/jobs/{id}/corrections` | Save audit correction and corrected JSON |
-| `POST /api/jobs/delete-preview` | List terminal jobs eligible for deletion |
-| `POST /api/jobs/bulk-delete` | Delete only eligible previewed jobs |
-| `GET /api/system-metrics` | CPU/RAM/disk/GPU/queue summary with no-GPU fallback |
+`POST /api/engines/{id}/check` validates configuration, then makes a bounded real request with a 1x1 image on configured strong servers. On an unconfigured workstation it returns `not_configured` without a network call.
 
-FastAPI serves artifacts/corrected JSON read-only from a controlled job path. API failures are explicit JSON errors matching the frontend's handling.
+## Corrections, crops, reports, and deletion
 
-## Validation and safety
+- Manual crop validates document/page/field ownership and image bounds, then uses PyMuPDF/Pillow-free local image handling to save a crop artifact. It does not invoke VLM again.
+- Corrections append an audit record with `actor: "anonymous"`, old/new values, timestamp, and existing evidence. Raw OCR evidence is never overwritten.
+- A document becomes `approved` only when no field still needs review. Saving an unchanged document may approve it if no blocker remains.
+- `report_url` is `/jobs/{id}`. That route reads persisted normalized JSON/artifacts and serves the current UI; do not generate static report HTML.
+- Persist only normalized results, page PNGs, crop artifacts, and corrected JSON. Do not persist raw VLM responses.
+- Logs are redacted structured events only, capped at 200 events and 64 KB/job.
+- Deletion is permanent. `bulk-delete` rechecks each requested job is terminal immediately before removing its whole directory, and reports skipped/failed jobs.
 
-- Permit only `pdf` but can open for more file extensions in the future phases; enforce file-count and total-size limits returned to the UI.
-- Reject absolute paths, `..`, NUL, duplicate paths, and uploads after upload state ends.
-- Reject invalid transition/start/cancel/rerun/delete operations.
-- Verify crop document/page/image/field ownership and rectangle bounds before writing an artifact.
-- Corrections retain OCR old values and evidence in an audit trail; do not overwrite raw OCR evidence.
-- Limit log size and remove secrets before persistence or display.
+## API contract
+
+Implement the routes consumed by `web/app.js`:
+
+`GET /`, `GET /jobs/{id}`, `GET /api/state`, `POST /api/jobs`, `GET /api/jobs/{id}`, `PUT /api/jobs/{id}/files`, `POST /api/jobs/{id}/start`, `POST /api/jobs/{id}/cancel`, `POST /api/jobs/{id}/rerun`, `GET /api/engines`, `POST /api/engines/{id}/check`, `POST /api/jobs/{id}/manual-crop`, `POST /api/jobs/{id}/corrections`, `POST /api/jobs/delete-preview`, `POST /api/jobs/bulk-delete`, and `GET /api/system-metrics`.
+
+Serve job artifacts read-only through controlled job-relative paths. Errors are explicit JSON codes already understood by `web/app.js`; no secret, request body, or raw VLM response enters an API error or log.
 
 ## Implementation order
 
-1. Update package metadata for Python 3.12, FastAPI, Uvicorn, Celery, and Redis; gitignore `.env` and runtime job data.
-2. Replace the static HTTP server with FastAPI, serve `web/`, and inject state for `/` and `/jobs/{id}`.
-3. Implement job JSON/filesystem storage plus create/upload/list/status/start routes and unit tests using a temporary directory.
-4. Add Celery task execution, state/progress/log updates, cancellation, and rerun.
-5. Add OpenAI-compatible runner, configuration, and engine readiness checks.
-6. Generate report/artifacts; implement manual crop and correction audit.
-7. Add aggregate state, deletion preview/bulk delete, and system metrics.
-8. Validate locally, then run full deployment validation on the strong server.
+1. Add FastAPI, Uvicorn, Celery, Redis client, and PyMuPDF metadata; ignore `.env` and `data/jobs/`.
+2. Serve `web/` with injected `window.INTELLIDOC_DATA`; make its upload controls PDF-only and populate engines from the configured engine.
+3. Implement filesystem jobs, atomic state updates, PDF validation/limits, create/upload/list/status/start routes, and focused tests using a temporary directory.
+4. Add Celery dispatch, page-by-page processing, cancellation markers, retries, batch warning/error semantics, and rerun.
+5. Implement PyMuPDF render/crop and the strict OpenAI-compatible runner with mocked HTTP tests.
+6. Add correction audit, dynamic `/jobs/{id}` report data, deletion, aggregate state, and no-GPU system-metrics fallback.
+7. Run local checks, then validate a real PDF/VLM flow on the strong server.
 
-## Validation and deployment
+## Validation
 
-### Development workstation
+Development workstation:
 
 ```powershell
 $env:PYTHONPATH = "src"
@@ -131,18 +135,6 @@ python -m unittest discover -s tests
 python -m compileall src
 ```
 
-### Strong server
+FastAPI must start without Redis/Celery/provider configuration. `start` then returns a clear configuration/worker error; tests inject a fake dispatcher and never call a real endpoint.
 
-1. Configure `.env` with real Redis and OCR provider settings.
-2. Install with `python -m pip install -e .`.
-3. Start Redis, `celery -A ocr.tasks worker --loglevel=INFO`, and `python -m ocr`.
-4. Verify engine readiness, real upload/report polling, correction, manual crop, cancellation, rerun, and persistence after API/Redis restart.
-
-## Done criteria
-
-- The current frontend works without a framework rewrite or API contract drift.
-- OCR runs in Celery without blocking HTTP requests.
-- Completed reports/artifacts/corrections survive FastAPI and Redis restart.
-- OCR failures become safe, visible terminal job errors.
-- Local unit tests pass; real endpoint behavior is verified on the strong server.
-
+Strong server validation: configure `.env`, start Redis, a Celery worker, and `python -m ocr`; then verify readiness, PDF upload, polling, corrections, crop, cancellation, rerun, and persistence after FastAPI/Redis restart.

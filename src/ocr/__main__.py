@@ -1,14 +1,9 @@
-from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
-from pathlib import Path
+import uvicorn
 
 
 def main() -> None:
-    web_root = Path(__file__).resolve().parents[2] / "web"
-    handler = lambda *args, **kwargs: SimpleHTTPRequestHandler(*args, directory=web_root, **kwargs)
-    print("Serving http://localhost:8000")
-    ThreadingHTTPServer(("", 8000), handler).serve_forever()
+    uvicorn.run("ocr.app:app", host="0.0.0.0", port=8000)
 
 
 if __name__ == "__main__":
     main()
-

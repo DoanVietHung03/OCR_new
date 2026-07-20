@@ -1674,7 +1674,7 @@ function renderShell(content) {
 }
 
 function renderUpload() {
-  const tabLabel = state.uploadTab === "zip" ? "ZIP/PDF" : "folder";
+  const tabLabel = "PDF";
   const serverReady = Boolean(DATA.server_mode);
   const runningInsideJobReport = window.location.pathname.startsWith("/jobs/");
   const hasFiles = state.uploadFiles.length > 0;
@@ -1722,10 +1722,6 @@ function renderUpload() {
       <div><h2>${escapeHtml(t("upload.title"))}</h2></div>
     </section>
     <section class="panel upload-wrap">
-      <div class="tabs">
-        <button class="tab ${state.uploadTab === "zip" ? "active" : ""}" data-upload-tab="zip">${escapeHtml(t("upload.choose_files"))}</button>
-        <button class="tab ${state.uploadTab === "folder" ? "active" : ""}" data-upload-tab="folder">${escapeHtml(t("upload.choose_folder"))}</button>
-      </div>
       <div class="upload-options">
         <label>
           <span>${escapeHtml(t("upload.engine"))}</span>
@@ -1742,7 +1738,7 @@ function renderUpload() {
           <p>${state.uploadName ? escapeHtml(state.uploadName) : escapeHtml(t("upload.accepts"))}</p>
         </div>
       </div>
-      <input id="upload-input" type="file" ${state.uploadTab === "zip" ? 'accept=".zip,.pdf,.bmp,.gif,.jpg,.jpeg,.png,.tif,.tiff,.webp"' : "webkitdirectory"} hidden>
+      <input id="upload-input" type="file" accept=".pdf,application/pdf" multiple hidden>
       ${fileList}
       <button class="button upload-action" data-upload-start ${canUpload ? "" : "disabled"}>${escapeHtml(uploadLabel)}</button>
       ${serverReady ? "" : `<p class="empty" style="padding-bottom:0">${
@@ -3389,7 +3385,7 @@ function uploadFilePath(file) {
 }
 
 function uploadSelectionIssues(files) {
-  const allowed = new Set(["zip", "pdf", "bmp", "gif", "jpg", "jpeg", "png", "tif", "tiff", "webp"]);
+  const allowed = new Set(["pdf"]);
   const seen = new Set();
   const issues = [];
   (files || []).forEach((file) => {
