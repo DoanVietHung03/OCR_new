@@ -1,111 +1,306 @@
 from __future__ import annotations
+
 import json
+import uuid
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse
-from ..services.jobs import FIELDS, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
+
+from ..schemas.jobs import (
+    CorrectionResponse,
+    CorrectionRequest,
+    CreateJobRequest,
+    CropEvidence,
+    DeletePreviewResponse,
+    DeleteResponse,
+    EngineCheckResponse,
+    EnginesResponse,
+    JobIdsRequest,
+    JobResponse,
+    ManualCropRequest,
+    StateResponse,
+    SystemMetricsResponse,
+    UploadResponse,
+)
+from ..services.jobs import DELETABLE, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
 from ..services.ocr_runner import PROMPT_VERSION, configured
-from ..schemas.jobs import CorrectionRequest, CreateJobRequest
 from ..settings import settings
 
 router = APIRouter()
 store = JobStore(settings.ocr_data_dir)
 
-def fail(status: int, code: str):
+
+def fail(status: int, code: str) -> None:
     raise HTTPException(status_code=status, detail={"code": code, "message": code})
 
+
 def job_or_404(job_id: str) -> dict:
-    try: return store.read(job_id)
-    except (FileNotFoundError, ValueError): fail(404, "not_found")
+    try:
+        return store.read(job_id)
+    except (FileNotFoundError, ValueError):
+        fail(404, "not_found")
 
-def public_job(job: dict) -> dict: return {**job, "logs": job.get("logs", [])[-200:]}
-def engines() -> list[dict]: return [{"id": settings.ocr_provider, "label": settings.ocr_provider.replace("_", " ").title(), "external": settings.ocr_provider in {"openai", "azure_openai"}, "status": "configured" if configured(settings.ocr_base_url, settings.ocr_model) else "not_configured"}]
-def metrics(jobs: list[dict]) -> dict: return {"total_jobs": len(jobs), "pages": sum(int(j.get("page_count", 0)) for j in jobs), "correction_count": sum(int(j.get("correction_count", 0)) for j in jobs), "error_jobs": sum(j.get("status") == "error" for j in jobs)}
 
-@router.get("/state")
-async def state(page: int = 1, page_size: int = Query(25, le=100), status: str = "all", method: str = "all", query: str = ""):
-    jobs = store.list(); jobs = [j for j in jobs if (status == "all" or j.get("status") == status) and (method == "all" or j.get("ocr_method") == method) and (not query or query.lower() in json.dumps(j, ensure_ascii=False).lower())]; start = max(0, (page - 1) * page_size)
-    return {"server_mode": True, "jobs": [public_job(j) for j in jobs[start:start + page_size]], "documents": [], "logs": [], "metrics": metrics(jobs), "ocr_methods": engines(), "limits": {"max_files_per_job": MAX_FILES, "max_job_upload_bytes": MAX_BYTES}, "pagination": {"page": page, "page_size": page_size, "total": len(jobs), "pages": max(1, (len(jobs) + page_size - 1) // page_size)}}
+def public_job(job: dict) -> dict:
+    return {**job, "logs": job.get("logs", [])[-200:]}
 
-@router.post("/jobs")
+
+def engines() -> list[dict]:
+    return [{
+        "id": settings.ocr_provider,
+        "label": settings.ocr_provider.replace("_", " ").title(),
+        "external": settings.ocr_endpoint_external,
+        "status": "configured" if configured(settings.ocr_base_url, settings.ocr_model) else "not_configured",
+    }]
+
+
+def metrics(jobs: list[dict]) -> dict:
+    return {
+        "total_jobs": len(jobs),
+        "pages": sum(int(job.get("page_count", 0)) for job in jobs),
+        "correction_count": sum(int(job.get("correction_count", 0)) for job in jobs),
+        "error_jobs": sum(job.get("status") == "error" for job in jobs),
+    }
+
+
+@router.get("/state", response_model=StateResponse)
+async def state(
+    page: int = 1,
+    page_size: int = Query(25, le=100),
+    status: str = "all",
+    method: str = "all",
+    query: str = "",
+):
+    jobs = [
+        job for job in store.list()
+        if (status == "all" or job.get("status") == status)
+        and (method == "all" or job.get("ocr_method") == method)
+        and (not query or query.lower() in json.dumps(job, ensure_ascii=False).lower())
+    ]
+    offset = max(0, (page - 1) * page_size)
+    return {
+        "server_mode": True,
+        "jobs": [public_job(job) for job in jobs[offset:offset + page_size]],
+        "documents": [],
+        "logs": [],
+        "metrics": metrics(jobs),
+        "ocr_methods": engines(),
+        "limits": {"max_files_per_job": MAX_FILES, "max_job_upload_bytes": MAX_BYTES},
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": len(jobs),
+            "pages": max(1, (len(jobs) + page_size - 1) // page_size),
+        },
+    }
+
+
+@router.post("/jobs", response_model=JobResponse)
 async def create_job(payload: CreateJobRequest):
-    try: return store.create(payload.model_dump())
-    except ValueError as exc: fail(400, str(exc))
+    options = payload.model_dump()
+    options.update(
+        provider=settings.ocr_provider,
+        model=settings.ocr_model,
+        prompt_version=PROMPT_VERSION,
+        endpoint_external=settings.ocr_endpoint_external,
+    )
+    try:
+        return store.create(options)
+    except ValueError as exc:
+        fail(400, str(exc))
 
-@router.put("/jobs/{job_id}/files")
+
+@router.put("/jobs/{job_id}/files", response_model=UploadResponse)
 async def upload(job_id: str, request: Request, path: str = ""):
     job_or_404(job_id)
-    try: return {"job": store.add_pdf(job_id, path, await request.body())}
-    except ValueError as exc: fail(400, str(exc))
+    try:
+        return {"job": public_job(store.add_pdf(job_id, path, await request.body()))}
+    except ValueError as exc:
+        fail(400, str(exc))
 
-@router.post("/jobs/{job_id}/start")
+
+@router.post("/jobs/{job_id}/start", response_model=JobResponse)
 async def start(job_id: str):
     job = job_or_404(job_id)
-    if job["uploaded_files"] != job["expected_files"]: fail(409, "upload_incomplete")
-    if job.get("ocr_method") in {"openai", "azure_openai"} and not job.get("cloud_data_confirmed"): fail(400, "cloud_data_confirmation_required")
-    if not configured(settings.ocr_base_url, settings.ocr_model): fail(503, "ocr_not_configured")
+    if job.get("status") != "ready":
+        return public_job(job)
+    if job["uploaded_files"] != job["expected_files"]:
+        fail(409, "upload_incomplete")
+    if job.get("endpoint_external", True) and not job.get("cloud_data_confirmed"):
+        fail(400, "cloud_data_confirmation_required")
+    if not configured(settings.ocr_base_url, settings.ocr_model):
+        fail(503, "ocr_not_configured")
+    try:
+        job, should_dispatch = store.begin_start(job_id)
+    except ValueError as exc:
+        fail(409, str(exc))
+    if not should_dispatch:
+        return public_job(job)
     try:
         from ..workers.tasks import dispatch
+
         dispatch(job_id)
-    except Exception: fail(503, "worker_unavailable")
-    return store.update(job_id, status="queued", report_url=f"/jobs/{job_id}")
+    except Exception:
+        store.interrupt(job_id)
+        fail(503, "worker_unavailable")
+    return public_job(store.read(job_id))
 
-@router.get("/jobs/{job_id}")
-async def get_job(job_id: str): return public_job(job_or_404(job_id))
 
-@router.post("/jobs/{job_id}/cancel")
-async def cancel(job_id: str): return public_job(store.cancel(job_id))
+@router.get("/jobs/{job_id}", response_model=JobResponse)
+async def get_job(job_id: str):
+    return public_job(job_or_404(job_id))
 
-@router.post("/jobs/{job_id}/rerun")
+
+@router.post("/jobs/{job_id}/cancel", response_model=JobResponse)
+async def cancel(job_id: str):
+    try:
+        return public_job(store.cancel(job_id))
+    except (FileNotFoundError, ValueError):
+        fail(404, "not_found")
+
+
+@router.post("/jobs/{job_id}/rerun", response_model=JobResponse)
 async def rerun(job_id: str, request: Request):
-    source, options = job_or_404(job_id), await request.json(); new = store.create({**source, **options, "file_count": source["expected_files"], "prompt_version": PROMPT_VERSION})
-    for pdf in (store.path(job_id) / "uploads").glob("*.pdf"): store.add_pdf(new["id"], pdf.name, pdf.read_bytes())
+    source = job_or_404(job_id)
+    if source.get("status") not in TERMINAL:
+        fail(409, "job_active")
+    options = await request.json()
+    pdfs = sorted((store.path(job_id) / "uploads").glob("*.pdf"))
+    if len(pdfs) != source.get("expected_files"):
+        fail(409, "source_files_incomplete")
+    new = store.create({
+        "file_count": source["expected_files"],
+        "upload_name": source.get("upload_name", ""),
+        "cloud_data_confirmed": bool(options.get("cloud_data_confirmed")),
+        "provider": settings.ocr_provider,
+        "model": settings.ocr_model,
+        "prompt_version": PROMPT_VERSION,
+        "endpoint_external": settings.ocr_endpoint_external,
+    })
+    for pdf in pdfs:
+        store.add_pdf(new["id"], pdf.name, pdf.read_bytes())
     return await start(new["id"])
 
-@router.get("/engines")
-async def get_engines(): return {"engines": engines()}
 
-@router.post("/engines/{engine_id}/check")
+@router.get("/engines", response_model=EnginesResponse)
+async def get_engines():
+    return {"engines": engines()}
+
+
+@router.post("/engines/{engine_id}/check", response_model=EngineCheckResponse)
 async def check_engine(engine_id: str):
-    if engine_id not in {e["id"] for e in engines()}: fail(404, "invalid_ocr_method")
+    if engine_id not in {engine["id"] for engine in engines()}:
+        fail(404, "invalid_ocr_method")
     configured_now = configured(settings.ocr_base_url, settings.ocr_model)
-    return {"id": engine_id, "status": "configured" if configured_now else "not_configured", "summary": "Configuration is present." if configured_now else "OCR provider is not configured."}
+    return {
+        "id": engine_id,
+        "status": "configured" if configured_now else "not_configured",
+        "summary": "Configuration is present." if configured_now else "OCR provider is not configured.",
+    }
 
-@router.post("/jobs/{job_id}/manual-crop")
-async def manual_crop(job_id: str, request: Request):
-    job, body = job_or_404(job_id), await request.json(); document = next((d for d in job.get("documents", []) if d.get("id") == body.get("document_id")), None); page_index, rect = int(body.get("page_index", 0)), body.get("rect") or {}
-    if not document or page_index >= len(document.get("pages", [])) or any(float(rect.get(k, 0)) < 0 for k in ("x", "y", "width", "height")) or float(rect.get("width", 0)) < 2 or float(rect.get("height", 0)) < 2: fail(400, "Invalid crop rectangle.")
+
+@router.post("/jobs/{job_id}/manual-crop", response_model=CropEvidence)
+async def manual_crop(job_id: str, payload: ManualCropRequest):
+    job = job_or_404(job_id)
+    if job.get("status") not in TERMINAL:
+        fail(409, "job_not_terminal")
+    document = next((item for item in job.get("documents", []) if item.get("id") == payload.document_id), None)
+    if document is None or payload.page_index >= len(document.get("pages", [])):
+        fail(404, "not_found")
+    if payload.field not in document.get("fields", {}):
+        fail(400, "invalid_field")
+    rect = payload.rect.model_dump()
     try:
         import fitz
-        source = store.path(job_id) / "artifacts" / document["id"] / f"page-{page_index + 1}.png"; target = source.parent / f"crop-{body.get('field', 'field')}-{page_index + 1}.png"; image = fitz.Pixmap(str(source)); fitz.Pixmap(image, fitz.Rect(float(rect["x"]), float(rect["y"]), float(rect["x"] + rect["width"]), float(rect["y"] + rect["height"]))).save(str(target))
-    except Exception: fail(404, "Page image was not found in this job.")
-    return {"crop_image": f"/api/jobs/{job_id}/artifacts/{document['id']}/{target.name}", "evidence_source": "manual_crop", "evidence_status": "trusted", "bbox": rect, "page_index": page_index}
 
-@router.post("/jobs/{job_id}/corrections")
+        source = store.path(job_id) / "artifacts" / document["id"] / f"page-{payload.page_index + 1}.png"
+        image = fitz.Pixmap(str(source))
+        if rect["x"] + rect["width"] > image.width or rect["y"] + rect["height"] > image.height:
+            fail(400, "invalid_crop_rectangle")
+        target = source.parent / f"crop-{payload.field}-{payload.page_index + 1}-{uuid.uuid4().hex[:8]}.png"
+        fitz.Pixmap(
+            image,
+            image.width,
+            image.height,
+            fitz.Rect(rect["x"], rect["y"], rect["x"] + rect["width"], rect["y"] + rect["height"]),
+        ).save(str(target))
+    except HTTPException:
+        raise
+    except Exception:
+        fail(404, "not_found")
+    evidence = {
+        "crop_image": f"/api/jobs/{job_id}/artifacts/{document['id']}/{target.name}",
+        "evidence_source": "manual_crop",
+        "evidence_status": "trusted",
+        "bbox": rect,
+        "page_index": payload.page_index,
+        "field": payload.field,
+        "created_at": now(),
+    }
+    return store.add_crop_evidence(job_id, payload.document_id, evidence)
+
+
+@router.post("/jobs/{job_id}/corrections", response_model=CorrectionResponse)
 async def corrections(job_id: str, payload: CorrectionRequest):
-    job = job_or_404(job_id)
-    if any(item.get("field") not in FIELDS for item in payload.corrections): fail(400, "invalid_field")
-    (store.path(job_id) / "corrections" / f"{now().replace(':', '-')}.json").write_text(json.dumps({"actor": "anonymous", "timestamp": now(), "document_id": payload.document_id, "corrections": payload.corrections}, ensure_ascii=False, indent=2), encoding="utf-8")
-    job = store.update(job_id, correction_count=int(job.get("correction_count", 0)) + len(payload.corrections)); return {"saved_count": len(payload.corrections), "job": public_job(job), "document_status": {"review_status": {"value": "approved", "risk_count": 0}, "approved": True, "last_saved_at": now()}}
+    job_or_404(job_id)
+    try:
+        job, document = store.apply_review(
+            job_id,
+            payload.document_id,
+            [item.model_dump() for item in payload.corrections],
+        )
+    except ValueError as exc:
+        code = str(exc)
+        fail(409 if code in {"correction_conflict", "job_not_terminal"} else 400, code)
+    return {
+        "saved_count": len(payload.corrections),
+        "job": public_job(job),
+        "document_status": {
+            "review_status": {"value": document["review_status"], "risk_count": 0},
+            "approved": True,
+            "last_saved_at": document["approved_at"],
+        },
+    }
 
-@router.post("/jobs/delete-preview")
-async def delete_preview(request: Request):
-    jobs = [job_or_404(i) for i in (await request.json()).get("job_ids", [])]; return {"deletable": [{"id": j["id"], "name": j.get("upload_name") or j["id"]} for j in jobs if j.get("status") in TERMINAL], "skipped": [{"id": j["id"]} for j in jobs if j.get("status") not in TERMINAL]}
 
-@router.post("/jobs/bulk-delete")
-async def bulk_delete(request: Request):
+@router.post("/jobs/delete-preview", response_model=DeletePreviewResponse)
+async def delete_preview(payload: JobIdsRequest):
+    jobs = [job_or_404(job_id) for job_id in payload.job_ids]
+    return {
+        "deletable": [
+            {"id": job["id"], "name": job.get("upload_name") or job["id"]}
+            for job in jobs if job.get("status") in DELETABLE
+        ],
+        "skipped": [{"id": job["id"]} for job in jobs if job.get("status") not in DELETABLE],
+    }
+
+
+@router.post("/jobs/bulk-delete", response_model=DeleteResponse)
+async def bulk_delete(payload: JobIdsRequest):
     deleted, skipped, failed = [], [], []
-    for job_id in (await request.json()).get("job_ids", []):
+    for job_id in payload.job_ids:
         try:
-            if store.read(job_id).get("status") not in TERMINAL: skipped.append(job_id); continue
-            store.delete(job_id); deleted.append(job_id)
-        except Exception: failed.append(job_id)
+            if store.read(job_id).get("status") not in DELETABLE:
+                skipped.append(job_id)
+                continue
+            store.delete(job_id)
+            deleted.append(job_id)
+        except ValueError:
+            skipped.append(job_id)
+        except Exception:
+            failed.append(job_id)
     return {"deleted": deleted, "skipped": skipped, "failed": failed}
+
 
 @router.get("/jobs/{job_id}/artifacts/{path:path}")
 async def artifact(job_id: str, path: str):
-    root, target = store.path(job_id) / "artifacts", (store.path(job_id) / "artifacts" / path).resolve()
-    if root.resolve() not in target.parents or not target.is_file(): fail(404, "not_found")
+    root = store.path(job_id) / "artifacts"
+    target = (root / path).resolve()
+    if root.resolve() not in target.parents or not target.is_file():
+        fail(404, "not_found")
     return FileResponse(target)
 
-@router.get("/system-metrics")
-async def system_metrics(): return {"cpu_percent": None, "memory_percent": None, "gpu": None}
+
+@router.get("/system-metrics", response_model=SystemMetricsResponse)
+async def system_metrics():
+    return {"cpu_percent": None, "memory_percent": None, "gpu": None}

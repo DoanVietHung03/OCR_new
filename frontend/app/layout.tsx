@@ -1,4 +1,5 @@
 import "./globals.css";
+import "./parity.css";
 
 export const metadata = { title: "OCR", description: "OCR workspace" };
 

@@ -67,7 +67,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/StateResponse"
+                }
               }
             }
           },
@@ -103,7 +105,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
               }
             }
           },
@@ -150,7 +154,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
               }
             }
           },
@@ -187,7 +193,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
               }
             }
           },
@@ -224,7 +232,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
               }
             }
           },
@@ -261,7 +271,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
               }
             }
           },
@@ -298,7 +310,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
               }
             }
           },
@@ -324,7 +338,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EnginesResponse"
+                }
               }
             }
           }
@@ -351,7 +367,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EngineCheckResponse"
+                }
               }
             }
           },
@@ -383,12 +401,24 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualCropRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CropEvidence"
+                }
               }
             }
           },
@@ -435,7 +465,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CorrectionResponse"
+                }
               }
             }
           },
@@ -456,12 +488,34 @@
       "post": {
         "summary": "Delete Preview",
         "operationId": "delete_preview_api_jobs_delete_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobIdsRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePreviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -472,12 +526,34 @@
       "post": {
         "summary": "Bulk Delete",
         "operationId": "bulk_delete_api_jobs_bulk_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobIdsRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -539,7 +615,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SystemMetricsResponse"
+                }
               }
             }
           }
@@ -574,54 +652,84 @@
   },
   "components": {
     "schemas": {
+      "CorrectionItem": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "old_value": {
+            "title": "Old Value",
+            "default": ""
+          },
+          "new_value": {
+            "title": "New Value",
+            "default": ""
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "field"
+        ],
+        "title": "CorrectionItem"
+      },
       "CorrectionRequest": {
         "properties": {
           "document_id": {
             "type": "string",
-            "title": "Document Id",
-            "default": ""
+            "title": "Document Id"
           },
           "corrections": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/CorrectionItem"
             },
             "type": "array",
             "title": "Corrections"
           }
         },
+        "additionalProperties": true,
         "type": "object",
         "required": [
-          "corrections"
+          "document_id"
         ],
         "title": "CorrectionRequest"
       },
+      "CorrectionResponse": {
+        "properties": {
+          "saved_count": {
+            "type": "integer",
+            "title": "Saved Count"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobResponse"
+          },
+          "document_status": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document Status"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "saved_count",
+          "job",
+          "document_status"
+        ],
+        "title": "CorrectionResponse"
+      },
       "CreateJobRequest": {
         "properties": {
-          "kind": {
-            "type": "string",
-            "title": "Kind",
-            "default": "zip"
-          },
           "file_count": {
             "type": "integer",
             "maximum": 15.0,
             "minimum": 1.0,
             "title": "File Count"
           },
-          "ocr_method": {
-            "type": "string",
-            "title": "Ocr Method",
-            "default": "qwen"
-          },
           "upload_name": {
             "type": "string",
             "title": "Upload Name",
-            "default": ""
-          },
-          "model": {
-            "type": "string",
-            "title": "Model",
             "default": ""
           },
           "cloud_data_confirmed": {
@@ -643,11 +751,6 @@
             "type": "integer",
             "title": "Vlm Max Pages",
             "default": 0
-          },
-          "prompt_version": {
-            "type": "string",
-            "title": "Prompt Version",
-            "default": "3"
           }
         },
         "additionalProperties": true,
@@ -656,6 +759,373 @@
           "file_count"
         ],
         "title": "CreateJobRequest"
+      },
+      "CropEvidence": {
+        "properties": {
+          "crop_image": {
+            "type": "string",
+            "title": "Crop Image"
+          },
+          "evidence_source": {
+            "type": "string",
+            "title": "Evidence Source",
+            "default": "manual_crop"
+          },
+          "evidence_status": {
+            "type": "string",
+            "title": "Evidence Status",
+            "default": "trusted"
+          },
+          "bbox": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Bbox"
+          },
+          "page_index": {
+            "type": "integer",
+            "title": "Page Index"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "crop_image",
+          "bbox",
+          "page_index",
+          "field",
+          "created_at"
+        ],
+        "title": "CropEvidence"
+      },
+      "CropRectangle": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Y"
+          },
+          "width": {
+            "type": "number",
+            "minimum": 2.0,
+            "title": "Width"
+          },
+          "height": {
+            "type": "number",
+            "minimum": 2.0,
+            "title": "Height"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "title": "CropRectangle"
+      },
+      "DeleteItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "DeleteItem"
+      },
+      "DeletePreviewResponse": {
+        "properties": {
+          "deletable": {
+            "items": {
+              "$ref": "#/components/schemas/DeleteItem"
+            },
+            "type": "array",
+            "title": "Deletable"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/DeleteItem"
+            },
+            "type": "array",
+            "title": "Skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deletable",
+          "skipped"
+        ],
+        "title": "DeletePreviewResponse"
+      },
+      "DeleteResponse": {
+        "properties": {
+          "deleted": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deleted"
+          },
+          "skipped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skipped"
+          },
+          "failed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted",
+          "skipped",
+          "failed"
+        ],
+        "title": "DeleteResponse"
+      },
+      "DocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "default": ""
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": ""
+          },
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FieldResponse"
+            },
+            "type": "object",
+            "title": "Fields"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/PageResponse"
+            },
+            "type": "array",
+            "title": "Pages"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "review_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Status"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "crop_evidence": {
+            "items": {
+              "$ref": "#/components/schemas/CropEvidence"
+            },
+            "type": "array",
+            "title": "Crop Evidence"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "DocumentResponse"
+      },
+      "EngineCheckResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "summary"
+        ],
+        "title": "EngineCheckResponse"
+      },
+      "EngineResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "external": {
+            "type": "boolean",
+            "title": "External",
+            "default": true
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "status"
+        ],
+        "title": "EngineResponse"
+      },
+      "EnginesResponse": {
+        "properties": {
+          "engines": {
+            "items": {
+              "$ref": "#/components/schemas/EngineResponse"
+            },
+            "type": "array",
+            "title": "Engines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "engines"
+        ],
+        "title": "EnginesResponse"
+      },
+      "FieldResponse": {
+        "properties": {
+          "value": {
+            "title": "Value",
+            "default": ""
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "default": 0
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Bbox"
+          },
+          "page_index": {
+            "type": "integer",
+            "title": "Page Index",
+            "default": 0
+          },
+          "ocr_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Value"
+          },
+          "corrected_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrected Value"
+          },
+          "corrected_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrected At"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "FieldResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -669,6 +1139,386 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "JobIdsRequest": {
+        "properties": {
+          "job_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Job Ids"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "JobIdsRequest"
+      },
+      "JobResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "default": ""
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "default": ""
+          },
+          "ocr_method": {
+            "type": "string",
+            "title": "Ocr Method",
+            "default": ""
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "default": ""
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version",
+            "default": ""
+          },
+          "endpoint_external": {
+            "type": "boolean",
+            "title": "Endpoint External",
+            "default": true
+          },
+          "cloud_data_confirmed": {
+            "type": "boolean",
+            "title": "Cloud Data Confirmed",
+            "default": false
+          },
+          "expected_files": {
+            "type": "integer",
+            "title": "Expected Files",
+            "default": 0
+          },
+          "uploaded_files": {
+            "type": "integer",
+            "title": "Uploaded Files",
+            "default": 0
+          },
+          "upload_name": {
+            "type": "string",
+            "title": "Upload Name",
+            "default": ""
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentResponse"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "logs": {
+            "items": {},
+            "type": "array",
+            "title": "Logs"
+          },
+          "correction_count": {
+            "type": "integer",
+            "title": "Correction Count",
+            "default": 0
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count",
+            "default": 0
+          },
+          "failed_pages": {
+            "type": "integer",
+            "title": "Failed Pages",
+            "default": 0
+          },
+          "vlm_task": {
+            "type": "string",
+            "title": "Vlm Task",
+            "default": "full_ocr"
+          },
+          "vlm_pages": {
+            "type": "string",
+            "title": "Vlm Pages",
+            "default": "all"
+          },
+          "vlm_max_pages": {
+            "type": "integer",
+            "title": "Vlm Max Pages",
+            "default": 0
+          },
+          "report_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Url"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "JobResponse"
+      },
+      "LimitsResponse": {
+        "properties": {
+          "max_files_per_job": {
+            "type": "integer",
+            "title": "Max Files Per Job"
+          },
+          "max_job_upload_bytes": {
+            "type": "integer",
+            "title": "Max Job Upload Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "max_files_per_job",
+          "max_job_upload_bytes"
+        ],
+        "title": "LimitsResponse"
+      },
+      "ManualCropRequest": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "page_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Page Index"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "rect": {
+            "$ref": "#/components/schemas/CropRectangle"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "document_id",
+          "page_index",
+          "field",
+          "rect"
+        ],
+        "title": "ManualCropRequest"
+      },
+      "MetricsResponse": {
+        "properties": {
+          "total_jobs": {
+            "type": "integer",
+            "title": "Total Jobs"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          },
+          "correction_count": {
+            "type": "integer",
+            "title": "Correction Count"
+          },
+          "error_jobs": {
+            "type": "integer",
+            "title": "Error Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_jobs",
+          "pages",
+          "correction_count",
+          "error_jobs"
+        ],
+        "title": "MetricsResponse"
+      },
+      "PageResponse": {
+        "properties": {
+          "page_index": {
+            "type": "integer",
+            "title": "Page Index",
+            "default": 0
+          },
+          "image_url": {
+            "type": "string",
+            "title": "Image Url",
+            "default": ""
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "PageResponse"
+      },
+      "PaginationResponse": {
+        "properties": {
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page",
+          "page_size",
+          "total",
+          "pages"
+        ],
+        "title": "PaginationResponse"
+      },
+      "StateResponse": {
+        "properties": {
+          "server_mode": {
+            "type": "boolean",
+            "title": "Server Mode"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobResponse"
+            },
+            "type": "array",
+            "title": "Jobs"
+          },
+          "documents": {
+            "items": {},
+            "type": "array",
+            "title": "Documents"
+          },
+          "logs": {
+            "items": {},
+            "type": "array",
+            "title": "Logs"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/MetricsResponse"
+          },
+          "ocr_methods": {
+            "items": {
+              "$ref": "#/components/schemas/EngineResponse"
+            },
+            "type": "array",
+            "title": "Ocr Methods"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/LimitsResponse"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationResponse"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "server_mode",
+          "jobs",
+          "documents",
+          "logs",
+          "metrics",
+          "ocr_methods",
+          "limits",
+          "pagination"
+        ],
+        "title": "StateResponse"
+      },
+      "SystemMetricsResponse": {
+        "properties": {
+          "cpu_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpu Percent"
+          },
+          "memory_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Percent"
+          },
+          "gpu": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gpu"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cpu_percent",
+          "memory_percent",
+          "gpu"
+        ],
+        "title": "SystemMetricsResponse"
+      },
+      "UploadResponse": {
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/JobResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job"
+        ],
+        "title": "UploadResponse"
       },
       "ValidationError": {
         "properties": {

@@ -6,7 +6,9 @@ legacy runtime until these commands pass on the target server.
 
 ## Acceptance
 
-1. Back up the host `OCR_DATA_DIR` and record the backup path.
+1. Pause uploads, drain and stop the legacy worker, then back up the host
+   `OCR_DATA_DIR`. Record the path, size, and checksum. Do not start the new
+   worker while legacy is still running.
 2. Start the isolated stack with a non-secret `.env`:
 
    ```bash
@@ -19,7 +21,8 @@ legacy runtime until these commands pass on the target server.
    ```bash
    docker compose ps
    docker compose logs --tail=200 backend worker redis nginx
-   curl -fsS http://127.0.0.1:8080/health
+   docker compose exec worker celery -A app.workers.tasks:celery_app inspect registered
+   curl -fsS http://127.0.0.1:52409/health
    ```
 
 4. Run the local gates from the repository root:
@@ -32,9 +35,15 @@ legacy runtime until these commands pass on the target server.
    pnpm api:check
    ```
 
-5. Submit one real-provider job, verify its `data/jobs/<id>/` artifacts, then
-   restart backend and worker. Poll the same job and confirm the job JSON,
-   uploaded PDF, page images, corrections, and crop remain readable.
+5. From an offline directory outside Git and `OCR_DATA_DIR`, submit the three
+   fixed sanitized PDFs: clear digital, multi-page scan, and difficult scan.
+   At least one must exceed 1 MiB. Record each SHA-256, job ID, page/artifact
+   counts, report result, and manual field review.
+6. Restart backend, worker, and Redis. Confirm terminal data remains readable,
+   an active job becomes `interrupted`, and a stale task does not run again.
+7. Stop the new stack before starting legacy against the same data. Perform the
+   two-way round-trip and rollback rehearsal, then complete
+   `docs/phase4_acceptance.md`.
 
 ## Cutover and rollback
 

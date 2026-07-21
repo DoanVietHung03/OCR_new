@@ -1,0 +1,37 @@
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 3px solid #84adff;
+  outline-offset: 2px;
+}
+
+.consent {
+  display: flex;
+  flex: 1 0 100%;
+  align-items: flex-start;
+  gap: 9px;
+  color: #46556c;
+}
+
+.consent input {
+  margin-top: 3px;
+}
+
+.document-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.evidence-list a {
+  color: #175cd3;
+}
