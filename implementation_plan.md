@@ -1,7 +1,8 @@
 # Kế hoạch công việc còn lại cho OCR monorepo
 
-**Trạng thái hiện tại:** Milestone A và B đã implement, pass 18 test backend,
-typecheck/build và 3 browser smoke local ngày 2026-07-21. Bằng chứng
+**Trạng thái hiện tại:** Milestone A và B cùng đợt tái tạo legacy browser đã
+implement, pass 20 test backend, 10 test compatibility, typecheck/build và 10
+browser test mặc định local ngày 2026-07-21; capture mode pass 11/11. Bằng chứng
 Nginx/Redis/Celery/provider thật vẫn để ở Gate Milestone C. Legacy
 `src/ocr/` + `web/` vẫn là runtime rollback cho đến khi Gate Milestone C pass.
 
@@ -78,8 +79,9 @@ phase đã hoàn tất 100% không được liệt kê lại.
 
 ### UI, test và rollout
 
-- Visual/behavior parity được nghiệm thu bằng checklist tại desktop
-  `1440×900` và mobile `390×844`; không pixel-perfect hoặc screenshot diff.
+- Visual/behavior parity được nghiệm thu bằng checklist tại desktop `1440×900`
+  và `1366×768`. Viewport `390×844` chỉ là safety smoke: không overflow ngang,
+  không vỡ layout và modal đóng được; không pixel-perfect hoặc screenshot diff.
 - Giữ route-mock Playwright cho trạng thái hiếm/lỗi. Thêm một happy path chạy
   Next + FastAPI thật, Celery eager chỉ trong test và fake HTTP provider cục
   bộ; local test không cần Redis, Docker, GPU hoặc provider thật.
@@ -97,7 +99,7 @@ phase đã hoàn tất 100% không được liệt kê lại.
 
 ## 3. Milestone A — Đã implement, chờ bằng chứng strong-server
 
-- `uv run --project backend pytest backend/tests -q`: 18 passed ngày
+- `uv run --project backend pytest backend/tests -q`: 20 passed ngày
   2026-07-21; không cần Redis, worker, Docker, GPU hoặc provider thật.
 - OpenAPI/types đã regenerate; `pnpm api:check` pass.
 - Nginx limit, task `ocr.process_job`, one-shot `/start`, worker concurrency,
@@ -116,7 +118,7 @@ phase đã hoàn tất 100% không được liệt kê lại.
 
 ### B2. PDF-only UI và parity
 
-- Dashboard và job detail phủ upload, progress, mọi document/page, correction,
+- Dashboard và job detail phủ upload, status/counters, mọi document/page, correction,
   approval, crop evidence, report, filter/pagination/bulk action và safe errors.
 - CSS/native APIs giữ frontend dependency-light; VI/EN, UTF-8, favicon và
   `localStorage["intellidoc.language"]` được kiểm tra tại `1440×900` và
@@ -124,16 +126,19 @@ phase đã hoàn tất 100% không được liệt kê lại.
 
 ### B3. Browser verification đã pass
 
-- 3 smoke pass: route-mock workflow, real Next/FastAPI/eager task/fake HTTP
-  provider, và mobile English PDF-only với upload/start safe errors.
+- 10 browser test mặc định pass: route-mock workflow, real
+  Next/FastAPI/eager task/fake HTTP provider, lifecycle/URL/responsive desktop,
+  mobile English PDF-only, upload recovery, dirty navigation, visual crop,
+  telemetry nullable và safe errors. Capture mode pass 11/11 khi đặt
+  `UPDATE_UI_BASELINE=1`.
 - Integration kiểm tra upload, polling/result, correction reload, crop reload,
   approval, rerun và delete preview/delete. Đây không phải bằng chứng
   Redis/Celery/Nginx production.
 
 ### Gate Milestone B — pass local 2026-07-21
 
-- Typecheck, production build, OpenAPI/generated-types check và 3 Playwright
-  smoke pass.
+- Typecheck, production build, OpenAPI/generated-types check và 10 Playwright
+  browser test mặc định pass; capture mode pass 11/11.
 - Mọi API action tương thích có UI path; không còn control ZIP/ảnh hoặc lỗi
   hydration khi đọc ngôn ngữ đã lưu.
 
@@ -197,7 +202,10 @@ thay thế UTF-8.
 ## Ràng buộc
 
 - Không thêm database, provider SDK, UI kit, state manager, WebSocket, auth,
-  auto-retention, persistent code catalog hoặc host telemetry.
+  auto-retention, persistent code catalog hoặc host agent. Ngoại lệ telemetry
+  đã duyệt chỉ mô tả môi trường backend nhìn thấy: CPU/RAM, filesystem chứa
+  `OCR_DATA_DIR` và GPU best-effort; không lộ hostname, path, process, raw output,
+  secret hoặc provider configuration và không bắt buộc GPU trong Compose.
 - Không đổi route `/api/*`, artifact URL, filesystem layout hoặc safe error
   envelope ngoài các semantics đã khóa ở trên.
 - Không xóa legacy runtime trước Gate Milestone C và rollback window.

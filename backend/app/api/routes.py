@@ -24,6 +24,7 @@ from ..schemas.jobs import (
 )
 from ..services.jobs import DELETABLE, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
 from ..services.ocr_runner import PROMPT_VERSION, configured
+from ..services.system_metrics import system_metrics as read_system_metrics
 from ..settings import settings
 
 router = APIRouter()
@@ -303,4 +304,4 @@ async def artifact(job_id: str, path: str):
 
 @router.get("/system-metrics", response_model=SystemMetricsResponse)
 async def system_metrics():
-    return {"cpu_percent": None, "memory_percent": None, "gpu": None}
+    return read_system_metrics(settings.ocr_data_dir)

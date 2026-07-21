@@ -919,6 +919,34 @@
         ],
         "title": "DeleteResponse"
       },
+      "DiskMetricsResponse": {
+        "properties": {
+          "used_bytes": {
+            "type": "integer",
+            "title": "Used Bytes"
+          },
+          "total_bytes": {
+            "type": "integer",
+            "title": "Total Bytes"
+          },
+          "free_bytes": {
+            "type": "integer",
+            "title": "Free Bytes"
+          },
+          "percent": {
+            "type": "number",
+            "title": "Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "used_bytes",
+          "total_bytes",
+          "free_bytes",
+          "percent"
+        ],
+        "title": "DiskMetricsResponse"
+      },
       "DocumentResponse": {
         "properties": {
           "id": {
@@ -1126,6 +1154,97 @@
         "additionalProperties": true,
         "type": "object",
         "title": "FieldResponse"
+      },
+      "GPUDeviceResponse": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "utilization_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Utilization Percent"
+          },
+          "memory_used_mb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Used Mb"
+          },
+          "memory_total_mb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Total Mb"
+          },
+          "temperature_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature C"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "name",
+          "utilization_percent",
+          "memory_used_mb",
+          "memory_total_mb",
+          "temperature_c"
+        ],
+        "title": "GPUDeviceResponse"
+      },
+      "GPUMetricsResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/GPUDeviceResponse"
+            },
+            "type": "array",
+            "title": "Devices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "GPUMetricsResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1490,20 +1609,32 @@
             ],
             "title": "Memory Percent"
           },
-          "gpu": {
+          "disk": {
             "anyOf": [
-              {},
+              {
+                "$ref": "#/components/schemas/DiskMetricsResponse"
+              },
               {
                 "type": "null"
               }
-            ],
-            "title": "Gpu"
+            ]
+          },
+          "gpu": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GPUMetricsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
           "cpu_percent",
           "memory_percent",
+          "disk",
           "gpu"
         ],
         "title": "SystemMetricsResponse"

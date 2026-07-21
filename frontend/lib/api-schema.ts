@@ -411,6 +411,17 @@ export interface components {
             /** Failed */
             failed: string[];
         };
+        /** DiskMetricsResponse */
+        DiskMetricsResponse: {
+            /** Used Bytes */
+            used_bytes: number;
+            /** Total Bytes */
+            total_bytes: number;
+            /** Free Bytes */
+            free_bytes: number;
+            /** Percent */
+            percent: number;
+        };
         /** DocumentResponse */
         DocumentResponse: {
             /**
@@ -504,6 +515,31 @@ export interface components {
             corrected_at?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** GPUDeviceResponse */
+        GPUDeviceResponse: {
+            /** Index */
+            index: number;
+            /** Name */
+            name: string;
+            /** Utilization Percent */
+            utilization_percent: number | null;
+            /** Memory Used Mb */
+            memory_used_mb: number | null;
+            /** Memory Total Mb */
+            memory_total_mb: number | null;
+            /** Temperature C */
+            temperature_c: number | null;
+        };
+        /** GPUMetricsResponse */
+        GPUMetricsResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "unavailable" | "error";
+            /** Devices */
+            devices?: components["schemas"]["GPUDeviceResponse"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -699,8 +735,8 @@ export interface components {
             cpu_percent: number | null;
             /** Memory Percent */
             memory_percent: number | null;
-            /** Gpu */
-            gpu: unknown | null;
+            disk: components["schemas"]["DiskMetricsResponse"] | null;
+            gpu: components["schemas"]["GPUMetricsResponse"] | null;
         };
         /** UploadResponse */
         UploadResponse: {

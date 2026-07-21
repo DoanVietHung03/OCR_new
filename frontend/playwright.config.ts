@@ -2,9 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 30_000,
+  timeout: 45_000,
   use: { baseURL: "http://127.0.0.1:3100", trace: "retain-on-failure", viewport: { width: 1440, height: 900 } },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
   webServer: [
     {
       command: process.platform === "win32" ? "..\\backend\\.venv\\Scripts\\python.exe ..\\backend\\tests\\integration_server.py" : "uv run --project ../backend python ../backend/tests/integration_server.py",

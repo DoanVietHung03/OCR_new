@@ -14,10 +14,14 @@ restart, cross-version, and rollback evidence. Keep `src/ocr/` and `web/` as the
 rollback runtime until the one-day rollback window closes.
 
 The detailed legacy-browser recreation plan in `legacy_browser_recreated.md`
-was approved on 2026-07-21 but is not implemented. It changes the follow-up UI
-scope to desktop-first responsive behavior and approves one backend addition:
-real, minimal `/api/system-metrics` telemetry. Do not describe either as current
-runtime behavior until the relevant phase and checks are complete.
+was implemented and locally verified on 2026-07-21. The current Next.js UI is
+desktop-first responsive and the backend exposes minimal, safe
+`/api/system-metrics` telemetry. This local evidence does not complete Milestone
+C or prove production/provider behavior.
+
+The 2026-07-21 closure audit passes 20 backend tests, 10 legacy compatibility
+tests, and 10 default browser tests; capture mode passes 11/11. The detailed
+100% local checkpoint table is in `legacy_browser_recreated.md`.
 
 ## Repository map
 
@@ -78,7 +82,7 @@ runtime behavior until the relevant phase and checks are complete.
   desktop-first: visual/functional anchors at `1440×900` and `1366×768`; at
   `390×844` require only no horizontal overflow, no broken layout, and closable
   modals.
-- Planned system telemetry describes the environment visible to the backend:
+- System telemetry describes the environment visible to the backend:
   CPU/RAM, disk containing `OCR_DATA_DIR`, and best-effort visible GPUs. It must
   not expose hostname, paths, processes, raw command output, secrets, or provider
   configuration; do not require GPU access in the default Compose stack.
@@ -109,7 +113,7 @@ runtime behavior until the relevant phase and checks are complete.
    when architecture, commands, or rollout state changes.
 8. Do not create commits unless the user explicitly asks for them.
 
-## Approved legacy-browser phases (not started)
+## Completed legacy-browser phases
 
 1. Capture sanitized baseline and map every UI block to real schema/API data.
 2. Implement minimal backend telemetry, focused tests, and generated API types.

@@ -7,11 +7,20 @@ export type Document = Schemas["DocumentResponse"];
 export type Field = Schemas["FieldResponse"];
 export type Page = Schemas["PageResponse"];
 export type State = Schemas["StateResponse"];
+export type SystemMetrics = Schemas["SystemMetricsResponse"];
+
+export const ACTIVE_JOB_STATUSES = new Set(["starting", "queued", "running", "cancelling"]);
+export const TERMINAL_JOB_STATUSES = new Set(["completed", "completed_with_warnings", "error", "cancelled", "interrupted"]);
+export const DELETABLE_JOB_STATUSES = new Set(["uploading", "ready", ...TERMINAL_JOB_STATUSES]);
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number, public code?: string) { super(message); }
+}
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.detail?.message || payload?.detail || `Request failed (${response.status})`);
+  if (!response.ok) throw new ApiError(payload?.detail?.message || payload?.detail || `Request failed (${response.status})`, response.status, payload?.detail?.code);
   return payload;
 }
 

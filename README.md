@@ -9,6 +9,17 @@ trên máy chủ mạnh với Nginx/Redis/Celery/provider thật, ba PDF cố đ
 khởi động lại, tương thích hai phiên bản và diễn tập rollback. Cho đến khi gate
 này đạt, `src/ocr/` và `web/` vẫn là runtime rollback.
 
+Giao diện Next.js hiện tái tạo luồng vận hành legacy theo hướng desktop-first:
+upload PDF inline, dashboard có filter/lifecycle action, workspace kiểm tra từng
+document/page/field, Lưu và duyệt, visual crop theo tọa độ ảnh tự nhiên, report,
+legacy logs có điều kiện và System Monitor. Ảnh/checklist đã ẩn danh nằm trong
+`docs/ui-parity/`; đây là bằng chứng local, không thay thế Milestone C.
+
+Checkpoint local chi tiết nằm trong `legacy_browser_recreated.md`: 20 backend
+tests, 10 legacy compatibility tests và 10 browser tests mặc định đã pass;
+capture mode pass 11/11. Các con số này là contract/UI evidence local, không
+phải bằng chứng chất lượng OCR hoặc production readiness.
+
 ## Cấu trúc repository
 
 - `frontend/`: giao diện Next.js App Router và các kiểu API được sinh tự động.
@@ -35,6 +46,10 @@ này đạt, `src/ocr/` và `web/` vẫn là runtime rollback.
 - `data/jobs/` là nguồn dữ liệu bền vững duy nhất. Redis không có volume lưu trữ.
 - Trình duyệt chỉ gọi đường dẫn tương đối `/api/*`; cấu hình provider và secret
   không bao giờ được gửi xuống frontend.
+- `/api/system-metrics` chỉ trả CPU/RAM, dung lượng filesystem chứa
+  `OCR_DATA_DIR` và GPU mà backend nhìn thấy theo best-effort. Endpoint không trả
+  hostname, path, process, raw command output, secret hoặc provider config;
+  Compose mặc định không yêu cầu GPU.
 
 ## Yêu cầu môi trường
 
@@ -89,11 +104,12 @@ pnpm --dir frontend typecheck
 pnpm --dir frontend build
 pnpm --dir frontend e2e:smoke
 pnpm api:check
+python -m compileall -q src backend/app
 git diff --check
 ```
 
 Playwright kiểm tra workflow dùng mock, một luồng Next/FastAPI/eager-task thật
-với fake provider cục bộ, cùng hai viewport đã khóa là desktop `1440×900` và
+với fake provider cục bộ, desktop `1440×900`, laptop `1366×768` và safety smoke
 mobile `390×844`. Các kiểm tra này không chứng minh hành vi của
 Redis/Celery/provider trong production.
 

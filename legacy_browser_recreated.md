@@ -3,12 +3,14 @@
 ## 1. Trạng thái và phạm vi quyết định
 
 Tài liệu này là kế hoạch đã được chốt sau buổi phỏng vấn thiết kế ngày
-2026-07-21. Chưa có runtime code nào được thay đổi theo kế hoạch này.
+2026-07-21 và đã được triển khai, kiểm tra local cùng ngày. Milestone C vẫn chưa
+đạt vì chưa có evidence Nginx/Redis/Celery/provider thật trên strong server.
 
 Mục tiêu là tái tạo trải nghiệm browser legacy từ `web/` trong frontend Next.js
 ở `frontend/`, giữ nguyên API/lifecycle/filesystem/rollback contract của stack
-mới. Ngoại lệ backend duy nhất được duyệt là hoàn thiện telemetry thật cho
-`GET /api/system-metrics`; endpoint hiện chỉ là stub trả `null`.
+mới. Ngoại lệ backend duy nhất được duyệt là telemetry tối thiểu cho
+`GET /api/system-metrics`; endpoint hiện trả CPU/RAM/OCR disk và GPU best-effort
+qua schema typed, không lộ chi tiết host bị cấm.
 
 Persona chính là nhân viên nghiệp vụ xử lý hồ sơ đầu-cuối:
 
@@ -21,9 +23,9 @@ Persona chính là nhân viên nghiệp vụ xử lý hồ sơ đầu-cuối:
 Logs và System Monitor là công cụ hỗ trợ. Chúng không được lấn át luồng nghiệp
 vụ chính.
 
-Đây là công việc documentation/planning. Trước khi triển khai runtime, phải
-đồng bộ ngoại lệ telemetry và acceptance desktop-first vào
-`implementation_plan.md`. Không tự commit nếu người dùng chưa yêu cầu.
+Ngoại lệ telemetry và acceptance desktop-first đã được đồng bộ vào
+`implementation_plan.md` trước runtime changes. Không tự commit nếu người dùng
+chưa yêu cầu.
 
 ## 2. Nguồn chuẩn và thứ tự ưu tiên
 
@@ -98,8 +100,8 @@ Các quyết định UI phải phản ánh đúng implementation hiện tại:
 - Manual crop là evidence append-only; không có replace/delete API.
 - Backend mới không ghi logs; `StateResponse.logs` luôn rỗng. `JobResponse.logs`
   chỉ có thể có dữ liệu từ job legacy và chứa kiểu bất kỳ.
-- `/api/system-metrics` hiện trả `cpu_percent`, `memory_percent`, `gpu` đều
-  `null`; đây là stub, chưa phải telemetry thật.
+- `/api/system-metrics` hiện trả typed nullable CPU/RAM/disk và GPU status
+  `available | unavailable | error`; field `gpu` vẫn nullable để giữ tương thích.
 - Dashboard metrics được tính trên toàn bộ tập khớp filter, không phải toàn hệ
   thống và không chỉ page hiện tại.
 - Upload trùng final filename làm job chuyển `error`; một file lỗi cũng làm
@@ -386,6 +388,11 @@ route/review code thực sự không còn đọc được hoặc cần test đ�
 
 ## 10. Sáu phase triển khai
 
+**Trạng thái 2026-07-21:** Phase 0–5 đã implement. Mapping và ảnh sanitized nằm
+trong `docs/ui-parity/`; telemetry/types, shell/dashboard/upload, review/report,
+visual crop, conditional logs, System Monitor và các browser path đã có check
+local. Gate production vẫn thuộc Milestone C và `docs/phase4_acceptance.md`.
+
 ### Phase 0 — Baseline và contract mapping
 
 - Chạy legacy và Next.js với cùng fixture/mock.
@@ -475,6 +482,34 @@ python -m compileall -q src backend/app
 git diff --check
 ```
 
+### Bảng checkpoint hoàn thiện local — 2026-07-21
+
+Phạm vi của bảng này là source code và bằng chứng local cho kế hoạch tái tạo
+browser. `✅ 100%` nghĩa là implementation đã có, đường đi browser tương ứng đã
+được kiểm tra và các gate local liên quan đã pass; không đồng nghĩa với nghiệm
+thu production của Milestone C.
+
+| # | Checkpoint | Chi tiết đã khóa và kiểm tra | Evidence | Trạng thái |
+| ---: | --- | --- | --- | :---: |
+| 1 | Shell và điều hướng | Sidebar tối giản; chỉ giữ Jobs/New OCR; logo, Jobs, New OCR, browser Back và đổi document đều tôn trọng dirty guard | `legacy-shell.tsx`, job-detail Playwright | ✅ 100% |
+| 2 | Upload PDF | Drag/drop và file picker; chỉ PDF; duplicate, 15 file, 200 MiB; consent external; upload tuần tự; retry giữ nguyên selection; tên dài được rút gọn an toàn | dashboard Playwright | ✅ 100% |
+| 3 | Dashboard và URL state | Metric/row thật; correction count; created/updated time; filter/search/page trong URL; initial error khác stale refresh; bỏ selection không còn hợp lệ | dashboard Playwright | ✅ 100% |
+| 4 | Lifecycle actions | State matrix dùng chung; cancel/rerun/delete bằng dialog truy cập được; rerun xin lại consent; delete có preview, blocked list và kết quả thực tế; `uploading`/`ready` cũng xóa được | `api.ts`, dashboard/job-detail Playwright | ✅ 100% |
+| 5 | Job detail và polling | Default document đúng ưu tiên; counter/error không đếm đôi; poll chỉ khi active; terminal dừng poll; stale snapshot vẫn giữ nội dung gần nhất | job-detail Playwright | ✅ 100% |
+| 6 | Viewer và page navigation | Điều hướng page số; Fit/100%; fallback khi artifact lỗi; không nạp 100 thumbnail; URL artifact giữ contract hiện tại | review-workspace Playwright | ✅ 100% |
+| 7 | Field review và approval | Scalar field sửa được; unknown/non-scalar legacy vẫn hiển thị read-only; textarea tự giãn; đúng nhãn “Lưu và duyệt”; approval không correction; conflict giữ draft | review-workspace và real-flow Playwright | ✅ 100% |
+| 8 | Bảo vệ draft | Guard khi bấm link/logo, browser Back, New OCR hoặc đổi document; custom dialog có focus/keyboard; `beforeunload` vẫn bảo vệ đóng tab | job-detail Playwright | ✅ 100% |
+| 9 | Visual crop | Vẽ bằng pointer/keyboard; clamp bounds; kích thước tối thiểu; chuyển Fit → natural pixels; payload chính xác; evidence append-only và mới nhất trước | crop Playwright, `crop-modal.png` | ✅ 100% |
+| 10 | Report, logs và lỗi an toàn | Report inline dùng dữ liệu thật; legacy logs chỉ xuất hiện khi có dữ liệu, Copy/Download hoạt động; safe error code được dịch VI/EN, không hiển thị raw lỗi | review/dashboard Playwright | ✅ 100% |
+| 11 | System Monitor | CPU/RAM/disk/GPU nullable; GPU không đọc được hiển thị unavailable thay vì `0%`; không lộ host/path/raw output; dừng poll khi hidden, đóng hoặc unmount | backend telemetry tests, monitor Playwright | ✅ 100% |
+| 12 | VI/EN, accessibility và responsive | Đổi ngôn ngữ tức thời, giữ `intellidoc.language`; dialog/keyboard labels; anchors `1440×900`, `1366×768`; `390×844` không overflow và modal đóng được | 4 ảnh trong `docs/ui-parity/`, browser smoke | ✅ 100% |
+| 13 | Contract và rollback | API browser vẫn relative `/api/*`; public types generated; không thêm dependency/UI kit; `src/ocr/`, `web/`, data layout và artifact URLs không bị thay đổi | API drift check, legacy compatibility tests | ✅ 100% |
+| 14 | Gate tự động local | 20 backend tests, 10 legacy compatibility tests, 10 browser tests mặc định; capture mode 11/11; typecheck, build, API drift, compileall và diff check pass | các lệnh required local checks | ✅ 100% |
+
+**Ngoài phạm vi checkpoint local:** Milestone C vẫn `⬜ CHƯA ĐẠT`; cần evidence
+Nginx/Redis/Celery/provider thật, ba PDF cố định, restart, cross-version và rollback
+trong `docs/phase4_acceptance.md` trước khi tuyên bố production-ready.
+
 ## 12. Acceptance checklist
 
 ### Desktop/responsive
@@ -536,6 +571,6 @@ git diff --check
 - telemetry typed, safe, portable và không cần GPU cho local checks;
 - VI/EN, accessibility và responsive anchors pass;
 - generated API types không drift và required checks pass;
-- ba baseline screenshots/checklist được lưu;
+- bốn baseline/completed-state screenshots và checklist được lưu;
 - `web/` vẫn rollback-ready;
 - production readiness chỉ được công nhận sau Milestone C evidence.

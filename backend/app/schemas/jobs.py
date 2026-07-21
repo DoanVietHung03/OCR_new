@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -182,7 +182,29 @@ class DeleteResponse(BaseModel):
     failed: list[str]
 
 
+class DiskMetricsResponse(BaseModel):
+    used_bytes: int
+    total_bytes: int
+    free_bytes: int
+    percent: float
+
+
+class GPUDeviceResponse(BaseModel):
+    index: int
+    name: str
+    utilization_percent: float | None
+    memory_used_mb: float | None
+    memory_total_mb: float | None
+    temperature_c: float | None
+
+
+class GPUMetricsResponse(BaseModel):
+    status: Literal["available", "unavailable", "error"]
+    devices: list[GPUDeviceResponse] = Field(default_factory=list)
+
+
 class SystemMetricsResponse(BaseModel):
     cpu_percent: float | None
     memory_percent: float | None
-    gpu: Any | None
+    disk: DiskMetricsResponse | None
+    gpu: GPUMetricsResponse | None

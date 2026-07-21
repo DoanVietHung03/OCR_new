@@ -2,71 +2,111 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { cancelJob, crop, Document, getJob, Job, rerunJob, saveCorrections } from "../../../lib/api";
-import { initializeLanguage, statusText, text } from "../../../lib/i18n";
+import { MouseEvent, useEffect, useRef, useState } from "react";
+import { ACTIVE_JOB_STATUSES, ApiError, bulkDelete, cancelJob, DELETABLE_JOB_STATUSES, deletePreview, Document, getJob, Job, rerunJob, TERMINAL_JOB_STATUSES } from "../../../lib/api";
+import { language, safeError, statusText, text, useLanguage } from "../../../lib/i18n";
+import LegacyShell from "../../legacy-shell";
+import ReviewWorkspace from "./review-workspace";
 import "./review.css";
 
-const activeStatuses = new Set(["starting", "queued", "running", "cancelling"]);
-const terminalStatuses = new Set(["completed", "completed_with_warnings", "error", "cancelled", "interrupted"]);
+type PendingNavigation = { href: string } | { documentId: string } | null;
+type LifecycleAction = "cancel" | "rerun" | "delete" | null;
+const message = (reason: unknown) => safeError(reason instanceof ApiError ? reason.code || reason.message : reason instanceof Error ? reason.message : String(reason));
 
 export default function JobPage({ params }: { params: Promise<{ jobId: string }> }) {
+  useLanguage();
   const router = useRouter();
-  const [, setLocale] = useState("vi");
   const [id, setId] = useState(""); const [job, setJob] = useState<Job | null>(null); const [error, setError] = useState("");
-  const [documentId, setDocumentId] = useState(""); const [values, setValues] = useState<Record<string, string>>({});
-  const [cropUrl, setCropUrl] = useState(""); const [field, setField] = useState(""); const [pageIndex, setPageIndex] = useState(0);
-  const [rect, setRect] = useState({ x: 0, y: 0, width: 100, height: 100 });
-
-  useEffect(() => { setLocale(initializeLanguage()); }, []);
+  const [documentId, setDocumentId] = useState(""); const [dirty, setDirty] = useState(false); const [busy, setBusy] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation>(null); const [action, setAction] = useState<LifecycleAction>(null);
+  const [actionConsent, setActionConsent] = useState(false); const [deleteAllowed, setDeleteAllowed] = useState(false); const [deleteBlocked, setDeleteBlocked] = useState<{ id: string; name?: string | null }[]>([]);
+  const discardDialog = useRef<HTMLDialogElement>(null); const actionDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { params.then(({ jobId }) => setId(jobId)); }, [params]);
   useEffect(() => {
     if (!id) return;
-    const load = () => getJob(id).then(setJob).catch((reason) => setError(reason.message));
-    load(); const timer = setInterval(load, 2_000); return () => clearInterval(timer);
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const load = () => getJob(id).then((next) => {
+      setJob(next); setError("");
+      if (ACTIVE_JOB_STATUSES.has(next.status) && !timer) timer = setInterval(load, 2_000);
+      if (!ACTIVE_JOB_STATUSES.has(next.status) && timer) { clearInterval(timer); timer = undefined; }
+    }).catch((reason) => setError(message(reason)));
+    load(); return () => clearInterval(timer);
   }, [id]);
+  useEffect(() => {
+    if (!job?.documents?.length || job.documents.some((item) => item.id === documentId)) return;
+    const preferred = job.documents.find((item) => item.error || item.errors?.length) || job.documents.find((item) => item.review_status !== "approved") || job.documents[0];
+    setDocumentId(preferred.id);
+  }, [job, documentId]);
+  useEffect(() => {
+    if (!dirty) return;
+    const current = location.href;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    const back = () => { const target = location.href; history.pushState(null, "", current); setPendingNavigation({ href: target }); };
+    window.addEventListener("beforeunload", warn); window.addEventListener("popstate", back);
+    return () => { window.removeEventListener("beforeunload", warn); window.removeEventListener("popstate", back); };
+  }, [dirty]);
+  useEffect(() => { if (pendingNavigation) discardDialog.current?.showModal(); else discardDialog.current?.close(); }, [pendingNavigation]);
+  useEffect(() => { if (action) actionDialog.current?.showModal(); else actionDialog.current?.close(); }, [action]);
 
-  if (!job) return <main className="shell"><Link className="button secondary" href="/">← {text("back")}</Link><p className="empty">{error || text("loading")}</p></main>;
-  const currentJob = job;
-  const documents = job.documents || [];
-  const document = (documents.find((item) => item.id === documentId) || documents[0] || null) as Document | null;
-  const fields = Object.entries(document?.fields || {}); const pages = document?.pages || [];
-  const active = activeStatuses.has(job.status); const terminal = terminalStatuses.has(job.status);
-
-  const selectDocument = (selected: string) => { setDocumentId(selected); setValues({}); setField(""); setPageIndex(0); setCropUrl(""); };
-  async function save() {
-    if (!document) return;
+  function guardedLink(event: MouseEvent<HTMLAnchorElement>) { if (dirty) { event.preventDefault(); setPendingNavigation({ href: event.currentTarget.href }); } }
+  function goNew() { if (dirty) setPendingNavigation({ href: `${location.origin}/?upload=1` }); else router.push("/?upload=1"); }
+  function selectDocument(next: string) { if (next === documentId) return; if (dirty) setPendingNavigation({ documentId: next }); else setDocumentId(next); }
+  function confirmDiscard() {
+    const next = pendingNavigation; setPendingNavigation(null);
+    if (!next) return;
+    setDirty(false);
+    if ("documentId" in next) setDocumentId(next.documentId);
+    else { const target = new URL(next.href, location.href); router.push(`${target.pathname}${target.search}${target.hash}`); }
+  }
+  async function requestDelete() {
+    setBusy(true); setError("");
     try {
-      const corrections = Object.entries(values).map(([name, value]) => ({ field: name, old_value: document.fields?.[name]?.value ?? "", new_value: value }));
-      if (!corrections.length) return;
-      setJob((await saveCorrections(id, document.id, corrections)).job); setValues({});
-    } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+      const preview = await deletePreview([id]); setDeleteAllowed(preview.deletable.some((item) => item.id === id)); setDeleteBlocked(preview.skipped); setAction("delete");
+    } catch (reason) { setError(message(reason)); } finally { setBusy(false); }
   }
-  async function approve() {
-    if (!document) return;
-    try { setJob((await saveCorrections(id, document.id, [])).job); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+  async function confirmAction() {
+    if (!action || !job) return;
+    setBusy(true); setError("");
+    try {
+      if (action === "cancel") setJob(await cancelJob(id));
+      if (action === "rerun") { const next = await rerunJob(id, Boolean(job.endpoint_external && actionConsent)); router.push(`/jobs/${next.id}`); return; }
+      if (action === "delete" && deleteAllowed) {
+        const result = await bulkDelete([id]);
+        if (result.deleted.includes(id)) { router.push("/"); return; }
+        setError(text("deleteIncomplete", { count: result.skipped.length + result.failed.length || 1 }));
+      }
+      setAction(null); setActionConsent(false);
+    } catch (reason) { setAction(null); setError(message(reason)); } finally { setBusy(false); }
   }
-  async function makeCrop() {
-    if (!document || !field || !pages[pageIndex]) return;
-    try { setCropUrl((await crop(id, document.id, pages[pageIndex].page_index, field, rect)).crop_image); setJob(await getJob(id)); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
-  }
-  async function rerun() {
-    if (currentJob.endpoint_external && !confirm(text("consentConfirm"))) return;
-    try { router.push(`/jobs/${(await rerunJob(id, Boolean(currentJob.endpoint_external))).id}`); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
-  }
+  const logs = job?.logs || [];
+  const logText = logs.map((item) => typeof item === "string" ? item : JSON.stringify(item, null, 2)).join("\n");
+  function downloadLogs() { const url = URL.createObjectURL(new Blob([logText], { type: "text/plain;charset=utf-8" })); const link = window.document.createElement("a"); link.href = url; link.download = `${id}-logs.txt`; link.click(); URL.revokeObjectURL(url); }
 
-  return <main className="shell">
-    <Link className="button secondary" href="/">← {text("back")}</Link>
-    <header className="topbar job-title"><div><p className="eyebrow">{job.id}</p><h1>{job.upload_name || text("job")}</h1><p className="subtitle">{text("jobSummary", { pages: job.page_count, corrections: job.correction_count })}</p></div><span className={`status ${job.status}`}>{statusText(job.status)}</span></header>
-    <section className="panel engine-panel"><p>{active ? text("activeHint") : text("terminalHint")}</p><div className="actions">{active && <button className="button danger" onClick={() => cancelJob(id).then(setJob).catch((reason) => setError(reason.message))}>{text("cancel")}</button>}{terminal && <button className="button secondary" onClick={rerun}>{text("rerun")}</button>}{job.report_url && <a className="button link-button" href={job.report_url}>{text("report")}</a>}</div></section>
-    {(error || job.error) && <p className="error" role="alert">{error || job.error}</p>}
-    {documents.length > 1 && <nav className="document-tabs" aria-label={text("documents")}>{documents.map((item) => <button className={`button ${item.id === document?.id ? "primary" : "secondary"}`} key={item.id} onClick={() => selectDocument(item.id)}>{item.file_name}</button>)}</nav>}
-    {document ? <section className="review-grid">
-      <div className="panel review-panel"><h2>{document.file_name}</h2><p className="subtitle">{statusText(document.status)}</p>{(document.error || document.errors?.length) && <p className="error" role="alert">{document.error || document.errors?.join(", ")}</p>}{pages.map((page) => <img className="page-preview" key={page.page_index} src={page.image_url} alt={text("page", { page: page.page_index + 1, pages: pages.length })} />)}</div>
-      <div className="panel editor-panel"><h2>{text("fields")}</h2>{fields.map(([name, data]) => <label className="field" key={name}><span>{name} <small>{text("confidence", { value: Math.round(Number(data.confidence || 0) * 100) })}</small></span><input disabled={!terminal} value={values[name] ?? String(data.value ?? "")} onChange={(event) => setValues({ ...values, [name]: event.target.value })} /></label>)}{terminal && <div className="actions"><button className="button primary" disabled={!Object.keys(values).length} onClick={save}>{text("save")}</button><button className="button secondary" onClick={approve}>{document.review_status === "approved" ? text("approved") : text("approve")}</button></div>}<hr />
-        <h2>{text("cropEvidence")}</h2><label className="field">{text("cropField")}<select aria-label={text("cropField")} value={field} onChange={(event) => setField(event.target.value)}><option value="">{text("chooseField")}</option>{fields.map(([name]) => <option value={name} key={name}>{name}</option>)}</select></label>{pages.length > 1 && <label className="field">{text("cropPage")}<select value={pageIndex} onChange={(event) => setPageIndex(Number(event.target.value))}>{pages.map((page, index) => <option value={index} key={page.page_index}>{page.page_index + 1}</option>)}</select></label>}<div className="crop-inputs">{(["x", "y", "width", "height"] as const).map((key) => <label key={key}>{key}<input type="number" min="0" value={rect[key]} onChange={(event) => setRect({ ...rect, [key]: Number(event.target.value) })} /></label>)}</div><button className="button secondary" disabled={!terminal || !field} onClick={makeCrop}>{text("createCrop")}</button>{cropUrl && <a className="button link-button" href={cropUrl} target="_blank" rel="noreferrer">{text("viewCrop")}</a>}{!!document.crop_evidence?.length && <div className="evidence-list"><b>{text("savedEvidence")}</b>{document.crop_evidence.map((evidence) => <a key={evidence.crop_image} href={evidence.crop_image} target="_blank" rel="noreferrer">{evidence.field} · {evidence.page_index + 1}</a>)}</div>}
-      </div>
-    </section> : <section className="panel empty">{text("noResult")}</section>}
-  </main>;
+  if (!job) return <LegacyShell detail onNew={() => router.push("/?upload=1")}><Link className="button secondary" href="/">← {text("back")}</Link><p className="empty">{error || text("loading")}</p></LegacyShell>;
+  const documents = job.documents || []; const document = (documents.find((item) => item.id === documentId) || documents[0] || null) as Document | null;
+  const active = ACTIVE_JOB_STATUSES.has(job.status), terminal = TERMINAL_JOB_STATUSES.has(job.status);
+  const failures = job.failed_pages + documents.filter((item) => item.error).length;
+
+  return <LegacyShell detail onNew={goNew} onJobs={guardedLink}>
+    <Link className="back-link" href="/" onClick={guardedLink}>← {text("back")}</Link>
+    <header className="job-header"><div><p className="eyebrow">{job.id}</p><h1>{job.upload_name || text("job")}</h1><p>{text("jobSummary", { pages: job.page_count, corrections: job.correction_count })}</p></div><span className={`status ${job.status}`}>{statusText(job.status)}</span></header>
+    <section className="job-facts panel"><div><span>{text("provider")}</span><b>{job.provider || job.ocr_method || "—"}</b><small>{job.model || "—"} · prompt {job.prompt_version || "—"}</small></div><div><span>{text("documents")}</span><b>{documents.length}</b><small>{job.uploaded_files}/{job.expected_files} PDF</small></div><div><span>{text("pages")}</span><b>{job.page_count}</b><small>{job.failed_pages} failed</small></div><div><span>{text("updated")}</span><b>{new Date(job.updated_at).toLocaleDateString(language())}</b><small>{new Date(job.updated_at).toLocaleTimeString(language())}</small></div><div className="job-actions">{active && <button className="button danger" disabled={busy || job.status === "cancelling"} onClick={() => setAction("cancel")}>{text("cancel")}</button>}{terminal && <button className="button secondary" disabled={busy} onClick={() => setAction("rerun")}>{text("rerun")}</button>}{DELETABLE_JOB_STATUSES.has(job.status) && <button className="button danger ghost" disabled={busy} onClick={requestDelete}>{text("delete")}</button>}</div></section>
+    <p className="lifecycle-note">{active ? text("activeHint") : terminal ? text("terminalHint") : statusText(job.status)}</p>
+    {(error || job.error) && <p className="notice error" role="alert">{error || safeError(job.error!)}</p>}
+    {!!documents.length && <nav className="document-tabs" aria-label={text("documents")}>{documents.map((item, index) => <button className={item.id === document?.id ? "active" : ""} aria-current={item.id === document?.id ? "page" : undefined} key={item.id} onClick={() => selectDocument(item.id)}><span>{index + 1}</span><b>{item.file_name}</b><small>{item.error || item.errors?.length ? statusText("error") : item.review_status === "approved" ? text("approved") : statusText(item.status)}</small></button>)}</nav>}
+    {document ? <ReviewWorkspace key={document.id} jobId={id} document={document} terminal={terminal} onJob={setJob} onDirty={setDirty} onError={setError} /> : <section className="panel empty">{text("noResult")}</section>}
+    <section className="panel report-section"><div className="section-head"><div><p className="eyebrow">{text("report")}</p><h2>{text("reportSummary", { documents: documents.length, pages: job.page_count, corrections: job.correction_count, failures })}</h2></div>{job.report_url && <a className="button secondary" href={job.report_url} target="_blank" rel="noreferrer">{text("openArtifact")}</a>}</div><div className="report-documents">{documents.map((item) => <div key={item.id}><b>{item.file_name}</b><span>{statusText(item.status)}</span><small>{item.pages?.length || 0} {text("pages").toLocaleLowerCase(language())} · {item.review_status === "approved" ? text("approved") : "—"}</small></div>)}</div></section>
+    {!!logs.length && <details className="panel logs-section"><summary>{text("logs")} ({logs.length})</summary><div className="actions"><button className="button secondary" onClick={() => navigator.clipboard.writeText(logText)}>{text("copy")}</button><button className="button secondary" onClick={downloadLogs}>{text("download")}</button></div><pre>{logText}</pre></details>}
+    <dialog ref={discardDialog} className="modal" onClose={() => setPendingNavigation(null)}>
+      <div className="modal-head"><h2>{text("discardTitle")}</h2><button className="icon-button" aria-label={text("close")} onClick={() => setPendingNavigation(null)}>×</button></div>
+      <p>{text("discardDraft")}</p><footer className="modal-actions"><button className="button secondary" onClick={() => setPendingNavigation(null)}>{text("close")}</button><button className="button danger" onClick={confirmDiscard}>{text("confirm")}</button></footer>
+    </dialog>
+    <dialog ref={actionDialog} className="modal" onClose={() => { setAction(null); setActionConsent(false); }}>
+      {action && <><div className="modal-head"><h2>{text(action === "delete" ? "deleteTitle" : action === "cancel" ? "cancelTitle" : "rerunTitle")}</h2><button className="icon-button" aria-label={text("close")} onClick={() => setAction(null)}>×</button></div>
+        <p>{text(action === "delete" ? "deleteSummary" : action === "cancel" ? "cancelBody" : "rerunBody", action === "delete" ? { count: deleteAllowed ? 1 : 0 } : {})}</p>
+        {dirty && <p className="notice warning">{text("discardDraft")}</p>}{!!deleteBlocked.length && <><b>{text("blocked")}</b><ul>{deleteBlocked.map((item) => <li key={item.id}>{item.name || item.id}</li>)}</ul></>}
+        {action === "rerun" && job.endpoint_external && <label className="consent"><input type="checkbox" checked={actionConsent} onChange={(event) => setActionConsent(event.target.checked)} />{text("consent")}</label>}
+        <footer className="modal-actions"><button className="button secondary" onClick={() => setAction(null)}>{text("close")}</button><button className={action === "delete" || action === "cancel" ? "button danger" : "button primary"} disabled={busy || (action === "delete" && !deleteAllowed) || (action === "rerun" && job.endpoint_external && !actionConsent)} onClick={confirmAction}>{text(action === "delete" ? "confirmDelete" : "confirm")}</button></footer></>}
+    </dialog>
+  </LegacyShell>;
 }

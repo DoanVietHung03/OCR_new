@@ -133,15 +133,50 @@ def test_crop_evidence_persists_and_rerun_is_clean(tmp_path, monkeypatch, pdf_by
     assert store.read(source["id"])["status"] == "completed"
 
 
-def test_error_envelope_and_openapi():
+def test_error_envelope_and_openapi(monkeypatch):
+    monkeypatch.setattr("app.api.routes.read_system_metrics", lambda _: {
+        "cpu_percent": 12.5,
+        "memory_percent": 34.5,
+        "disk": {"used_bytes": 1, "total_bytes": 4, "free_bytes": 3, "percent": 25},
+        "gpu": {"status": "unavailable", "devices": []},
+    })
     assert client.get("/api/jobs/not-a-uuid").json()["detail"] == {
         "code": "not_found",
         "message": "not_found",
     }
     job_schema = client.get("/openapi.json").json()["components"]["schemas"]["JobResponse"]
     assert {"documents", "provider", "endpoint_external", "correction_count"} <= set(job_schema["properties"])
-    assert client.get("/api/system-metrics").json() == {
+    metrics = client.get("/api/system-metrics").json()
+    assert metrics["disk"]["total_bytes"] == 4
+    assert metrics["gpu"] == {"status": "unavailable", "devices": []}
+
+
+def test_gpu_metrics_is_safe_for_available_unavailable_and_error(monkeypatch):
+    import app.services.system_metrics as metrics
+
+    monkeypatch.setattr(metrics.shutil, "which", lambda _: None)
+    assert metrics.gpu_metrics() == {"status": "unavailable", "devices": []}
+
+    monkeypatch.setattr(metrics.shutil, "which", lambda _: "nvidia-smi")
+    monkeypatch.setattr(metrics.subprocess, "run", lambda *_args, **_kwargs: type("Result", (), {
+        "stdout": "0, Test GPU, 12, 1024, 8192, 45\n",
+    })())
+    assert metrics.gpu_metrics()["devices"][0]["name"] == "Test GPU"
+
+    monkeypatch.setattr(metrics.subprocess, "run", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError()))
+    assert metrics.gpu_metrics() == {"status": "error", "devices": []}
+
+
+def test_system_metrics_returns_nullable_values_when_host_reads_fail(monkeypatch, tmp_path):
+    import app.services.system_metrics as metrics
+
+    monkeypatch.setattr(metrics.psutil, "cpu_percent", lambda: (_ for _ in ()).throw(OSError()))
+    monkeypatch.setattr(metrics.shutil, "disk_usage", lambda _path: (_ for _ in ()).throw(OSError()))
+    monkeypatch.setattr(metrics, "gpu_metrics", lambda: {"status": "unavailable", "devices": []})
+
+    assert metrics.system_metrics(str(tmp_path)) == {
         "cpu_percent": None,
         "memory_percent": None,
-        "gpu": None,
+        "disk": None,
+        "gpu": {"status": "unavailable", "devices": []},
     }
