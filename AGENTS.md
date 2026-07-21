@@ -21,7 +21,9 @@ C or prove production/provider behavior.
 
 The 2026-07-21 closure audit passes 20 backend tests, 10 legacy compatibility
 tests, and 10 default browser tests; capture mode passes 11/11. The detailed
-100% local checkpoint table is in `legacy_browser_recreated.md`.
+checkpoint table in `legacy_browser_recreated.md` is 14/14 complete. There is
+no unfinished local implementation in that plan; the remaining work is
+Milestone C strong-server acceptance only.
 
 ## Repository map
 
@@ -33,7 +35,8 @@ tests, and 10 default browser tests; capture mode passes 11/11. The detailed
 - `data/jobs/`: durable offline state; Redis is disposable.
 - `src/ocr/`, `web/`, `tests/`: legacy rollback runtime.
 - `implementation_plan.md`: locked decisions and remaining gate.
-- `legacy_browser_recreated.md`: approved UI/telemetry follow-up plan and gates.
+- `legacy_browser_recreated.md`: completed UI/telemetry spec and 14 local checkpoints.
+- `docs/ui-parity/`: four sanitized captures and local browser evidence notes.
 - `docs/phase4_cutover_runbook.md`: strong-server commands.
 - `docs/phase4_acceptance.md`: sole Milestone C evidence record.
 
@@ -99,9 +102,9 @@ tests, and 10 default browser tests; capture mode passes 11/11. The detailed
 
 ## Working procedure
 
-1. Read `implementation_plan.md` before migration work. For legacy-browser
-   recreation, also read `legacy_browser_recreated.md` and align the known host
-   telemetry/mobile-acceptance wording in the main plan before runtime edits.
+1. Read `implementation_plan.md` before migration or cutover work. For changes
+   to the recreated browser flow, also read `legacy_browser_recreated.md` and
+   preserve its completed checkpoints and Milestone C boundary.
 2. Before editing code, use the CodeGraph MCP against `C:\HProjecT\OCR` to
    inspect the target symbols, callers, routes, and blast radius. Do not infer
    flow from filenames or query `.codegraph/codegraph.db` directly.
@@ -126,8 +129,9 @@ tests, and 10 default browser tests; capture mode passes 11/11. The detailed
 6. Add conditional legacy logs, the real System Monitor, desktop/accessibility
    parity, and aligned documentation.
 
-Each phase must leave relevant checks passing. This plan does not authorize
-automatic commits or deleting the legacy runtime.
+All six phases left their relevant checks passing. Future changes must preserve
+those checks. This plan does not authorize automatic commits or deleting the
+legacy runtime.
 
 ## Required local checks
 
