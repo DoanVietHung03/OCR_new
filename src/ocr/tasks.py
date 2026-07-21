@@ -10,8 +10,8 @@ from .runner import is_terminal_page_error, request_page
 
 celery_app = Celery(
     "ocr",
-    broker=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
-    backend=os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/1"),
+    broker=os.getenv("CELERY_BROKER_URL", "redis://localhost:6380/0"),
+    backend=os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6380/1"),
 )
 
 

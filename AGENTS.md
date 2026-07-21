@@ -67,7 +67,7 @@ rollback runtime until the one-day rollback window closes.
 - Direct backend: `50177`.
 - Direct frontend: `54846`.
 - Compose: only Nginx publishes `52409`; backend/frontend/Redis stay internal
-  on `50177`/`54846`/`6379`.
+  on `50177`/`54846`/`6380`.
 - Do not add `BACKEND_PORT`; it does not configure the listener.
 - Browser API calls remain relative `/api/*`; TLS terminates outside Compose.
 

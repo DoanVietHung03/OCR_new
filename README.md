@@ -135,7 +135,7 @@ ngày kết thúc.
 - FastAPI chạy trực tiếp: `50177`.
 - Next.js chạy trực tiếp: `54846`.
 - Điểm truy cập Compose: `52409`.
-- Redis nội bộ trong Compose: `6379`.
+- Redis nội bộ trong Compose: `6380`.
 
 `OCR_ENDPOINT_EXTERNAL` mặc định là `true`; mỗi job phải ghi nhận sự đồng ý
 trước khi gửi ảnh trang đến endpoint bên ngoài. `BACKEND_PORT` cố ý không được
