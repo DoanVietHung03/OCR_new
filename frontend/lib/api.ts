@@ -6,7 +6,7 @@ export type Job = {
 export type Document = { id: string; file_name: string; status: string; fields?: Record<string, Field>; pages?: Page[]; [key: string]: unknown };
 export type Field = { value?: string; confidence?: number; bbox?: number[]; page_index?: number; [key: string]: unknown };
 export type Page = { page_index: number; image_url: string; [key: string]: unknown };
-export type State = { jobs: Job[]; metrics: Record<string, number>; ocr_methods: { id: string; label: string; status: string }[]; pagination: { total: number } };
+export type State = { jobs: Job[]; metrics: Record<string, number>; ocr_methods: { id: string; label: string; status: string }[]; pagination: { page: number; pages: number; total: number } };
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -14,7 +14,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   if (!response.ok) throw new Error(payload?.detail?.message || payload?.detail || `Request failed (${response.status})`);
   return payload;
 }
-export const getState = (query = "") => request<State>(`/api/state?query=${encodeURIComponent(query)}`);
+export const getState = (filters: { query?: string; status?: string; method?: string; page?: number } = {}) => request<State>(`/api/state?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);
 export const getJob = (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}`);
 export const createJob = (fileCount: number, uploadName: string) => request<Job>("/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file_count: fileCount, upload_name: uploadName, ocr_method: "qwen" }) });
 export const uploadFile = (id: string, file: File) => request<{ job: Job }>(`/api/jobs/${encodeURIComponent(id)}/files?path=${encodeURIComponent(file.name)}`, { method: "PUT", body: file });

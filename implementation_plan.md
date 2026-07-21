@@ -13,7 +13,7 @@
 * [x] **Phase 0 — Technical Research & Documentation Audit (Python 3.12 focus)**.
 * [x] Phase 1 — Scaffold workspace và kiểm tra các lệnh dev/build rỗng.
 * [x] Phase 2 — Port backend async/Pydantic v2, giữ nguyên API contract.
-* [x] Phase 3 — Port UI sang Next.js App Router.
+* [ ] Phase 3 — Port UI sang Next.js App Router (core UI ported; fake-browser verification must pass again after the parity repair).
 * [ ] Phase 4 — Integration, cutover, và loại bỏ legacy sau rollback window.
 
 ---
@@ -186,7 +186,7 @@ Pydantic v2 schemas in `backend/app/schemas/` are canonical. FastAPI exposes Ope
 
 ## Validation matrix
 
-Implementation status: Phase 2 and Phase 3 complete; Phase 4 local gates complete, strong-server Docker/provider acceptance pending.
+Implementation status: Phase 2 complete. Phase 3 core UI has been repaired with dashboard filters/actions, job review, corrections, and coordinate crop; repeat the fake-browser smoke on a host with a working Playwright runner before treating it as accepted. Phase 4 strong-server Docker/Redis/Celery/provider and restart/persistence acceptance remains pending.
 
 | Milestone | Required check |
 | --- | --- |

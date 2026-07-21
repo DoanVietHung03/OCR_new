@@ -42,6 +42,13 @@ docker-compose.yml
 Use Node 22/pnpm for `frontend` and Python 3.12/`uv --project backend` for
 Python. A Python workspace is unnecessary while there is one backend package.
 
+## Development ports
+
+- Direct backend development: `50177` (`uv run --project backend uvicorn app.main:app --host 0.0.0.0 --port 50177 --reload`).
+- Direct frontend development: `54846` (`pnpm --dir frontend dev -- --hostname 0.0.0.0 --port 54846`).
+- Compose entry point: Nginx on host port `52409`; internal backend/frontend ports remain `50177`/`54846`.
+- `BACKEND_PORT` must not be added as dotenv configuration: it does not affect the internal backend listener. Redis stays internal as `redis:6379`.
+
 ## Locked rollout decisions
 
 - Production Compose runs Nginx, frontend, backend, worker, and Redis under
@@ -71,3 +78,4 @@ Python. A Python workspace is unnecessary while there is one backend package.
 4. Do not delete legacy `src/`/`web/` until an explicit post-cutover cleanup.
 5. Update this file, `README.md`, and the plan when architecture or commands
    materially change.
+6. Phase 3 is only complete after the React UI covers upload, polling, filtering, job actions, review, correction, crop, and deletion against the fake backend; Phase 4 additionally requires strong-server Docker, Redis/Celery/provider, restart/persistence, and rollback evidence.
