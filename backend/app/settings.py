@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     ocr_api_key: str = ""
     ocr_model: str = ""
     ocr_timeout_seconds: float = 120
-    celery_broker_url: str = "redis://localhost:6379/0"
-    celery_result_backend: str = "redis://localhost:6379/1"
+    celery_broker_url: str = "redis://localhost:6380/0"
+    celery_result_backend: str = "redis://localhost:6380/1"
 
 
 settings = Settings()

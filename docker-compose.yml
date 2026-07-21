@@ -18,7 +18,7 @@ services:
       retries: 10
   backend:
     build: ./backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 50177
     env_file: .env
     environment:
       OCR_DATA_DIR: /data/jobs
@@ -30,7 +30,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:50177/health')"]
       interval: 10s
       timeout: 5s
       retries: 10

@@ -291,7 +291,7 @@ packages:
   brace-expansion@2.1.2:
     resolution: {integrity: sha512-w5JZcKgdhDOgOwm8H+KgbosopHMuGcl6qbulwjtz3SM7I7P3yW1eAjzMPLrIE+NQ9vjgANKHWeMHnrT0OXW1oA==}
 
-  caniuse-lite@1.0.548461806:
+  caniuse-lite@1.0.30001806:
     resolution: {integrity: sha512-72Cuvd95zbSYPKq6Fhg8eDJRlzgWDf7/mtoZv6Qe/DYNCEBdNxoA3+rZAU2ZhGCpZlns3EssFavaZomckT5Uuw==}
 
   change-case@5.4.4:
@@ -679,7 +679,7 @@ snapshots:
     dependencies:
       balanced-match: 1.0.2
 
-  caniuse-lite@1.0.548461806: {}
+  caniuse-lite@1.0.30001806: {}
 
   change-case@5.4.4: {}
 
@@ -735,7 +735,7 @@ snapshots:
       '@next/env': 16.2.10
       '@swc/helpers': 0.5.15
       baseline-browser-mapping: 2.10.43
-      caniuse-lite: 1.0.548461806
+      caniuse-lite: 1.0.30001806
       postcss: 8.4.31
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
