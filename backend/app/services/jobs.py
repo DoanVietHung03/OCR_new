@@ -134,6 +134,7 @@ class JobStore:
             "created_at": stamp,
             "updated_at": stamp,
             "ocr_method": options.get("provider", options.get("ocr_method", "qwen")),
+            "provider_profile_id": options.get("provider_profile_id", options.get("provider", "qwen")),
             "provider": options.get("provider", options.get("ocr_method", "qwen")),
             "model": options.get("model", ""),
             "prompt_version": str(options.get("prompt_version", "3")),
@@ -191,7 +192,8 @@ class JobStore:
         with self.locked(job_id):
             job = self.read(job_id)
             if job.get("status") in ACTIVE:
-                job.update(status="interrupted", error="worker_interrupted", updated_at=now())
+                stamp = now()
+                job.update(status="interrupted", error="worker_interrupted", updated_at=stamp, completed_at=stamp)
                 self.write(job_id, job)
             return job
 
@@ -202,7 +204,8 @@ class JobStore:
                 return job
             self.path(job_id).joinpath("cancel").touch()
             if job.get("status") in {"uploading", "ready"}:
-                job.update(status="cancelled", updated_at=now())
+                stamp = now()
+                job.update(status="cancelled", updated_at=stamp, completed_at=stamp)
                 return self.write(job_id, job)
             return {**job, "status": "cancelling"}
 

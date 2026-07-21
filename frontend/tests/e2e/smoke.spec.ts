@@ -10,12 +10,12 @@ const now = "2026-07-21T10:00:00Z";
 const cleanCapture = async (page: Page) => page.locator("nextjs-portal").evaluateAll((nodes) => nodes.forEach((node) => node.remove())).catch(() => {});
 
 function fixtureJob(status = "completed", document: Record<string, unknown> = fixtureDocument()) {
-  return { id, status, created_at: now, updated_at: now, ocr_method: "qwen", provider: "qwen", model: "test-model", prompt_version: "3", endpoint_external: false, cloud_data_confirmed: false, expected_files: 1, uploaded_files: 1, upload_name: "smoke.pdf", documents: [document], logs: ["sanitized legacy log"], page_count: 1, failed_pages: 0, correction_count: 0, vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0, report_url: `/api/jobs/${id}/artifacts/report.json` };
+  return { id, status, created_at: now, updated_at: now, started_at: now, completed_at: now, ocr_method: "qwen", provider: "qwen", provider_profile_id: "qwen", model: "test-model", prompt_version: "3", endpoint_external: false, cloud_data_confirmed: false, expected_files: 1, uploaded_files: 1, upload_name: "smoke.pdf", documents: [document], logs: ["sanitized legacy log"], page_count: 1, failed_pages: 0, correction_count: 0, vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0, report_url: `/api/jobs/${id}/artifacts/report.json` };
 }
 function fixtureDocument() {
   return { id: "smoke", file_name: "smoke.pdf", status: "completed", review_status: null as string | null, fields: { so_van_ban: { value: "OLD", ocr_value: "OLD", confidence: .91, bbox: [0, 0, 10, 10], page_index: 0 } }, pages: [{ page_index: 0, image_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }], crop_evidence: [] as Record<string, unknown>[] };
 }
-const state = (jobs: ReturnType<typeof fixtureJob>[], external = false) => ({ server_mode: true, jobs, documents: [], logs: [], metrics: { total_jobs: jobs.length, pages: jobs.length, correction_count: 0, error_jobs: 0 }, ocr_methods: [{ id: "qwen", label: "Qwen", status: "configured", external }], limits: { max_files_per_job: 15, max_job_upload_bytes: 209715200 }, pagination: { page: 1, page_size: 25, pages: 1, total: jobs.length } });
+const state = (jobs: ReturnType<typeof fixtureJob>[], external = false) => ({ server_mode: true, jobs, documents: [], logs: [], metrics: { total_jobs: jobs.length, active_jobs: jobs.filter((job) => ["starting", "queued", "running", "cancelling"].includes(job.status)).length, completed_jobs: jobs.filter((job) => ["completed", "completed_with_warnings"].includes(job.status)).length, documents: jobs.reduce((count, job) => count + job.documents.length, 0), pages: jobs.length, correction_count: 0, error_jobs: 0 }, ocr_methods: [{ id: "qwen", label: "Qwen", status: "configured", external }], limits: { max_files_per_job: 15, max_job_upload_bytes: 209715200 }, pagination: { page: 1, page_size: 25, pages: 1, total: jobs.length } });
 
 test("mocked upload, review, exact crop, logs, monitor and delete", async ({ page }) => {
   const document = fixtureDocument(); let created = false, deleted = false, reads = 0, conflictOnce = true, cropCalls = 0; let correctionBody: any; let cropBody: any;
@@ -23,7 +23,8 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   await page.route("**/api/**", async (route) => {
     const request = route.request(), url = new URL(request.url()), apiPath = url.pathname;
     if (apiPath === "/api/state") return route.fulfill({ json: state(created && !deleted ? [fixtureJob("completed", document)] : []) });
-    if (apiPath === "/api/system-metrics") return route.fulfill({ json: { cpu_percent: 12, memory_percent: 34, disk: { used_bytes: 25, total_bytes: 100, free_bytes: 75, percent: 25 }, gpu: { status: "unavailable", devices: [] } } });
+    if (apiPath === "/api/system-metrics") return route.fulfill({ json: { cpu_percent: 12, memory_percent: 34, cpu: { model: "Test CPU", physical_cores: 4, logical_cores: 8, percent: 12, load_1m: .1, load_5m: .2, load_15m: .3 }, disk: { used_bytes: 25, total_bytes: 100, free_bytes: 75, percent: 25 }, gpu: { status: "unavailable", devices: [] } } });
+    if (apiPath === "/api/reports") return route.fulfill({ json: { operations: { total_jobs: 1, active_jobs: 0, completed_jobs: 1, error_jobs: 0, documents: 1, pages: 1, duration_seconds_average: 60, pages_per_minute: 1, failure_codes: {} }, quality: { documents: 1, approved_documents: 1, corrected_fields: 0, confidence_average: .91, total_fields: 1, confidence_coverage: 1, evidence_coverage: 0, warning_documents: 0 }, benchmark_samples: [] } });
     if (apiPath === "/api/engines/qwen/check") return route.fulfill({ json: { id: "qwen", status: "configured", summary: "Configuration is present." } });
     if (apiPath === "/api/jobs" && request.method() === "POST") { created = true; return route.fulfill({ json: fixtureJob("uploading", document) }); }
     if (apiPath === `/api/jobs/${id}/files`) return route.fulfill({ json: { job: fixtureJob("ready", document) } });
@@ -38,16 +39,17 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
     if (apiPath.endsWith("/manual-crop")) { cropCalls += 1; cropBody = request.postDataJSON(); document.crop_evidence.push({ crop_image: `/api/jobs/${id}/artifacts/smoke/crop.png`, field: "so_van_ban", page_index: 0, created_at: now, bbox: cropBody.rect, evidence_source: "manual_crop", evidence_status: "trusted" }); return route.fulfill({ json: document.crop_evidence.at(-1) }); }
     if (apiPath === "/api/jobs/delete-preview") return route.fulfill({ json: { deletable: [{ id, name: "smoke.pdf" }], skipped: [] } });
     if (apiPath === "/api/jobs/bulk-delete") { deleted = true; return route.fulfill({ json: { deleted: [id], skipped: [], failed: [] } }); }
+    if (apiPath === `/api/jobs/${id}/artifacts`) return route.fulfill({ json: { items: [{ name: "page-1.png", kind: "image", status: "available", size_bytes: 200, updated_at: now, document_id: "smoke", page_index: 0, download_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }] } });
     if (apiPath.includes("/artifacts/") && apiPath.endsWith(".png")) return route.fulfill({ status: 200, contentType: "image/svg+xml", body: svg });
     if (apiPath.endsWith("report.json")) return route.fulfill({ json: { ok: true } });
     return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
   });
 
-  await page.goto("/");
+  await page.goto("/upload");
   await page.getByRole("button", { name: /kiểm tra lại|recheck/i }).click();
   await page.locator('input[type="file"]').setInputFiles({ name: "smoke.pdf", mimeType: "application/pdf", buffer: pdf });
   await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/jobs/${id}$`));
+  await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`));
   await expect(page.locator(".field-card input").first()).toHaveValue("OLD");
   await page.locator(".field-card input").first().fill("NEW");
   await page.getByRole("button", { name: /lưu và duyệt|save and approve/i }).click();
@@ -66,23 +68,25 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   await expect(page.locator(".evidence-list")).toBeVisible(); await expect(page.locator(".evidence-list a").first()).toHaveAttribute("href", /\/crop\.png$/);
   if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/review-workspace.png") }); }
   await page.getByRole("button", { name: /vẽ crop|draw crop/i }).click(); const smallBox = await page.locator(".crop-canvas img").boundingBox(); await page.mouse.move(smallBox!.x + 10, smallBox!.y + 10); await page.mouse.down(); await page.mouse.move(smallBox!.x + 11, smallBox!.y + 11); await page.mouse.up(); await page.getByRole("button", { name: /lưu crop|save crop/i }).click(); await expect(page.locator(".notice.error")).toContainText("Vùng crop không hợp lệ"); expect(cropCalls).toBe(1); await page.locator(".crop-modal .modal-actions").getByRole("button", { name: /đóng|close/i }).click();
-  await expect(page.locator(".logs-section")).toContainText("sanitized legacy log"); await page.locator(".logs-section summary").click();
+  await page.locator(".detail-tabs").getByRole("button", { name: /artifacts/i }).click(); await expect(page.locator(".artifact-section")).toContainText("page-1.png"); await expect(page.locator(".artifact-section")).toContainText("200 B");
+  await page.locator(".detail-tabs").getByRole("button", { name: /nhật ký|logs/i }).click(); await expect(page.locator(".logs-section")).toContainText("sanitized legacy log");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]); await page.getByRole("button", { name: /sao chép|copy/i }).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("sanitized legacy log");
   const download = page.waitForEvent("download"); await page.getByRole("button", { name: /tải xuống|download/i }).click(); expect((await download).suggestedFilename()).toContain("logs.txt");
 
   await page.getByRole("button", { name: /giám sát hệ thống|system monitor/i }).click();
   await expect(page.locator(".monitor-modal")).toContainText("12%");
+  await expect(page.locator(".monitor-modal")).toContainText("load 0.1/0.2/0.3");
   await page.locator(".monitor-modal").getByRole("button", { name: /đóng|close/i }).click();
   await page.getByRole("link", { name: /công việc|jobs/i }).first().click(); await expect(page).toHaveURL(/\/$/);
-  if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/recreated-dashboard.png") }); }
+  if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/recreated-dashboard.png") }); await page.setViewportSize({ width: 1366, height: 768 }); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/recreated-dashboard-1366x768.png") }); await page.setViewportSize({ width: 1440, height: 900 }); }
   await page.locator(".job-row").filter({ hasText: "smoke.pdf" }).getByRole("button", { name: /xóa|delete/i }).click();
   await page.getByRole("button", { name: /xóa vĩnh viễn|delete permanently/i }).click();
   await expect(page.locator(".job-row").filter({ hasText: "smoke.pdf" })).toHaveCount(0);
 });
 
 test("real Next and FastAPI use eager Celery with a fake HTTP provider", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/upload");
   await page.locator('input[type="file"]').setInputFiles({ name: "integration.pdf", mimeType: "application/pdf", buffer: pdf });
   await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
   await expect(page).toHaveURL(/\/jobs\//);
@@ -113,7 +117,8 @@ test("desktop lifecycle modals and URL filters preserve backend semantics", asyn
     if (apiPath === `/api/jobs/${rerunId}`) return route.fulfill({ json: { ...current, id: rerunId, status: "starting" } });
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
-  await page.goto("/"); await page.getByPlaceholder(/tìm kiếm|search/i).fill("smoke"); await expect(page).toHaveURL(/q=smoke/);
+  await page.goto("/"); await expect(page.locator(".job-row").filter({ hasText: "smoke.pdf" })).toBeVisible(); await page.getByPlaceholder(/tìm kiếm|search/i).fill("smoke"); await expect(page).toHaveURL(/q=smoke/);
+  await page.getByLabel(/sắp xếp|sort/i).selectOption("updated_desc"); await expect(page).toHaveURL(/sort=updated_desc/);
   await page.locator(".job-row").filter({ hasText: "smoke.pdf" }).getByRole("button", { name: /hủy|cancel/i }).click();
   await page.getByRole("button", { name: /xác nhận|confirm/i }).click(); await expect(page.locator(".job-row").filter({ hasText: "smoke.pdf" })).toContainText(/đang hủy|cancelling/i);
   status = "interrupted"; await page.getByRole("button", { name: /làm mới|refresh/i }).click();
@@ -134,8 +139,8 @@ test("mobile English keeps PDF-only errors, instant language and closable monito
     if (apiPath === `/api/jobs/${id}/start`) return route.fulfill({ status: 503, json: { detail: { code: "worker_unavailable", message: "worker_unavailable" } } });
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
-  await page.goto("/"); await expect(page.locator("html")).toHaveAttribute("lang", "en"); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Jobs");
-  await page.getByRole("button", { name: "VI", exact: true }).click(); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Công việc"); await page.getByRole("button", { name: "EN", exact: true }).click();
+  await page.goto("/upload"); await expect(page.locator("html")).toHaveAttribute("lang", "en"); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Upload PDF");
+  await page.getByRole("button", { name: "VI", exact: true }).click(); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Tải PDF"); await page.getByRole("button", { name: "EN", exact: true }).click();
   await expect(page.locator('input[type="file"]')).toHaveAttribute("accept", "application/pdf,.pdf"); expect((await page.request.get("/icon.svg")).ok()).toBeTruthy();
   await page.locator('input[type="file"]').setInputFiles({ name: "bad.pdf", mimeType: "application/pdf", buffer: pdf }); await page.getByRole("button", { name: "Start OCR" }).click();
   await expect(page.locator(".notice.error")).toContainText("Unsupported file"); uploadFails = false;
@@ -143,6 +148,7 @@ test("mobile English keeps PDF-only errors, instant language and closable monito
   await expect(page.locator(".notice.error")).toContainText("Worker unavailable");
   await page.getByRole("button", { name: /system monitor/i }).click(); await expect(page.locator(".monitor-modal")).toBeVisible(); await page.locator(".monitor-modal").getByRole("button", { name: "Close" }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/mobile-upload-390x844.png") }); }
 });
 
 test("initial and stale state errors preserve only real snapshots", async ({ page }) => {
@@ -161,7 +167,7 @@ test("initial and stale state errors preserve only real snapshots", async ({ pag
 
 test("upload validates duplicate, limits and native drag-drop", async ({ page }) => {
   await page.route("**/api/state**", (route) => route.fulfill({ json: { ...state([]), limits: { max_files_per_job: 2, max_job_upload_bytes: 1024 } } }));
-  await page.goto("/"); const input = page.locator('input[type="file"]');
+  await page.goto("/upload"); const input = page.locator('input[type="file"]');
   await page.locator(".dropzone").evaluate((element) => { const transfer = new DataTransfer(); transfer.items.add(new File(["%PDF"], "same.pdf")); transfer.items.add(new File(["%PDF"], "SAME.PDF")); element.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer })); }); await expect(page.locator(".notice.error")).toContainText("trùng");
   await input.setInputFiles([{ name: "a.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "b.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "c.pdf", mimeType: "application/pdf", buffer: pdf }]); await expect(page.locator(".notice.error")).toContainText("giới hạn");
   await page.locator(".dropzone").evaluate((element) => { const transfer = new DataTransfer(); transfer.items.add(new File(["%PDF-1.7"], "DROP.PDF", { type: "" })); element.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer })); });
@@ -180,8 +186,8 @@ test("upload sends selected PDFs sequentially with a compact name", async ({ pag
     if (apiPath.endsWith(".png")) return route.fulfill({ contentType: "image/svg+xml", body: svg });
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
-  await page.goto("/"); await page.locator('input[type="file"]').setInputFiles([{ name: "first.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "second.pdf", mimeType: "application/pdf", buffer: pdf }]); await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/jobs/${id}$`)); expect(uploaded).toEqual(["first.pdf", "second.pdf"]); expect(createBody.upload_name).toBe("first.pdf +1");
+  await page.goto("/upload"); await page.locator('input[type="file"]').setInputFiles([{ name: "first.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "second.pdf", mimeType: "application/pdf", buffer: pdf }]); await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
+  await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`)); expect(uploaded).toEqual(["first.pdf", "second.pdf"]); expect(createBody.upload_name).toBe("first.pdf +1");
 });
 
 test("default document, dirty navigation and browser back keep drafts", async ({ page }) => {
@@ -201,7 +207,7 @@ test("default document, dirty navigation and browser back keep drafts", async ({
   await page.getByRole("button", { name: /valid\.pdf/i }).click(); await expect(page.locator(".field-card pre")).toContainText('"legacy": true'); await expect(page.locator(".logs-section")).toHaveCount(0);
   await page.locator(".field-card textarea").focus(); await expect(page.locator('.page-numbers button[aria-current="page"]')).toHaveText("2"); await expect(page.locator(".artifact-error")).toContainText("Không tải được ảnh trang");
   const input = page.locator(".field-card input").first(); await input.fill("DRAFT"); await page.locator("a.brand").click(); await expect(page.locator("dialog[open]")).toContainText("Thay đổi chưa lưu"); await page.locator("dialog[open] .modal-actions").getByRole("button", { name: "Đóng" }).click(); await expect(input).toHaveValue("DRAFT");
-  await page.evaluate(() => history.back()); await expect(page.locator("dialog[open]")).toContainText("Bỏ các thay đổi"); await page.locator("dialog[open] .modal-actions").getByRole("button", { name: "Đóng" }).click(); await expect(page).toHaveURL(new RegExp(`/jobs/${id}$`)); await expect(input).toHaveValue("DRAFT");
+  await page.evaluate(() => history.back()); await expect(page.locator("dialog[open]")).toContainText("Bỏ các thay đổi"); await page.locator("dialog[open] .modal-actions").getByRole("button", { name: "Đóng" }).click(); await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`)); await expect(input).toHaveValue("DRAFT");
   await page.getByRole("button", { name: /approved\.pdf/i }).click(); await page.locator("dialog[open]").getByRole("button", { name: "Xác nhận" }).click(); await expect(page.locator(".document-tabs button.active")).toContainText("approved.pdf");
 });
 
@@ -218,6 +224,36 @@ test("monitor stops polling and preserves nullable GPU values", async ({ page })
   await page.evaluate(() => { Object.defineProperty(document, "hidden", { configurable: true, value: true }); document.dispatchEvent(new Event("visibilitychange")); }); const hidden = metricsCalls; await page.waitForTimeout(2_200); expect(metricsCalls).toBe(hidden);
   await page.evaluate(() => { Object.defineProperty(document, "hidden", { configurable: true, value: false }); document.dispatchEvent(new Event("visibilitychange")); }); await expect.poll(() => metricsCalls).toBeGreaterThan(hidden);
   await page.locator(".monitor-modal").getByRole("button", { name: /đóng|close/i }).click(); const closed = metricsCalls; await page.waitForTimeout(2_200); expect(metricsCalls).toBe(closed);
+});
+
+test("Legacy+ routes deep-link and Code Catalog CRUD survives reload", async ({ page }) => {
+  let catalog = { revision: 0, items: [] as any[] }; let eventsQuery = "";
+  await page.route("**/api/**", async (route) => {
+    const request = route.request(), apiPath = new URL(request.url()).pathname;
+    if (apiPath === "/api/state") return route.fulfill({ json: state([]) });
+    if (apiPath === "/api/documents") return route.fulfill({ json: { items: [{ id: "smoke", job_id: id, job_status: "completed", file_name: "smoke.pdf", document_type: "Thông báo", status: "completed", review_status: "approved", page_count: 1, confidence_average: .91, warning_count: 0, updated_at: now, deep_link: `/jobs/${id}?document=smoke&view=review` }], pagination: { page: 1, page_size: 25, total: 1, pages: 1 } } });
+    if (apiPath === "/api/events") { eventsQuery = new URL(request.url()).search; return route.fulfill({ json: { items: [{ timestamp: now, severity: "info", category: "lifecycle", code: "job_created", job_id: id, provider_profile_id: "qwen", document_id: "smoke", page_index: 0, message: "job_created" }], pagination: { page: 1, page_size: 50, total: 1, pages: 1 } } }); }
+    if (apiPath === "/api/reports") return route.fulfill({ json: { operations: { total_jobs: 1, active_jobs: 0, completed_jobs: 1, error_jobs: 0, documents: 1, pages: 1, duration_seconds_average: 60, pages_per_minute: 1, failure_codes: {} }, quality: { documents: 1, approved_documents: 1, corrected_fields: 0, confidence_average: .91, total_fields: 1, confidence_coverage: 1, evidence_coverage: .5, warning_documents: 0 }, benchmark_samples: [] } });
+    if (apiPath === "/api/codes" && request.method() === "GET") return route.fulfill({ json: catalog });
+    if (apiPath === "/api/codes" && request.method() === "POST") { const body = request.postDataJSON(); catalog = { revision: catalog.revision + 1, items: [{ ...body, created_at: now, updated_at: now }] }; return route.fulfill({ status: 201, json: catalog }); }
+    if (apiPath === "/api/codes/BC" && request.method() === "PUT") { const body = request.postDataJSON(); catalog = { revision: catalog.revision + 1, items: catalog.items.map((item) => ({ ...item, ...body, code: item.code, group: item.group, updated_at: now })) }; return route.fulfill({ json: catalog }); }
+    if (apiPath === "/api/codes/BC" && request.method() === "DELETE") { catalog = { revision: catalog.revision + 1, items: [] }; return route.fulfill({ json: catalog }); }
+    return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
+  });
+
+  await page.goto("/"); const nav = page.locator("#primary-navigation");
+  await nav.getByRole("link", { name: /tải pdf|upload pdf/i }).click(); await expect(page).toHaveURL(/\/upload$/);
+  await nav.getByRole("link", { name: /quản lý|manage/i }).click(); await expect(page).toHaveURL(/\/documents$/); await expect(page.getByRole("link", { name: /mở|open/i }).last()).toHaveAttribute("href", new RegExp(`document=smoke&view=review`));
+  await nav.getByRole("link", { name: /nhật ký|logs/i }).click(); await expect(page).toHaveURL(/\/logs$/); await expect(page.locator(".data-table")).toContainText("job_created");
+  await page.getByLabel("Provider").fill("qwen"); await page.getByLabel(/tài liệu|document/i).fill("smoke"); await page.getByLabel(/số trang|pages/i).fill("0"); await expect.poll(() => eventsQuery).toContain("provider_profile_id=qwen"); expect(eventsQuery).toContain("document_id=smoke"); expect(eventsQuery).toContain("page_index=0");
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]); await page.getByRole("button", { name: /sao chép|copy/i }).click(); expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("job_created"); const safeDownload = page.waitForEvent("download"); await page.getByRole("button", { name: /tải xuống|download/i }).click(); expect((await safeDownload).suggestedFilename()).toBe("safe-events.json");
+  await nav.getByRole("link", { name: /báo cáo|reports/i }).click(); await expect(page).toHaveURL(/\/reports$/); await expect(page.locator(".report-card").first()).toContainText("91%"); await expect(page.locator(".report-metrics")).toContainText("60s"); await expect(page.locator(".report-card").first()).toContainText("50%");
+  await nav.getByRole("link", { name: /danh mục mã|code catalog/i }).click(); await expect(page).toHaveURL(/\/codes$/);
+  await page.getByRole("button", { name: /thêm mã|add code/i }).click(); await page.getByLabel("Code").fill("BC"); await page.getByLabel(/nhãn|label/i).fill("Báo cáo"); await page.getByRole("button", { name: /^lưu$|^save$/i }).click();
+  let row = page.locator(".data-table tbody tr").filter({ hasText: "BC" }); await expect(row).toContainText("Báo cáo");
+  await page.reload(); row = page.locator(".data-table tbody tr").filter({ hasText: "BC" }); await expect(row).toBeVisible();
+  await row.getByRole("button", { name: /sửa mã|edit code/i }).click(); await page.getByLabel(/nhãn|label/i).fill("Báo cáo mới"); await page.getByRole("button", { name: /^lưu$|^save$/i }).click(); await expect(row).toContainText("Báo cáo mới");
+  page.once("dialog", (dialog) => dialog.accept()); await row.getByRole("button", { name: /xóa|delete/i }).click(); await expect(row).toHaveCount(0);
 });
 
 test("ready detail delete uses preview and result", async ({ page }) => {
@@ -252,4 +288,5 @@ test("capture sanitized populated legacy dashboard", async ({ page }) => {
   });
   await page.goto("http://legacy.local/"); await expect(page.locator("body")).toContainText("11111111-1111-4111-8111");
   await page.screenshot({ path: path.join(root, "docs/ui-parity/legacy-dashboard.png") });
+  await page.setViewportSize({ width: 1366, height: 768 }); await page.screenshot({ path: path.join(root, "docs/ui-parity/legacy-dashboard-1366x768.png") });
 });

@@ -8,6 +8,14 @@ export type Field = Schemas["FieldResponse"];
 export type Page = Schemas["PageResponse"];
 export type State = Schemas["StateResponse"];
 export type SystemMetrics = Schemas["SystemMetricsResponse"];
+export type ProviderProfile = Schemas["ProviderProfileResponse"];
+export type Documents = Schemas["DocumentsResponse"];
+export type Events = Schemas["EventsResponse"];
+export type Reports = Schemas["ReportsResponse"];
+export type CodeCatalog = Schemas["CodeCatalogResponse"];
+export type CodeEntry = Schemas["CodeEntry"];
+export type CodeInput = Schemas["CodeInput"];
+export type Artifacts = Schemas["ArtifactsResponse"];
 
 export const ACTIVE_JOB_STATUSES = new Set(["starting", "queued", "running", "cancelling"]);
 export const TERMINAL_JOB_STATUSES = new Set(["completed", "completed_with_warnings", "error", "cancelled", "interrupted"]);
@@ -24,11 +32,11 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return payload;
 }
 
-export const getState = (filters: { query?: string; status?: string; method?: string; page?: number } = {}) =>
+export const getState = (filters: { query?: string; status?: string; method?: string; sort?: string; page?: number } = {}) =>
   request<State>(`/api/state?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);
 export const getJob = (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}`);
-export const createJob = (fileCount: number, uploadName: string, cloudDataConfirmed = false) =>
-  request<Job>("/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file_count: fileCount, upload_name: uploadName, cloud_data_confirmed: cloudDataConfirmed }) });
+export const createJob = (payload: Schemas["CreateJobRequest"]) =>
+  request<Job>("/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
 export const uploadFile = (id: string, file: File) =>
   request<Schemas["UploadResponse"]>(`/api/jobs/${encodeURIComponent(id)}/files?path=${encodeURIComponent(file.name)}`, { method: "PUT", body: file });
 export const startJob = (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}/start`, { method: "POST" });
@@ -46,3 +54,17 @@ export const crop = (id: string, documentId: string, pageIndex: number, field: s
 export const checkEngine = (id: string) =>
   request<Schemas["EngineCheckResponse"]>(`/api/engines/${encodeURIComponent(id)}/check`, { method: "POST" });
 export const getSystemMetrics = () => request<Schemas["SystemMetricsResponse"]>("/api/system-metrics");
+export const getProviderProfiles = () => request<Schemas["ProviderProfilesResponse"]>("/api/provider-profiles");
+export const getDocuments = (filters: { query?: string; review_status?: string; sort?: string; page?: number } = {}) =>
+  request<Documents>(`/api/documents?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);
+export const getEvents = (filters: { job_id?: string; severity?: string; category?: string; code?: string; provider_profile_id?: string; document_id?: string; page_index?: number; page?: number } = {}) =>
+  request<Events>(`/api/events?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);
+export const getReports = () => request<Reports>("/api/reports");
+export const getArtifacts = (id: string) => request<Artifacts>(`/api/jobs/${encodeURIComponent(id)}/artifacts`);
+export const getCodes = () => request<CodeCatalog>("/api/codes");
+export const createCode = (payload: Schemas["CodeInput"]) =>
+  request<CodeCatalog>("/api/codes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+export const updateCode = (code: string, payload: Schemas["CodeUpdate"]) =>
+  request<CodeCatalog>(`/api/codes/${encodeURIComponent(code)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+export const deleteCode = (code: string, revision: number) =>
+  request<CodeCatalog>(`/api/codes/${encodeURIComponent(code)}?revision=${revision}`, { method: "DELETE" });

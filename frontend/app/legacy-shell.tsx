@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { MouseEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { getSystemMetrics, SystemMetrics } from "../lib/api";
 import { text, useLanguage } from "../lib/i18n";
@@ -8,13 +9,15 @@ import { text, useLanguage } from "../lib/i18n";
 const percent = (value: number) => `${Math.round(value)}%`;
 const bytes = (value: number) => `${(value / 1024 ** 3).toFixed(1)} GB`;
 
-export default function LegacyShell({ children, detail = false, onNew, onJobs }: { children: ReactNode; detail?: boolean; onNew?: () => void; onJobs?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
+export default function LegacyShell({ children, onNew, onJobs }: { children: ReactNode; detail?: boolean; onNew?: () => void; onJobs?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
+  const pathname = usePathname();
   const [locale, changeLanguage] = useLanguage();
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [metricsError, setMetricsError] = useState("");
   const [updated, setUpdated] = useState<Date | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -37,13 +40,19 @@ export default function LegacyShell({ children, detail = false, onNew, onJobs }:
     <div><span>{label}</span><strong>{value == null ? "—" : percent(value)}</strong></div>
     <div className="meter"><i style={{ width: `${Math.max(0, Math.min(100, value || 0))}%` }} /></div>
   </article>;
+  const active = (href: string) => href === "/" ? pathname === "/" || pathname.startsWith("/jobs/") : pathname.startsWith(href);
+  const nav = [
+    ["/", "▦", text("jobs")], ["/upload", "⇧", text("upload")], ["/documents", "▣", text("manage")],
+    ["/logs", "▤", text("processingLogs")], ["/reports", "▥", text("report")], ["/codes", "▧", text("codes")],
+  ];
+  const operationStates = metrics?.operations?.states || {};
 
   return <div className="app-shell" data-locale={locale}>
     <aside className="sidebar">
       <Link className="brand" href="/" aria-label={text("title")} onClick={onJobs}><span className="brand-mark">ID</span><span>IntelliDoc<small>OCR</small></span></Link>
-      <nav aria-label={text("jobs")}>
-        <Link className={!detail ? "nav-link active" : "nav-link"} href="/" onClick={onJobs}>▦ <span>{text("jobs")}</span></Link>
-        <button className="nav-link" aria-label={text("newOcr")} onClick={onNew || (() => { location.href = "/?upload=1"; })}>＋ <span>{text("newOcr")}</span></button>
+      <button className="menu-toggle" aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen((value) => !value)}>☰</button>
+      <nav id="primary-navigation" className={menuOpen ? "open" : ""} aria-label={text("jobs")}>
+        {nav.map(([href, icon, label]) => <Link className={active(href) ? "nav-link active" : "nav-link"} href={href} key={href} onClick={(event) => { setMenuOpen(false); if (href === "/upload" && onNew) { event.preventDefault(); onNew(); } else onJobs?.(event); }}>{icon} <span>{label}</span></Link>)}
       </nav>
       <div className="sidebar-tools">
         <button className="nav-link" aria-label={text("systemMonitor")} onClick={() => setMonitorOpen(true)}>◫ <span>{text("systemMonitor")}</span></button>
@@ -60,12 +69,15 @@ export default function LegacyShell({ children, detail = false, onNew, onJobs }:
       <div className="monitor-grid">
         {meter(text("cpu"), metrics?.cpu_percent)}
         {meter(text("memory"), metrics?.memory_percent)}
+        {metrics?.cpu && <article className="monitor-card"><div><span>CPU</span><strong>{metrics.cpu.logical_cores ?? "—"}</strong></div><small>{metrics.cpu.model || text("unavailable")} · {metrics.cpu.physical_cores ?? "—"} physical · load {metrics.cpu.load_1m ?? "—"}/{metrics.cpu.load_5m ?? "—"}/{metrics.cpu.load_15m ?? "—"}</small></article>}
+        {metrics?.runtime && <article className="monitor-card"><div><span>Runtime</span><strong>{metrics.runtime.os_family}</strong></div><small>{metrics.runtime.architecture} · Python {metrics.runtime.python_version}</small></article>}
         <article className="monitor-card disk-card"><div><span>{text("disk")}</span><strong>{metrics?.disk ? percent(metrics.disk.percent) : "—"}</strong></div>
           {metrics?.disk && <><div className="meter"><i style={{ width: percent(metrics.disk.percent) }} /></div><small>{text("used")}: {bytes(metrics.disk.used_bytes)} · {text("free")}: {bytes(metrics.disk.free_bytes)}</small></>}
         </article>
         <article className="monitor-card gpu-card"><div><span>{text("gpu")}</span><strong>{metrics?.gpu?.status === "available" ? (metrics.gpu.devices?.length || 0) : metrics?.gpu?.status === "error" ? text("telemetryError") : text("unavailable")}</strong></div>
-          {metrics?.gpu?.devices?.map((gpu) => <div className="gpu-device" key={gpu.index}><b>{gpu.index}: {gpu.name}</b><small>{gpu.utilization_percent == null ? "—" : percent(gpu.utilization_percent)} · {gpu.memory_used_mb ?? "—"}/{gpu.memory_total_mb ?? "—"} MB · {gpu.temperature_c ?? "—"}°C</small></div>)}
+          {metrics?.gpu?.devices?.map((gpu) => <div className="gpu-device" key={gpu.index}><b>{gpu.index}: {gpu.name}</b><small>{gpu.utilization_percent == null ? "—" : percent(gpu.utilization_percent)} · {gpu.memory_used_mb ?? "—"}/{gpu.memory_total_mb ?? "—"} MB · {gpu.temperature_c ?? "—"}°C · {gpu.power_w ?? "—"} W</small></div>)}
         </article>
+        {metrics?.operations && <article className="monitor-card gpu-card"><div><span>OCR operations</span><strong>{Object.values(operationStates).reduce((sum, value) => sum + value, 0)}</strong></div><small>{Object.entries(operationStates).map(([state, count]) => `${state}: ${count}`).join(" · ") || text("unavailable")}</small></article>}
       </div>
       <footer className="modal-actions"><small>{updated ? text("lastUpdated", { date: updated.toLocaleTimeString(locale) }) : text("loading")}</small><button className="button secondary" onClick={() => setRefreshToken((value) => value + 1)}>{text("refresh")}</button></footer>
     </dialog>

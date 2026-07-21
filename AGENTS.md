@@ -13,17 +13,15 @@ Milestone C is not complete. Do not claim production readiness until
 restart, cross-version, and rollback evidence. Keep `src/ocr/` and `web/` as the
 rollback runtime until the one-day rollback window closes.
 
-The minimal legacy-browser baseline was implemented and locally verified on
-2026-07-21. The approved target is now Legacy+ v2: full visual/workflow parity
-with `OCR_paper` except ZIP/image/folder upload, plus safe Provider Profiles,
-durable Codes, richer typed evidence/reports, and allowlisted telemetry. The
-runtime has not implemented that new target yet.
+Legacy+ v2 was implemented and locally verified on 2026-07-21: visual/workflow
+parity with `OCR_paper` except ZIP/image/folder upload, safe Provider Profiles,
+durable Codes, rich typed evidence/reports/artifacts/events, and allowlisted
+telemetry.
 
-The 2026-07-21 closure audit passes 20 backend tests, 10 legacy compatibility
-tests, and 10 default browser tests; capture mode passes 11/11. The detailed
-baseline checkpoint table is 14/14 complete. The active Legacy+ table in
-`legacy_browser_recreated.md` is 0/19. Do not claim current Legacy+ parity or
-production readiness; complete its local phases before Milestone C acceptance.
+The 2026-07-21 closure audit passes 27 backend tests, 10 legacy compatibility
+tests, and 11 default browser tests; capture mode passes 12/12. Baseline v1 is
+14/14 and Legacy+ is 18/19: every local checkpoint is complete, while Milestone
+C remains open. Do not call the stack production-ready before that acceptance.
 
 ## Repository map
 
@@ -34,12 +32,12 @@ production readiness; complete its local phases before Milestone C acceptance.
 - `backend/tests/`: local contract, lifecycle, persistence, and worker checks.
 - `data/jobs/`: durable offline state; Redis is disposable.
 - `src/ocr/`, `web/`, `tests/`: legacy rollback runtime.
-- `implementation_plan.md`: locked decisions, pending Legacy+ work, and rollout gate.
-- `legacy_browser_recreated.md`: active Legacy+ v2 spec, 0/19 active checkpoints,
-  and the completed 14-checkpoint v1 history.
+- `implementation_plan.md`: locked decisions and the remaining rollout gate.
+- `legacy_browser_recreated.md`: completed Legacy+ local spec/checkpoints and
+  the pending Milestone C checkpoint.
 - `CONTEXT.md`: canonical product vocabulary for Legacy+, Provider Profiles,
   Code Catalog, and Review Evidence.
-- `docs/ui-parity/`: four sanitized captures and local browser evidence notes.
+- `docs/ui-parity/`: sanitized 1440/1366/mobile captures and local evidence notes.
 - `docs/phase4_cutover_runbook.md`: strong-server commands.
 - `docs/phase4_acceptance.md`: sole Milestone C evidence record.
 
@@ -116,8 +114,7 @@ production readiness; complete its local phases before Milestone C acceptance.
 
 1. Read `implementation_plan.md` before migration or cutover work. For changes
    to the recreated browser flow, also read `legacy_browser_recreated.md` and
-   preserve its v1 baseline, implement the active Legacy+ checkpoints, and keep
-   the Milestone C boundary.
+   preserve its completed Legacy+ checkpoints and keep the Milestone C boundary.
 2. Before editing code, use the CodeGraph MCP against `C:\HProjecT\OCR` to
    inspect the target symbols, callers, routes, and blast radius. Do not infer
    flow from filenames or query `.codegraph/codegraph.db` directly.
@@ -129,7 +126,7 @@ production readiness; complete its local phases before Milestone C acceptance.
    when architecture, commands, or rollout state changes.
 8. Do not create commits unless the user explicitly asks for them.
 
-## Completed baseline-v1 phases
+## Completed browser phases
 
 1. Capture sanitized baseline and map every UI block to real schema/API data.
 2. Implement minimal backend telemetry, focused tests, and generated API types.
@@ -142,10 +139,11 @@ production readiness; complete its local phases before Milestone C acceptance.
 6. Add conditional legacy logs, the real System Monitor, desktop/accessibility
    parity, and aligned documentation.
 
-All six phases left their relevant checks passing. Future changes must preserve
-those checks. They do not complete Legacy+ v2. Follow the active phases and
-0/19 checkpoint table in `legacy_browser_recreated.md`. This plan does not
-authorize automatic commits or deleting the legacy runtime.
+Legacy+ then added full routes/sidebar, Provider Profile selection, Documents,
+rich review evidence/suggestions, artifact manifest/Safe Events, typed reports,
+durable Codes and expanded safe telemetry. Future changes must preserve all
+18 local checkpoints. This plan does not authorize automatic commits or deleting
+the legacy runtime.
 
 ## Required local checks
 

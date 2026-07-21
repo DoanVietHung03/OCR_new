@@ -69,6 +69,22 @@
 .logs-section summary { cursor: pointer; font-weight: 800; }
 .logs-section .actions { justify-content: flex-end; margin: 12px 0; }
 .logs-section pre { max-height: 340px; overflow: auto; border-radius: 8px; padding: 13px; color: #d9e7f8; background: #10213a; white-space: pre-wrap; }
+.detail-tabs { display: flex; gap: 6px; margin: 18px 0; overflow-x: auto; border-bottom: 1px solid #d7e0ec; }
+.detail-tabs button { border: 0; border-bottom: 3px solid transparent; padding: 11px 14px; color: #60728a; background: transparent; font-weight: 750; white-space: nowrap; }
+.detail-tabs button.active { border-bottom-color: #1768d4; color: #1768d4; }
+.page-inspector { display: grid; gap: 7px; padding: 12px; border-top: 1px solid #dce3ed; background: #f8fafc; }
+.page-inspector details { border: 1px solid #dce3ed; border-radius: 8px; padding: 9px 11px; background: #fff; }
+.page-inspector summary { color: #315375; cursor: pointer; font-weight: 700; }
+.page-inspector pre { max-height: 220px; overflow: auto; white-space: pre-wrap; }
+.page-inspector a { display: block; margin-top: 7px; color: #1768d4; }
+.field-provenance, .field-suggestion { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 7px; color: #62738a; }
+.field-provenance small[title] { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.field-suggestion { justify-content: space-between; border-top: 1px dashed #dce3ed; }
+.artifact-section { padding: 21px; }
+.artifact-list { display: grid; gap: 8px; margin-top: 16px; }
+.artifact-list a { display: grid; gap: 4px; min-width: 0; border: 1px solid #dce3ed; border-radius: 9px; padding: 11px 13px; color: #315375; text-decoration: none; }
+.artifact-list a:hover { border-color: #7eabdf; background: #f5f9ff; }
+.artifact-list small { overflow: hidden; color: #6a7b91; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (max-width: 1100px) {
   .job-facts { grid-template-columns: repeat(2, 1fr); }

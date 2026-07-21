@@ -42,6 +42,8 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
 
     assert result["status"] == "completed"
     assert result["page_count"] == 1
+    assert result["started_at"]
+    assert result["completed_at"]
     assert models == ["snapshot-model"]
     assert (store.path(job["id"]) / "artifacts" / "document" / "page-1.png").is_file()
 

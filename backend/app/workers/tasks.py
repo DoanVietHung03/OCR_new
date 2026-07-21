@@ -8,7 +8,7 @@ from threading import Thread
 from celery import Celery
 from celery.signals import worker_ready
 
-from ..services.jobs import ACTIVE, MAX_PAGES, JobStore
+from ..services.jobs import ACTIVE, MAX_PAGES, JobStore, now
 from ..services.ocr_runner import request_page
 
 celery_app = Celery(
@@ -48,7 +48,7 @@ def render_pdf(pdf: Path, output: Path) -> list[Path]:
 def cancelled(store: JobStore, job_id: str) -> bool:
     if not (store.path(job_id) / "cancel").exists():
         return False
-    store.update(job_id, status="cancelled", error=None)
+    store.update(job_id, status="cancelled", error=None, completed_at=now())
     return True
 
 
@@ -60,7 +60,7 @@ async def process_job_async(job_id: str) -> dict:
     store.update(job_id, status="queued")
     if cancelled(store, job_id):
         return store.read(job_id)
-    job = store.update(job_id, status="running", error=None)
+    job = store.update(job_id, status="running", error=None, started_at=job.get("started_at") or now())
     documents: list[dict] = []
     successes = failures = page_count = 0
     for pdf in sorted((store.path(job_id) / "uploads").glob("*.pdf")):
@@ -120,7 +120,7 @@ async def process_job_async(job_id: str) -> dict:
             document.update(status="error", error=safe_error(exc))
         store.update(job_id, documents=documents, failed_pages=failures)
     status = "completed" if successes and not failures else "completed_with_warnings" if successes else "error"
-    return store.update(job_id, status=status, documents=documents, report_url=f"/jobs/{job_id}")
+    return store.update(job_id, status=status, documents=documents, report_url=f"/jobs/{job_id}", completed_at=now())
 
 
 @celery_app.task(name="ocr.process_job")
@@ -131,7 +131,7 @@ def process_job(job_id: str) -> dict:
         store = JobStore(os.getenv("OCR_DATA_DIR", "data/jobs"))
         try:
             if store.read(job_id).get("status") in ACTIVE:
-                return store.update(job_id, status="error", error=safe_error(exc))
+                return store.update(job_id, status="error", error=safe_error(exc), completed_at=now())
             return store.read(job_id)
         except (FileNotFoundError, ValueError):
             return {"id": job_id, "status": "error", "error": "ocr_failed"}

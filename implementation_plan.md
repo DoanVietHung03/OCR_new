@@ -1,28 +1,16 @@
 # Kế hoạch công việc còn lại cho OCR monorepo
 
-**Trạng thái hiện tại:** Milestone A, B và baseline browser v1 đã implement,
-pass 20 test backend, 10 test compatibility, typecheck/build và 10 browser test
-mặc định local ngày 2026-07-21; capture mode pass 11/11. Baseline 14/14 này không
-còn là đích UI cuối. Đặc tả **Legacy+ v2** trong
-`legacy_browser_recreated.md` đã được duyệt nhưng chưa implement (0/19
-checkpoint). Bằng chứng Nginx/Redis/Celery/provider thật vẫn để ở Gate Milestone
-C. Legacy `src/ocr/` + `web/` vẫn là runtime rollback cho đến khi Gate Milestone
-C pass.
+**Trạng thái hiện tại:** Milestone A, B, baseline browser v1 và **Legacy+ v2**
+đã implement/verify local ngày 2026-07-21. Legacy+ đạt 18/18 checkpoint local:
+27 backend test, 10 legacy compatibility test, 11 browser test mặc định và
+12/12 capture mode; typecheck/build/OpenAPI/compile/diff pass. Checkpoint 19 vẫn
+là Gate Milestone C với Nginx/Redis/Celery/provider thật. Legacy `src/ocr/` +
+`web/` vẫn là runtime rollback cho đến khi Gate Milestone C pass.
 
 File này chỉ theo dõi việc chưa làm, đang làm hoặc đã làm nhưng đang lỗi. Các
 phase đã hoàn tất 100% không được liệt kê lại.
 
 ## 1. Khoảng trống còn lại
-
-### Legacy+ v2 còn chưa triển khai
-
-- Phục hồi toàn bộ visual/workflow của browser tham chiếu trong `OCR_paper`, chỉ
-  loại trừ ZIP/ảnh/folder upload.
-- Bổ sung Provider Profiles allowlist, Documents index, rich review evidence,
-  Safe Events/reports, Code Catalog persistence thật và telemetry allowlist mở
-  rộng. Chi tiết và source-of-truth checkpoint nằm trong
-  `legacy_browser_recreated.md`.
-- Không được dùng 14/14 checkpoint baseline v1 để tuyên bố Legacy+ hoàn thành.
 
 ### Acceptance trên strong server
 
@@ -153,22 +141,24 @@ phase đã hoàn tất 100% không được liệt kê lại.
 
 ### Gate Milestone B — pass local 2026-07-21
 
-- Typecheck, production build, OpenAPI/generated-types check và 10 Playwright
-  browser test mặc định pass; capture mode pass 11/11.
+- Baseline v1 từng pass 10 Playwright test mặc định và capture mode 11/11;
+  Legacy+ hiện pass 11 test mặc định và capture mode 12/12.
 - Mọi API action tương thích có UI path; không còn control ZIP/ảnh hoặc lỗi
   hydration khi đọc ngôn ngữ đã lưu.
 
-## 5. Legacy+ v2 — Chưa triển khai
+## 5. Legacy+ v2 — Đã hoàn thành local
 
-Triển khai tuần tự theo sáu phase trong `legacy_browser_recreated.md`: re-baseline
-và contract freeze; backend foundations; full shell/visual system; upload,
-dashboard và Manage; rich review workspace; Logs/Reports/Codes/Monitor; sau đó
-closure local. Bảng đang có hiệu lực là 0/19 checkpoint.
+Sáu phase trong `legacy_browser_recreated.md` đã đóng 18/18 checkpoint local:
+re-baseline; backend typed foundations; full shell/visual system; Upload/Jobs/
+Manage; rich review/artifacts/timeline; Logs/Reports/Codes/Monitor; closure local.
+Code Catalog dùng `_codes.json` atomic trong `OCR_DATA_DIR`; benchmark không có
+sample hiển thị unavailable thay vì dựng số liệu; provider secret không sang
+browser. Closure audit còn xác nhận stable sort, persisted job timing, document
+type/warnings, scoped Safe Events, report duration/throughput/failure/coverage
+và CPU load average đều đi qua typed contract, không dùng số liệu giả.
 
-Gate Legacy+ local chỉ pass khi toàn bộ API mới dùng Pydantic/OpenAPI generated
-types, Codes tồn tại sau restart, browser không lộ provider secret, telemetry
-đúng allowlist, cùng-state visual evidence hợp lệ và mọi required local check
-pass. Baseline v1 phải tiếp tục không regression.
+Ảnh cùng-state/responsive và mapping nằm trong `docs/ui-parity/`. Đây là bằng
+chứng local, không thay checkpoint 19 hoặc production acceptance.
 
 ## 6. Milestone C — Strong-server acceptance và rollback
 
@@ -230,8 +220,8 @@ thay thế UTF-8.
 ## Ràng buộc
 
 - Không thêm database, provider SDK, UI kit, state manager, WebSocket, auth,
-  auto-retention, persistent code catalog hoặc host agent. Ngoại lệ telemetry
-  đã duyệt chỉ mô tả môi trường backend nhìn thấy: CPU/RAM, filesystem chứa
+  auto-retention hoặc host agent. Code Catalog `_codes.json` là persistence đã
+  duyệt. Telemetry chỉ mô tả môi trường backend nhìn thấy: CPU/RAM, filesystem chứa
   `OCR_DATA_DIR` và GPU best-effort; không lộ hostname, path, process, raw output,
   secret hoặc provider configuration và không bắt buộc GPU trong Compose.
 - Không đổi route `/api/*`, artifact URL, filesystem layout hoặc safe error

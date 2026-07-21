@@ -12,8 +12,9 @@ Hai mốc phải được phân biệt rõ:
 
 - **Baseline v1:** bản Next.js tối giản đã hoàn thành 14/14 checkpoint local ngày
   2026-07-21. Đây là nền kỹ thuật cần giữ, không còn là đích parity cuối cùng.
-- **Legacy+ v2:** phạm vi mới trong tài liệu này. Hiện mới chốt đặc tả; chưa được
-  phép tick hoàn thành nếu code, test và evidence tương ứng chưa tồn tại.
+- **Legacy+ v2:** Phase 0–6 đã implement và verify local ngày 2026-07-21. Browser
+  mục tiêu đạt 18/18 checkpoint local; checkpoint 19 vẫn chờ Milestone C trên
+  strong server nên chưa được gọi là production-ready.
 
 Milestone C vẫn chưa đạt. Test local, mock provider và ảnh chụp UI không thay thế
 bằng chứng Nginx/Redis/Celery/provider thật, restart, cross-version và rollback
@@ -368,6 +369,14 @@ Durable truth vẫn là `OCR_DATA_DIR`: job JSON/artifacts/audit/events và
 Sau Phase 6 mới chạy Milestone C strong-server acceptance cho sản phẩm mục tiêu
 mới. Không dùng closure của baseline v1 để tuyên bố Legacy+ hoặc production-ready.
 
+**Trạng thái 2026-07-21:** Phase 0–6 đã hoàn tất local. Backend cung cấp Provider
+Profiles, Documents, Safe Events, typed reports/benchmark, artifact manifest,
+Code Catalog bền vững và telemetry allowlist. Frontend đã có đủ sáu route chính,
+rich job workspace và bằng chứng responsive/cùng-state trong `docs/ui-parity/`.
+Vòng closure audit cuối đã bổ sung sort ổn định, timestamps/duration do worker
+persist, loại tài liệu/cảnh báo, Logs filter theo profile/document/page, report
+throughput/failure/coverage và CPU load average; các giá trị thiếu vẫn nullable.
+
 ## 11. Bảng checkpoint
 
 ### 11.1 Baseline v1 — lịch sử đã hoàn thành 2026-07-21
@@ -396,28 +405,28 @@ hoàn thành Legacy+ v2.
 
 | # | Checkpoint | Điều kiện đạt 100% | Trạng thái |
 |---:|---|---|---|
-| 1 | Re-baseline cùng state | Có ảnh sanitized cùng viewport/data/state và mapping real/derived/nullable | ⬜ Chưa triển khai |
-| 2 | Full shell/routes | Jobs, Upload, Manage, Logs, Report, Codes và Monitor hoạt động bằng route/deep-link thật | ⬜ Chưa triển khai |
-| 3 | Visual parity | Hierarchy, density, token, tables/cards/dialog của browser cũ đạt review cùng-state | ⬜ Chưa triển khai |
-| 4 | Provider Profiles | API allowlist typed; browser chọn profile/task/pages; không lộ URL/key/header | ⬜ Chưa triển khai |
-| 5 | Rich upload/dashboard | PDF-only, readiness/consent và metric/progress/benchmark đều từ dữ liệu thật | ⬜ Chưa triển khai |
-| 6 | Manage/Documents | Chỉ mục xuyên job có pagination/filter/deep-link và compatibility test | ⬜ Chưa triển khai |
-| 7 | Rich job workspace | Header/document/page/preview/OCR text/quality state đầy đủ và không giả dữ liệu | ⬜ Chưa triển khai |
-| 8 | Evidence/suggestions | Contract typed, provenance rõ, nullable đúng và suggestion không tự ghi đè | ⬜ Chưa triển khai |
-| 9 | Review/crop parity | Giữ toàn bộ correction/approval/conflict/draft/crop evidence v1 trong UI mới | ⬜ Chưa triển khai |
-| 10 | Artifacts/timeline | Artifact explorer và SafeEvent timeline thật, lỗi cục bộ không sập workspace | ⬜ Chưa triển khai |
-| 11 | Logs | Global/job structured logs có filter/copy/download sanitized và durable truth | ⬜ Chưa triển khai |
-| 12 | Reports/benchmark | Operations/quality/benchmark typed, sample-compatible và unavailable trung thực | ⬜ Chưa triển khai |
-| 13 | Codes persistence | CRUD API, `_codes.json` atomic, revision conflict, restart/backup test | ⬜ Chưa triển khai |
-| 14 | System Monitor+ | Telemetry allowlist chi tiết, nullable đúng, không lộ thông tin cấm | ⬜ Chưa triển khai |
-| 15 | VI/EN/accessibility | Toàn bộ route/dialog/table dùng được bằng keyboard, language persist, reduced motion | ⬜ Chưa triển khai |
-| 16 | Responsive | Pass anchors desktop và mobile safety, không overflow hoặc modal kẹt | ⬜ Chưa triển khai |
-| 17 | Generated API/compatibility | OpenAPI/types không drift; old/new round-trip; đọc job cũ không rewrite | ⬜ Chưa triển khai |
-| 18 | Local closure | Backend, legacy, browser E2E, typecheck, build, API check, compile và diff đều pass | ⬜ Chưa triển khai |
+| 1 | Re-baseline cùng state | Có ảnh sanitized cùng viewport/data/state và mapping real/derived/nullable | ✅ 100% local — ảnh 1440/1366 và mapping trong `docs/ui-parity/` |
+| 2 | Full shell/routes | Jobs, Upload, Manage, Logs, Report, Codes và Monitor hoạt động bằng route/deep-link thật | ✅ 100% local — route E2E/deep-link pass |
+| 3 | Visual parity | Hierarchy, density, token, tables/cards/dialog của browser cũ đạt review cùng-state | ✅ 100% local — đã review ảnh và sửa table 1366/Run comparison |
+| 4 | Provider Profiles | API allowlist typed; browser chọn profile/task/pages; không lộ URL/key/header | ✅ 100% local — contract/security test pass |
+| 5 | Rich upload/dashboard | PDF-only, readiness/consent và metric/progress/benchmark đều từ dữ liệu thật | ✅ 100% local — stable sort, persisted duration, state/report API; không nội suy progress |
+| 6 | Manage/Documents | Chỉ mục xuyên job có pagination/filter/deep-link và compatibility test | ✅ 100% local — search/filter/sort/page/type/warning/URL pass |
+| 7 | Rich job workspace | Header/document/page/preview/OCR text/quality state đầy đủ và không giả dữ liệu | ✅ 100% local — profile/timestamps + rich optional fields + browser path pass |
+| 8 | Evidence/suggestions | Contract typed, provenance rõ, nullable đúng và suggestion không tự ghi đè | ✅ 100% local — Apply là thao tác explicit |
+| 9 | Review/crop parity | Giữ toàn bộ correction/approval/conflict/draft/crop evidence v1 trong UI mới | ✅ 100% local — conflict/draft/natural-pixel crop pass |
+| 10 | Artifacts/timeline | Artifact explorer và SafeEvent timeline thật, lỗi cục bộ không sập workspace | ✅ 100% local — manifest thật + available/missing/unknown |
+| 11 | Logs | Global/job structured logs có filter/copy/download sanitized và durable truth | ✅ 100% local — lifecycle/review events và filter profile/document/page từ job JSON/audit |
+| 12 | Reports/benchmark | Operations/quality/benchmark typed, sample-compatible và unavailable trung thực | ✅ 100% local — duration/throughput/failure/coverage thật; empty benchmark là unavailable |
+| 13 | Codes persistence | CRUD API, `_codes.json` atomic, revision conflict, restart/backup test | ✅ 100% local — CRUD/restart/copy-backup/corruption pass |
+| 14 | System Monitor+ | Telemetry allowlist chi tiết, nullable đúng, không lộ thông tin cấm | ✅ 100% local — CPU load/RAM/disk/runtime/GPU/operations safe |
+| 15 | VI/EN/accessibility | Toàn bộ route/dialog/table dùng được bằng keyboard, language persist, reduced motion | ✅ 100% local — native controls, keyboard crop, VI/EN E2E |
+| 16 | Responsive | Pass anchors desktop và mobile safety, không overflow hoặc modal kẹt | ✅ 100% local — 1440×900, 1366×768, 390×844 |
+| 17 | Generated API/compatibility | OpenAPI/types không drift; old/new round-trip; đọc job cũ không rewrite | ✅ 100% local — generated check + legacy suite pass |
+| 18 | Local closure | Backend, legacy, browser E2E, typecheck, build, OpenAPI check/generation, compile và diff đều pass | ✅ 100% local — xem evidence dưới đây |
 | 19 | Milestone C | Nginx/Redis/Celery/provider thật, fixtures, restart, cross-version và rollback có evidence | ⬜ Chưa đạt |
 
-**Tổng Legacy+ v2 hiện tại: 0/19 checkpoint đạt 100%.** Việc chốt đặc tả không
-được tính là implementation.
+**Tổng Legacy+ v2 hiện tại: 18/19 checkpoint đạt 100%; 18/18 checkpoint local đã
+đóng.** Checkpoint còn lại là acceptance vận hành, không phải code/UI local.
 
 ## 12. Test và evidence bắt buộc
 
@@ -457,9 +466,15 @@ git diff --check
 
 Test local là contract evidence, không chứng minh chất lượng OCR/provider thật.
 
+Closure local 2026-07-21: backend `27 passed`; legacy compatibility `10 passed`;
+browser mặc định `11 passed, 1 capture-only skipped`; capture mode `12 passed`;
+TypeScript, production build 9 route, OpenAPI/generated types, compileall và
+`git diff --check` pass. Bộ ảnh sanitized nằm trong `docs/ui-parity/`.
+
 ## 13. Definition of done
 
-Legacy+ chỉ hoàn thành khi:
+Legacy+ local đã hoàn thành khi 18 checkpoint đầu pass. Sản phẩm chỉ hoàn thành
+toàn bộ và được gọi là production-ready khi:
 
 - browser Next.js đạt visual và functional parity với Legacy Reference trong
   toàn bộ phạm vi, **chỉ thiếu ZIP/ảnh/folder upload**;
@@ -471,5 +486,5 @@ Legacy+ chỉ hoàn thành khi:
 - telemetry giàu hơn nhưng vẫn qua allowlist và không lộ thông tin cấm;
 - generated types, compatibility, accessibility, responsive và toàn bộ local
   gate pass với evidence cụ thể;
-- 19/19 checkpoint Legacy+ được tick sau kiểm chứng;
+- checkpoint 19 được tick sau kiểm chứng strong-server;
 - Milestone C có bằng chứng strong-server thật trước khi tuyên bố production-ready.

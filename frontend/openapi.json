@@ -60,6 +60,17 @@
               "default": "",
               "title": "Query"
             }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(created_desc|created_asc|updated_desc|updated_asc)$",
+              "default": "created_desc",
+              "title": "Sort"
+            }
           }
         ],
         "responses": {
@@ -347,6 +358,274 @@
         }
       }
     },
+    "/api/provider-profiles": {
+      "get": {
+        "summary": "Get Provider Profiles",
+        "operationId": "get_provider_profiles_api_provider_profiles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderProfilesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents": {
+      "get": {
+        "summary": "Get Documents",
+        "operationId": "get_documents_api_documents_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "review_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "all",
+              "title": "Review Status"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(updated_desc|updated_asc|name_asc|name_desc)$",
+              "default": "updated_desc",
+              "title": "Sort"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "summary": "Get Events",
+        "operationId": "get_events_api_events_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "all",
+              "title": "Severity"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "all",
+              "title": "Category"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "provider_profile_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider Profile Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "page_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports": {
+      "get": {
+        "summary": "Get Reports",
+        "operationId": "get_reports_api_reports_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/engines/{engine_id}/check": {
       "post": {
         "summary": "Check Engine",
@@ -369,6 +648,156 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EngineCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/codes": {
+      "get": {
+        "summary": "Get Codes",
+        "operationId": "get_codes_api_codes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeCatalogResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Code",
+        "operationId": "create_code_api_codes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeCatalogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/codes/{code}": {
+      "put": {
+        "summary": "Update Code",
+        "operationId": "update_code_api_codes__code__put",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeCatalogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Code",
+        "operationId": "delete_code_api_codes__code__delete",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "Revision"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeCatalogResponse"
                 }
               }
             }
@@ -560,6 +989,45 @@
         }
       }
     },
+    "/api/jobs/{job_id}/artifacts": {
+      "get": {
+        "summary": "Artifacts",
+        "operationId": "artifacts_api_jobs__job_id__artifacts_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/jobs/{job_id}/artifacts/{path}": {
       "get": {
         "summary": "Artifact",
@@ -652,6 +1120,414 @@
   },
   "components": {
     "schemas": {
+      "ArtifactEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "json",
+              "text",
+              "other"
+            ],
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "missing",
+              "unknown"
+            ],
+            "title": "Status",
+            "default": "available"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "page_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Index"
+          },
+          "download_url": {
+            "type": "string",
+            "title": "Download Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "size_bytes",
+          "updated_at",
+          "download_url"
+        ],
+        "title": "ArtifactEntry"
+      },
+      "ArtifactsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactEntry"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "ArtifactsResponse"
+      },
+      "BenchmarkSample": {
+        "properties": {
+          "provider_profile_id": {
+            "type": "string",
+            "title": "Provider Profile Id"
+          },
+          "fixture_group": {
+            "type": "string",
+            "title": "Fixture Group"
+          },
+          "task": {
+            "type": "string",
+            "title": "Task"
+          },
+          "page_scope": {
+            "type": "string",
+            "title": "Page Scope"
+          },
+          "sample_size": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sample Size"
+          },
+          "measured_at": {
+            "type": "string",
+            "title": "Measured At"
+          },
+          "duration_seconds_average": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds Average"
+          },
+          "pages_per_minute": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pages Per Minute"
+          },
+          "resource_summary": {
+            "type": "string",
+            "title": "Resource Summary",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider_profile_id",
+          "fixture_group",
+          "task",
+          "page_scope",
+          "sample_size",
+          "measured_at"
+        ],
+        "title": "BenchmarkSample"
+      },
+      "CPUMetricsResponse": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "physical_cores": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Physical Cores"
+          },
+          "logical_cores": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logical Cores"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "load_1m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Load 1M"
+          },
+          "load_5m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Load 5M"
+          },
+          "load_15m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Load 15M"
+          }
+        },
+        "type": "object",
+        "title": "CPUMetricsResponse"
+      },
+      "CodeCatalogResponse": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CodeEntry"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "items"
+        ],
+        "title": "CodeCatalogResponse"
+      },
+      "CodeEntry": {
+        "properties": {
+          "group": {
+            "type": "string",
+            "enum": [
+              "reserve_mode",
+              "use_mode",
+              "doc_type",
+              "confidence",
+              "language",
+              "retention",
+              "backup_status",
+              "physical_status"
+            ],
+            "title": "Group"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]{1,32}$",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "keywords": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Keywords",
+            "default": ""
+          },
+          "order": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Order",
+            "default": 0
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "code",
+          "label",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CodeEntry"
+      },
+      "CodeInput": {
+        "properties": {
+          "group": {
+            "type": "string",
+            "enum": [
+              "reserve_mode",
+              "use_mode",
+              "doc_type",
+              "confidence",
+              "language",
+              "retention",
+              "backup_status",
+              "physical_status"
+            ],
+            "title": "Group"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]{1,32}$",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "keywords": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Keywords",
+            "default": ""
+          },
+          "order": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Order",
+            "default": 0
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "code",
+          "label"
+        ],
+        "title": "CodeInput"
+      },
+      "CodeUpdate": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "keywords": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Keywords",
+            "default": ""
+          },
+          "order": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Order",
+            "default": 0
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "label"
+        ],
+        "title": "CodeUpdate"
+      },
       "CorrectionItem": {
         "properties": {
           "field": {
@@ -737,18 +1613,40 @@
             "title": "Cloud Data Confirmed",
             "default": false
           },
+          "provider_profile_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Profile Id"
+          },
           "vlm_task": {
             "type": "string",
+            "enum": [
+              "full_ocr",
+              "metadata"
+            ],
             "title": "Vlm Task",
             "default": "full_ocr"
           },
           "vlm_pages": {
             "type": "string",
+            "enum": [
+              "all",
+              "auto",
+              "first,last"
+            ],
             "title": "Vlm Pages",
             "default": "all"
           },
           "vlm_max_pages": {
             "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
             "title": "Vlm Max Pages",
             "default": 0
           }
@@ -947,6 +1845,92 @@
         ],
         "title": "DiskMetricsResponse"
       },
+      "DocumentIndexItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "job_status": {
+            "type": "string",
+            "title": "Job Status"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "review_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Status"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          },
+          "confidence_average": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Average"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          },
+          "warning_count": {
+            "type": "integer",
+            "title": "Warning Count",
+            "default": 0
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "deep_link": {
+            "type": "string",
+            "title": "Deep Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "job_id",
+          "job_status",
+          "file_name",
+          "status",
+          "page_count",
+          "updated_at",
+          "deep_link"
+        ],
+        "title": "DocumentIndexItem"
+      },
       "DocumentResponse": {
         "properties": {
           "id": {
@@ -1030,6 +2014,26 @@
         "type": "object",
         "title": "DocumentResponse"
       },
+      "DocumentsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentIndexItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "pagination"
+        ],
+        "title": "DocumentsResponse"
+      },
       "EngineCheckResponse": {
         "properties": {
           "id": {
@@ -1098,16 +2102,78 @@
         ],
         "title": "EnginesResponse"
       },
+      "EventsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SafeEvent"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "pagination"
+        ],
+        "title": "EventsResponse"
+      },
       "FieldResponse": {
         "properties": {
           "value": {
             "title": "Value",
             "default": ""
           },
+          "raw_value": {
+            "title": "Raw Value",
+            "default": ""
+          },
+          "source_text": {
+            "type": "string",
+            "title": "Source Text",
+            "default": ""
+          },
           "confidence": {
-            "type": "number",
-            "title": "Confidence",
-            "default": 0
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "final_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Confidence"
+          },
+          "raw_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Confidence"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "default": ""
           },
           "bbox": {
             "items": {
@@ -1120,6 +2186,98 @@
             "type": "integer",
             "title": "Page Index",
             "default": 0
+          },
+          "region_label": {
+            "type": "string",
+            "title": "Region Label",
+            "default": ""
+          },
+          "is_valid": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Valid"
+          },
+          "needs_review": {
+            "type": "boolean",
+            "title": "Needs Review",
+            "default": false
+          },
+          "review_reason": {
+            "type": "string",
+            "title": "Review Reason",
+            "default": ""
+          },
+          "review_context": {
+            "type": "string",
+            "title": "Review Context",
+            "default": ""
+          },
+          "suggested_value": {
+            "title": "Suggested Value",
+            "default": ""
+          },
+          "suggestion_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion Confidence"
+          },
+          "suggestion_reason": {
+            "type": "string",
+            "title": "Suggestion Reason",
+            "default": ""
+          },
+          "suggestions": {
+            "items": {},
+            "type": "array",
+            "title": "Suggestions"
+          },
+          "evidence_candidates": {
+            "items": {},
+            "type": "array",
+            "title": "Evidence Candidates"
+          },
+          "evidence_source": {
+            "type": "string",
+            "title": "Evidence Source",
+            "default": ""
+          },
+          "evidence_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Confidence"
+          },
+          "evidence_status": {
+            "type": "string",
+            "title": "Evidence Status",
+            "default": ""
+          },
+          "decision_crop_image": {
+            "type": "string",
+            "title": "Decision Crop Image",
+            "default": ""
+          },
+          "crop_image": {
+            "type": "string",
+            "title": "Crop Image",
+            "default": ""
           },
           "ocr_value": {
             "anyOf": [
@@ -1208,6 +2366,22 @@
               }
             ],
             "title": "Temperature C"
+          },
+          "power_w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Power W"
+          },
+          "driver_version": {
+            "type": "string",
+            "title": "Driver Version",
+            "default": ""
           }
         },
         "type": "object",
@@ -1293,9 +2467,36 @@
             "title": "Updated At",
             "default": ""
           },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
           "ocr_method": {
             "type": "string",
             "title": "Ocr Method",
+            "default": ""
+          },
+          "provider_profile_id": {
+            "type": "string",
+            "title": "Provider Profile Id",
             "default": ""
           },
           "provider": {
@@ -1458,11 +2659,51 @@
         ],
         "title": "ManualCropRequest"
       },
+      "MemoryMetricsResponse": {
+        "properties": {
+          "total_bytes": {
+            "type": "integer",
+            "title": "Total Bytes"
+          },
+          "used_bytes": {
+            "type": "integer",
+            "title": "Used Bytes"
+          },
+          "available_bytes": {
+            "type": "integer",
+            "title": "Available Bytes"
+          },
+          "percent": {
+            "type": "number",
+            "title": "Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_bytes",
+          "used_bytes",
+          "available_bytes",
+          "percent"
+        ],
+        "title": "MemoryMetricsResponse"
+      },
       "MetricsResponse": {
         "properties": {
           "total_jobs": {
             "type": "integer",
             "title": "Total Jobs"
+          },
+          "active_jobs": {
+            "type": "integer",
+            "title": "Active Jobs"
+          },
+          "completed_jobs": {
+            "type": "integer",
+            "title": "Completed Jobs"
+          },
+          "documents": {
+            "type": "integer",
+            "title": "Documents"
           },
           "pages": {
             "type": "integer",
@@ -1480,11 +2721,94 @@
         "type": "object",
         "required": [
           "total_jobs",
+          "active_jobs",
+          "completed_jobs",
+          "documents",
           "pages",
           "correction_count",
           "error_jobs"
         ],
         "title": "MetricsResponse"
+      },
+      "OperationsMetricsResponse": {
+        "properties": {
+          "states": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "States"
+          }
+        },
+        "type": "object",
+        "title": "OperationsMetricsResponse"
+      },
+      "OperationsReport": {
+        "properties": {
+          "total_jobs": {
+            "type": "integer",
+            "title": "Total Jobs"
+          },
+          "active_jobs": {
+            "type": "integer",
+            "title": "Active Jobs"
+          },
+          "completed_jobs": {
+            "type": "integer",
+            "title": "Completed Jobs"
+          },
+          "error_jobs": {
+            "type": "integer",
+            "title": "Error Jobs"
+          },
+          "documents": {
+            "type": "integer",
+            "title": "Documents"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          },
+          "duration_seconds_average": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds Average"
+          },
+          "pages_per_minute": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pages Per Minute"
+          },
+          "failure_codes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Failure Codes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_jobs",
+          "active_jobs",
+          "completed_jobs",
+          "error_jobs",
+          "documents",
+          "pages"
+        ],
+        "title": "OperationsReport"
       },
       "PageResponse": {
         "properties": {
@@ -1496,6 +2820,66 @@
           "image_url": {
             "type": "string",
             "title": "Image Url",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": ""
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          },
+          "ocr_scope": {
+            "type": "string",
+            "title": "Ocr Scope",
+            "default": ""
+          },
+          "ocr_line_count": {
+            "type": "integer",
+            "title": "Ocr Line Count",
+            "default": 0
+          },
+          "avg_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Score"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "images": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Images"
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Links"
+          },
+          "quality": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Quality"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error",
             "default": ""
           }
         },
@@ -1530,6 +2914,275 @@
           "pages"
         ],
         "title": "PaginationResponse"
+      },
+      "ProviderProfileResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "external": {
+            "type": "boolean",
+            "title": "External",
+            "default": true
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "tasks": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "full_ocr",
+                "metadata"
+              ]
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "page_modes": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "all",
+                "auto",
+                "first,last"
+              ]
+            },
+            "type": "array",
+            "title": "Page Modes"
+          },
+          "max_pages": {
+            "type": "integer",
+            "title": "Max Pages"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "status",
+          "tasks",
+          "page_modes",
+          "max_pages"
+        ],
+        "title": "ProviderProfileResponse"
+      },
+      "ProviderProfilesResponse": {
+        "properties": {
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderProfileResponse"
+            },
+            "type": "array",
+            "title": "Profiles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profiles"
+        ],
+        "title": "ProviderProfilesResponse"
+      },
+      "QualityReport": {
+        "properties": {
+          "documents": {
+            "type": "integer",
+            "title": "Documents"
+          },
+          "approved_documents": {
+            "type": "integer",
+            "title": "Approved Documents"
+          },
+          "corrected_fields": {
+            "type": "integer",
+            "title": "Corrected Fields"
+          },
+          "confidence_average": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Average"
+          },
+          "total_fields": {
+            "type": "integer",
+            "title": "Total Fields",
+            "default": 0
+          },
+          "confidence_coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Coverage"
+          },
+          "evidence_coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Coverage"
+          },
+          "warning_documents": {
+            "type": "integer",
+            "title": "Warning Documents",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "documents",
+          "approved_documents",
+          "corrected_fields"
+        ],
+        "title": "QualityReport"
+      },
+      "ReportsResponse": {
+        "properties": {
+          "operations": {
+            "$ref": "#/components/schemas/OperationsReport"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/QualityReport"
+          },
+          "benchmark_samples": {
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkSample"
+            },
+            "type": "array",
+            "title": "Benchmark Samples"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operations",
+          "quality",
+          "benchmark_samples"
+        ],
+        "title": "ReportsResponse"
+      },
+      "RuntimeMetricsResponse": {
+        "properties": {
+          "os_family": {
+            "type": "string",
+            "title": "Os Family"
+          },
+          "architecture": {
+            "type": "string",
+            "title": "Architecture"
+          },
+          "python_version": {
+            "type": "string",
+            "title": "Python Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "os_family",
+          "architecture",
+          "python_version"
+        ],
+        "title": "RuntimeMetricsResponse"
+      },
+      "SafeEvent": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "title": "Severity"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "lifecycle",
+              "document",
+              "review"
+            ],
+            "title": "Category"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "provider_profile_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Profile Id"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "page_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Index"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp",
+          "severity",
+          "category",
+          "code",
+          "job_id",
+          "message"
+        ],
+        "title": "SafeEvent"
       },
       "StateResponse": {
         "properties": {
@@ -1609,6 +3262,36 @@
             ],
             "title": "Memory Percent"
           },
+          "cpu": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CPUMetricsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "memory": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoryMetricsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuntimeMetricsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "disk": {
             "anyOf": [
               {
@@ -1623,6 +3306,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/GPUMetricsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operations": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OperationsMetricsResponse"
               },
               {
                 "type": "null"
