@@ -33,7 +33,8 @@ Fixtures remain outside Git and `OCR_DATA_DIR`. Record metadata only.
 ## Runtime gates
 
 - Nginx health on `52409`: _pending_
-- Backend/frontend/Redis internal-only: _pending_
+- Direct frontend and `/api/*` proxy on `54846`: _pending_
+- Backend/Redis internal-only: _pending_
 - Worker registered `ocr.process_job`: _pending_
 - Worker concurrency `1`, prefetch `1`: _pending_
 - Upload over 1 MiB succeeds without `413`: _pending_

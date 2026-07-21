@@ -148,8 +148,8 @@ phase đã hoàn tất 100% không được liệt kê lại.
 
 1. Dừng nhận job, drain/dừng legacy worker, backup `OCR_DATA_DIR` và ghi
    checksum/path.
-2. Build/start Nginx, frontend, backend, worker và Redis; chỉ Nginx publish
-   host port `52409`.
+2. Build/start Nginx, frontend, backend, worker và Redis; Nginx publish host
+   port `52409`, frontend publish `54846` với `/api/*` trỏ tới backend nội bộ.
 3. Xác nhận health, worker concurrency/prefetch và task registered.
 4. Chạy ba fixture từ thư mục acceptance offline qua browser, gồm ít nhất một
    PDF lớn hơn 1 MiB; kiểm tra API, fields, artifacts, report và UI thủ công.

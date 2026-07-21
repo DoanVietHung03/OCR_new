@@ -122,8 +122,11 @@ Khi schema FastAPI thay đổi, chạy `pnpm api:generate` và commit cả
 
 ## Chạy bằng Docker Compose
 
-Chỉ Nginx publish cổng host `52409`. Backend, frontend, Redis và worker chỉ hoạt
-động trong mạng nội bộ của Compose.
+Nginx publish cổng host `52409`; frontend đồng thời publish `54846` để địa chỉ
+Next.js ghi trong container log có thể truy cập trực tiếp. Cả hai đường đều dùng
+được đầy đủ `/api/*`; backend, Redis và worker vẫn chỉ hoạt động trong mạng nội
+bộ của Compose. Dùng `52409` cho luồng production/cutover và `54846` khi cần
+truy cập trực tiếp frontend.
 
 ```bash
 cp .env.example .env
@@ -132,6 +135,8 @@ docker compose config
 docker compose up -d --build redis backend worker frontend nginx
 docker compose ps
 curl -fsS http://127.0.0.1:52409/health
+curl -fsSI http://127.0.0.1:54846/
+curl -fsS http://127.0.0.1:54846/api/state > /dev/null
 ```
 
 Không dùng Compose với `OCR_DATA_DIR` thật cho đến khi đã dừng nhận upload,
@@ -153,7 +158,7 @@ ngày kết thúc.
 
 - Runtime legacy: `62472`.
 - FastAPI chạy trực tiếp: `50177`.
-- Next.js chạy trực tiếp: `54846`.
+- Next.js chạy trực tiếp hoặc frontend Compose: `54846`.
 - Điểm truy cập Compose: `52409`.
 - Redis nội bộ trong Compose: `6380`.
 

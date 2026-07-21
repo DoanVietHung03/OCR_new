@@ -94,9 +94,10 @@ Milestone C strong-server acceptance only.
 
 - Legacy: `62472`.
 - Direct backend: `50177`.
-- Direct frontend: `54846`.
-- Compose: only Nginx publishes `52409`; backend/frontend/Redis stay internal
-  on `50177`/`54846`/`6380`.
+- Direct frontend and Compose frontend: `54846`.
+- Compose also publishes Nginx on `52409`; backend and Redis stay internal on
+  `50177`/`6380`. The frontend image builds its `/api/*` rewrite to
+  `http://backend:50177`, while Nginx routes `/api/*` directly to backend.
 - Do not add `BACKEND_PORT`; it does not configure the listener.
 - Browser API calls remain relative `/api/*`; TLS terminates outside Compose.
 

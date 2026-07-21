@@ -23,6 +23,8 @@ legacy runtime until these commands pass on the target server.
    docker compose logs --tail=200 backend worker redis nginx
    docker compose exec worker celery -A app.workers.tasks:celery_app inspect registered
    curl -fsS http://127.0.0.1:52409/health
+   curl -fsSI http://127.0.0.1:54846/
+   curl -fsS http://127.0.0.1:54846/api/state > /dev/null
    ```
 
 4. Run the local gates from the repository root:

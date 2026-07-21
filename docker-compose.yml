@@ -52,6 +52,9 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        OCR_BACKEND_URL: http://backend:50177
+    ports: ["54846:54846"]
     depends_on:
       backend:
         condition: service_healthy

@@ -4,6 +4,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json frontend/package.json
 RUN corepack enable && pnpm install --frozen-lockfile
 COPY frontend frontend
+ARG OCR_BACKEND_URL=http://127.0.0.1:50177
+ENV OCR_BACKEND_URL=$OCR_BACKEND_URL
 RUN pnpm --dir frontend build
 RUN test -f /app/frontend/.next/standalone/frontend/server.js
 RUN test -f /app/frontend/.next/standalone/frontend/node_modules/next/package.json
