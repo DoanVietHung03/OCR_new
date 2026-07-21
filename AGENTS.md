@@ -13,17 +13,17 @@ Milestone C is not complete. Do not claim production readiness until
 restart, cross-version, and rollback evidence. Keep `src/ocr/` and `web/` as the
 rollback runtime until the one-day rollback window closes.
 
-The detailed legacy-browser recreation plan in `legacy_browser_recreated.md`
-was implemented and locally verified on 2026-07-21. The current Next.js UI is
-desktop-first responsive and the backend exposes minimal, safe
-`/api/system-metrics` telemetry. This local evidence does not complete Milestone
-C or prove production/provider behavior.
+The minimal legacy-browser baseline was implemented and locally verified on
+2026-07-21. The approved target is now Legacy+ v2: full visual/workflow parity
+with `OCR_paper` except ZIP/image/folder upload, plus safe Provider Profiles,
+durable Codes, richer typed evidence/reports, and allowlisted telemetry. The
+runtime has not implemented that new target yet.
 
 The 2026-07-21 closure audit passes 20 backend tests, 10 legacy compatibility
 tests, and 10 default browser tests; capture mode passes 11/11. The detailed
-checkpoint table in `legacy_browser_recreated.md` is 14/14 complete. There is
-no unfinished local implementation in that plan; the remaining work is
-Milestone C strong-server acceptance only.
+baseline checkpoint table is 14/14 complete. The active Legacy+ table in
+`legacy_browser_recreated.md` is 0/19. Do not claim current Legacy+ parity or
+production readiness; complete its local phases before Milestone C acceptance.
 
 ## Repository map
 
@@ -34,8 +34,11 @@ Milestone C strong-server acceptance only.
 - `backend/tests/`: local contract, lifecycle, persistence, and worker checks.
 - `data/jobs/`: durable offline state; Redis is disposable.
 - `src/ocr/`, `web/`, `tests/`: legacy rollback runtime.
-- `implementation_plan.md`: locked decisions and remaining gate.
-- `legacy_browser_recreated.md`: completed UI/telemetry spec and 14 local checkpoints.
+- `implementation_plan.md`: locked decisions, pending Legacy+ work, and rollout gate.
+- `legacy_browser_recreated.md`: active Legacy+ v2 spec, 0/19 active checkpoints,
+  and the completed 14-checkpoint v1 history.
+- `CONTEXT.md`: canonical product vocabulary for Legacy+, Provider Profiles,
+  Code Catalog, and Review Evidence.
 - `docs/ui-parity/`: four sanitized captures and local browser evidence notes.
 - `docs/phase4_cutover_runbook.md`: strong-server commands.
 - `docs/phase4_acceptance.md`: sole Milestone C evidence record.
@@ -63,6 +66,9 @@ Milestone C strong-server acceptance only.
   again after terminal. Cancel creates a marker; do not add distributed locks.
 - Snapshot provider/model/prompt/external status without URL, key, or headers.
   `OCR_ENDPOINT_EXTERNAL` defaults to `true` and requires per-job consent.
+- Legacy+ may expose server-defined Provider Profile IDs, labels, capabilities,
+  and safe readiness. The browser must never receive or submit arbitrary provider
+  URLs, keys, headers, or models.
 - Persist corrections with original OCR value and immutable audit. Manual crop
   is evidence only. Approval persists even with no correction.
 - Rerun copies only source PDFs into a clean job and leaves the old job intact.
@@ -72,8 +78,9 @@ Milestone C strong-server acceptance only.
 - Keep the frontend dependency-light: Next/React, CSS, and native browser APIs;
   no UI kit, state manager, BFF, database, or shared-types package.
 - The primary UI persona is an operations reviewer completing upload → monitor
-  → review/correct/approve. Keep permanent navigation to Jobs and New OCR only;
-  documents, reports, and legacy logs stay contextual to a job.
+  → review/correct/approve. Legacy+ restores permanent Jobs, Upload, Manage,
+  Logs, Report, and Codes navigation with real routes and data; System Monitor
+  remains a global dialog/deep-linkable state.
 - `/corrections` saves and approves in one call. UI with drafts must say “Save
   and approve”; do not invent an unapproved saved-correction state. Unknown or
   non-scalar legacy fields remain visible but read-only.
@@ -85,10 +92,14 @@ Milestone C strong-server acceptance only.
   desktop-first: visual/functional anchors at `1440×900` and `1366×768`; at
   `390×844` require only no horizontal overflow, no broken layout, and closable
   modals.
-- System telemetry describes the environment visible to the backend:
-  CPU/RAM, disk containing `OCR_DATA_DIR`, and best-effort visible GPUs. It must
-  not expose hostname, paths, processes, raw command output, secrets, or provider
-  configuration; do not require GPU access in the default Compose stack.
+- System telemetry describes the environment visible to the backend. Legacy+
+  may add sanitized CPU/runtime details, memory, the disk containing
+  `OCR_DATA_DIR`, best-effort GPU details, and persisted OCR operation samples.
+  It must not expose hostname, IP, usernames, paths, processes, environment
+  dumps, raw command output, secrets, or provider configuration; do not require
+  GPU access in the default Compose stack.
+- Durable Code Catalog state belongs in atomic `OCR_DATA_DIR/_codes.json` with
+  revision conflicts and restart/backup tests; do not add a database.
 
 ## Runtime contract
 
@@ -105,7 +116,8 @@ Milestone C strong-server acceptance only.
 
 1. Read `implementation_plan.md` before migration or cutover work. For changes
    to the recreated browser flow, also read `legacy_browser_recreated.md` and
-   preserve its completed checkpoints and Milestone C boundary.
+   preserve its v1 baseline, implement the active Legacy+ checkpoints, and keep
+   the Milestone C boundary.
 2. Before editing code, use the CodeGraph MCP against `C:\HProjecT\OCR` to
    inspect the target symbols, callers, routes, and blast radius. Do not infer
    flow from filenames or query `.codegraph/codegraph.db` directly.
@@ -117,7 +129,7 @@ Milestone C strong-server acceptance only.
    when architecture, commands, or rollout state changes.
 8. Do not create commits unless the user explicitly asks for them.
 
-## Completed legacy-browser phases
+## Completed baseline-v1 phases
 
 1. Capture sanitized baseline and map every UI block to real schema/API data.
 2. Implement minimal backend telemetry, focused tests, and generated API types.
@@ -131,8 +143,9 @@ Milestone C strong-server acceptance only.
    parity, and aligned documentation.
 
 All six phases left their relevant checks passing. Future changes must preserve
-those checks. This plan does not authorize automatic commits or deleting the
-legacy runtime.
+those checks. They do not complete Legacy+ v2. Follow the active phases and
+0/19 checkpoint table in `legacy_browser_recreated.md`. This plan does not
+authorize automatic commits or deleting the legacy runtime.
 
 ## Required local checks
 

@@ -4,23 +4,23 @@ Hệ thống OCR tài liệu hành chính tiếng Việt, chỉ nhận PDF. Stac
 dụng Next.js, FastAPI, Celery, Redis và một endpoint OCR tương thích OpenAI do
 máy chủ cấu hình.
 
-Milestone A, B và toàn bộ 14 checkpoint tái tạo legacy browser đã hoàn thiện,
-xác minh cục bộ ngày 2026-07-21. Không còn hạng mục local dang dở trong phạm vi
-`legacy_browser_recreated.md`. Milestone C vẫn phải được nghiệm thu trên máy chủ
-mạnh với Nginx/Redis/Celery/provider thật, ba PDF cố định, kiểm tra khởi động
-lại, tương thích hai phiên bản và diễn tập rollback. Cho đến khi gate này đạt,
-`src/ocr/` và `web/` vẫn là runtime rollback.
+Milestone A, B và 14 checkpoint browser baseline v1 đã hoàn thiện, xác minh cục
+bộ ngày 2026-07-21. Baseline này không còn là đích UI cuối. Kế hoạch **Legacy+
+v2** nhằm phục hồi toàn bộ browser tham chiếu trong `OCR_paper`, chỉ loại trừ
+ZIP/ảnh/folder upload, hiện chưa triển khai và đang ở 0/19 checkpoint. Milestone
+C vẫn phải được nghiệm thu trên máy chủ mạnh sau khi Legacy+ đóng gate local.
+Cho đến khi Gate C đạt, `src/ocr/` và `web/` vẫn là runtime rollback.
 
-Giao diện Next.js hiện tái tạo luồng vận hành legacy theo hướng desktop-first:
+Giao diện Next.js hiện là baseline desktop-first:
 upload PDF inline, dashboard có filter/lifecycle action, workspace kiểm tra từng
 document/page/field, Lưu và duyệt, visual crop theo tọa độ ảnh tự nhiên, report,
 legacy logs có điều kiện và System Monitor. Ảnh/checklist đã ẩn danh nằm trong
 `docs/ui-parity/`; đây là bằng chứng local, không thay thế Milestone C.
 
-Checkpoint local chi tiết nằm trong `legacy_browser_recreated.md`: 14/14 mục
-đạt 100%; 20 backend tests, 10 legacy compatibility tests và 10 browser tests
-mặc định đã pass; capture mode pass 11/11. Đây là contract/UI evidence local,
-không phải bằng chứng chất lượng OCR hoặc production readiness.
+Checkpoint baseline v1 trong `legacy_browser_recreated.md` đạt 14/14; 20 backend
+tests, 10 legacy compatibility tests và 10 browser tests mặc định đã pass;
+capture mode pass 11/11. Bảng Legacy+ v2 riêng đang là 0/19. Đây là contract/UI
+evidence local, không phải bằng chứng chất lượng OCR hoặc production readiness.
 
 ## Cấu trúc repository
 
@@ -29,7 +29,9 @@ không phải bằng chứng chất lượng OCR hoặc production readiness.
 - `nginx/`: định tuyến production trên cùng một domain.
 - `data/jobs/`: JSON, PDF và artifact bền vững của job; không lưu trong Redis.
 - `src/ocr/`, `web/`, `tests/`: runtime rollback legacy và các bài kiểm tra.
-- `legacy_browser_recreated.md`: đặc tả đã hoàn thành và bảng 14 checkpoint local.
+- `legacy_browser_recreated.md`: đặc tả Legacy+ v2, checkpoint đang làm và lịch
+  sử 14 checkpoint baseline v1.
+- `CONTEXT.md`: glossary ngắn cho Legacy+, Provider Profile, Codes và evidence.
 - `docs/ui-parity/`: bốn ảnh ẩn danh và mô tả browser evidence local.
 - `docs/phase4_cutover_runbook.md`: quy trình thực hiện trên máy chủ mạnh.
 - `docs/phase4_acceptance.md`: bằng chứng bắt buộc cho Milestone C.
@@ -166,8 +168,8 @@ ngày kết thúc.
 trước khi gửi ảnh trang đến endpoint bên ngoài. `BACKEND_PORT` cố ý không được
 hỗ trợ — backend luôn lắng nghe tại `50177`.
 
-Xem [legacy_browser_recreated.md](legacy_browser_recreated.md) để kiểm tra 14
-checkpoint đã hoàn thành, [implementation_plan.md](implementation_plan.md) để
-biết gate còn lại và
+Xem [legacy_browser_recreated.md](legacy_browser_recreated.md) để theo dõi 19
+checkpoint Legacy+ v2 và baseline v1, [implementation_plan.md](implementation_plan.md)
+để biết công việc còn lại và
 [docs/phase4_cutover_runbook.md](docs/phase4_cutover_runbook.md) để thực hiện
 cutover và rollback.

@@ -1,17 +1,30 @@
 # Kế hoạch công việc còn lại cho OCR monorepo
 
-**Trạng thái hiện tại:** Milestone A và B cùng đợt tái tạo legacy browser đã
-implement, pass 20 test backend, 10 test compatibility, typecheck/build và 10
-browser test mặc định local ngày 2026-07-21; capture mode pass 11/11. Bằng chứng
-Nginx/Redis/Celery/provider thật vẫn để ở Gate Milestone C. Legacy
-`src/ocr/` + `web/` vẫn là runtime rollback cho đến khi Gate Milestone C pass.
+**Trạng thái hiện tại:** Milestone A, B và baseline browser v1 đã implement,
+pass 20 test backend, 10 test compatibility, typecheck/build và 10 browser test
+mặc định local ngày 2026-07-21; capture mode pass 11/11. Baseline 14/14 này không
+còn là đích UI cuối. Đặc tả **Legacy+ v2** trong
+`legacy_browser_recreated.md` đã được duyệt nhưng chưa implement (0/19
+checkpoint). Bằng chứng Nginx/Redis/Celery/provider thật vẫn để ở Gate Milestone
+C. Legacy `src/ocr/` + `web/` vẫn là runtime rollback cho đến khi Gate Milestone
+C pass.
 
 File này chỉ theo dõi việc chưa làm, đang làm hoặc đã làm nhưng đang lỗi. Các
 phase đã hoàn tất 100% không được liệt kê lại.
 
 ## 1. Khoảng trống còn lại
 
-### Chỉ còn acceptance trên strong server
+### Legacy+ v2 còn chưa triển khai
+
+- Phục hồi toàn bộ visual/workflow của browser tham chiếu trong `OCR_paper`, chỉ
+  loại trừ ZIP/ảnh/folder upload.
+- Bổ sung Provider Profiles allowlist, Documents index, rich review evidence,
+  Safe Events/reports, Code Catalog persistence thật và telemetry allowlist mở
+  rộng. Chi tiết và source-of-truth checkpoint nằm trong
+  `legacy_browser_recreated.md`.
+- Không được dùng 14/14 checkpoint baseline v1 để tuyên bố Legacy+ hoàn thành.
+
+### Acceptance trên strong server
 
 - Chưa có bằng chứng runtime thật cho Nginx, Redis, Celery worker và provider.
 - Chưa chạy ba PDF acceptance cố định, restart/interrupted, round-trip với
@@ -36,7 +49,9 @@ phase đã hoàn tất 100% không được liệt kê lại.
 
 ### Provider và error contract
 
-- Provider/model chỉ do server cấu hình; browser chỉ hiển thị engine/status.
+- Server tiếp tục sở hữu URL/key/header và cấu hình provider thật. Legacy+ được
+  chọn `provider_profile_id` cùng task/pages/max-pages trong allowlist công khai;
+  browser không được gửi URL/key/header/model tùy ý.
 - `OCR_ENDPOINT_EXTERNAL` là cờ explicit, mặc định `true`. Job dùng endpoint
   external phải có consent trước khi gửi ảnh trang.
 - Khi tạo job, snapshot các giá trị không bí mật: `provider`, `model`,
@@ -79,9 +94,10 @@ phase đã hoàn tất 100% không được liệt kê lại.
 
 ### UI, test và rollout
 
-- Visual/behavior parity được nghiệm thu bằng checklist tại desktop `1440×900`
-  và `1366×768`. Viewport `390×844` chỉ là safety smoke: không overflow ngang,
-  không vỡ layout và modal đóng được; không pixel-perfect hoặc screenshot diff.
+- Legacy+ visual/behavior parity được nghiệm thu bằng cùng dữ liệu, viewport và
+  UI state với browser tham chiếu tại `1440×900` và `1366×768`; không so ảnh lệch
+  state. Viewport `390×844` là safety smoke: không overflow ngang, không vỡ layout
+  và modal đóng được.
 - Giữ route-mock Playwright cho trạng thái hiếm/lỗi. Thêm một happy path chạy
   Next + FastAPI thật, Celery eager chỉ trong test và fake HTTP provider cục
   bộ; local test không cần Redis, Docker, GPU hoặc provider thật.
@@ -116,7 +132,7 @@ phase đã hoàn tất 100% không được liệt kê lại.
   `/api/*`, không có BFF hoặc shared package.
 - `frontend/openapi.json` và `frontend/lib/api-schema.ts` đã regenerate/commit.
 
-### B2. PDF-only UI và parity
+### B2. PDF-only UI và baseline parity v1
 
 - Dashboard và job detail phủ upload, status/counters, mọi document/page, correction,
   approval, crop evidence, report, filter/pagination/bulk action và safe errors.
@@ -142,7 +158,19 @@ phase đã hoàn tất 100% không được liệt kê lại.
 - Mọi API action tương thích có UI path; không còn control ZIP/ảnh hoặc lỗi
   hydration khi đọc ngôn ngữ đã lưu.
 
-## 5. Milestone C — Strong-server acceptance và rollback
+## 5. Legacy+ v2 — Chưa triển khai
+
+Triển khai tuần tự theo sáu phase trong `legacy_browser_recreated.md`: re-baseline
+và contract freeze; backend foundations; full shell/visual system; upload,
+dashboard và Manage; rich review workspace; Logs/Reports/Codes/Monitor; sau đó
+closure local. Bảng đang có hiệu lực là 0/19 checkpoint.
+
+Gate Legacy+ local chỉ pass khi toàn bộ API mới dùng Pydantic/OpenAPI generated
+types, Codes tồn tại sau restart, browser không lộ provider secret, telemetry
+đúng allowlist, cùng-state visual evidence hợp lệ và mọi required local check
+pass. Baseline v1 phải tiếp tục không regression.
+
+## 6. Milestone C — Strong-server acceptance và rollback
 
 ### C1. Acceptance nội bộ
 
@@ -175,7 +203,7 @@ phase đã hoàn tất 100% không được liệt kê lại.
 - `README.md`, `AGENTS.md`, `.env.example`, runbook và acceptance report phản
   ánh đúng lệnh, port và trạng thái thực tế.
 
-## 6. Lệnh kiểm tra bắt buộc
+## 7. Lệnh kiểm tra bắt buộc
 
 ```bash
 # Backend, không cần Redis/provider thật
