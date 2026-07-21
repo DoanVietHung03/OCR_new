@@ -1,51 +1,50 @@
-# OCR service
+# Dịch vụ OCR
 
-PDF-only Vietnamese administrative-document OCR. The migration stack uses
-Next.js, FastAPI, Celery, Redis, and one server-configured OpenAI-compatible
-OCR endpoint.
+Hệ thống OCR tài liệu hành chính tiếng Việt, chỉ nhận PDF. Stack chuyển đổi sử
+dụng Next.js, FastAPI, Celery, Redis và một endpoint OCR tương thích OpenAI do
+máy chủ cấu hình.
 
-Milestones A and B are locally verified. Milestone C still requires the strong
-server: real Nginx/Redis/Celery/provider execution, three fixed PDF fixtures,
-restart checks, cross-version compatibility, and rollback rehearsal. Until
-that gate passes, `src/ocr/` and `web/` remain the rollback runtime.
+Milestone A và B đã được xác minh cục bộ. Milestone C vẫn phải được nghiệm thu
+trên máy chủ mạnh với Nginx/Redis/Celery/provider thật, ba PDF cố định, kiểm tra
+khởi động lại, tương thích hai phiên bản và diễn tập rollback. Cho đến khi gate
+này đạt, `src/ocr/` và `web/` vẫn là runtime rollback.
 
-## Repository layout
+## Cấu trúc repository
 
-- `frontend/`: Next.js App Router UI and generated API types.
-- `backend/`: FastAPI API, durable job store, Celery task, and tests.
-- `nginx/`: single-domain production routing.
-- `data/jobs/`: durable offline job JSON, PDFs, and artifacts; never Redis.
-- `src/ocr/`, `web/`, `tests/`: legacy rollback runtime and checks.
-- `docs/phase4_cutover_runbook.md`: strong-server procedure.
-- `docs/phase4_acceptance.md`: required Milestone C evidence.
+- `frontend/`: giao diện Next.js App Router và các kiểu API được sinh tự động.
+- `backend/`: FastAPI, kho job bền vững, Celery task và các bài kiểm tra.
+- `nginx/`: định tuyến production trên cùng một domain.
+- `data/jobs/`: JSON, PDF và artifact bền vững của job; không lưu trong Redis.
+- `src/ocr/`, `web/`, `tests/`: runtime rollback legacy và các bài kiểm tra.
+- `docs/phase4_cutover_runbook.md`: quy trình thực hiện trên máy chủ mạnh.
+- `docs/phase4_acceptance.md`: bằng chứng bắt buộc cho Milestone C.
 
-## Locked contract
+## Các ràng buộc đã khóa
 
-- PDF-only: at most 15 PDFs and 200 MiB per job; at most 100 pages per PDF.
-- PDFs are validated before dispatch. Invalid, encrypted, or oversized PDFs
-  fail the whole job without calling the provider.
-- FastAPI handles short requests only. Celery renders pages at 200 DPI and
-  calls the provider.
-- `/start` is one-shot. Production workers use concurrency `1` and prefetch
-  `1`; jobs are not automatically retried or resumed.
-- Provider, model, prompt version, and external-endpoint status are snapshotted
-  per job. URLs, keys, headers, raw provider responses, and unsafe errors are
-  never persisted.
-- Corrections, approval, immutable audit, and manual-crop evidence persist.
-  Rerun creates a clean job from the original PDFs.
-- `data/jobs/` is the durable source of truth. Redis has no persistent volume.
-- Browser requests stay relative to `/api/*`; provider settings and secrets
-  never reach the frontend.
+- Chỉ nhận PDF: tối đa 15 PDF và 200 MiB cho mỗi job; tối đa 100 trang mỗi PDF.
+- PDF được kiểm tra trước khi dispatch. PDF không hợp lệ, có mật khẩu hoặc vượt
+  giới hạn sẽ làm toàn bộ job thất bại mà không gọi provider.
+- FastAPI chỉ xử lý request ngắn. Celery render trang ở 200 DPI và gọi provider.
+- `/start` chỉ dispatch một lần. Worker production dùng concurrency `1` và
+  prefetch `1`; job không tự động retry hoặc resume.
+- Provider, model, phiên bản prompt và trạng thái endpoint bên ngoài được chụp
+  lại theo từng job. URL, khóa, header, phản hồi thô của provider và lỗi không
+  an toàn không bao giờ được lưu.
+- Nội dung chỉnh sửa, phê duyệt, audit bất biến và bằng chứng crop thủ công được
+  lưu bền vững. Rerun tạo một job sạch từ các PDF gốc.
+- `data/jobs/` là nguồn dữ liệu bền vững duy nhất. Redis không có volume lưu trữ.
+- Trình duyệt chỉ gọi đường dẫn tương đối `/api/*`; cấu hình provider và secret
+  không bao giờ được gửi xuống frontend.
 
-## Requirements
+## Yêu cầu môi trường
 
-- Python 3.12 and `uv`.
-- Node.js 22 and pnpm 10.
-- Docker Compose only for production-like and Milestone C runs.
+- Python 3.12 và `uv`.
+- Node.js 22 và pnpm 10.
+- Docker Compose chỉ cần cho môi trường gần production và Milestone C.
 
-## Local setup
+## Thiết lập cục bộ
 
-Run from the repository root:
+Chạy từ thư mục gốc của repository:
 
 ```powershell
 Copy-Item .env.example .env
@@ -53,32 +52,34 @@ uv sync --project backend
 pnpm install
 ```
 
-Edit `.env` with the real server-only provider values. The example Redis host
-`redis` is for Compose; direct Celery runs must use a reachable Redis host.
+Điền các giá trị provider thật, chỉ dùng phía máy chủ, vào `.env`. Redis host
+`redis` trong file mẫu dành cho Compose; khi chạy Celery trực tiếp phải dùng
+một Redis host có thể kết nối được.
 
-Start the API and frontend in separate terminals:
+Khởi động API và frontend trong hai terminal riêng:
 
 ```powershell
 uv run --env-file .env --project backend uvicorn app.main:app --host 0.0.0.0 --port 50177 --reload
 pnpm --dir frontend dev -- --hostname 0.0.0.0 --port 54846
 ```
 
-The frontend proxies relative `/api/*` calls to `http://127.0.0.1:50177` by
-default. Set `OCR_BACKEND_URL` only when the direct backend uses another URL.
-Next development currently allows `127.0.0.1` and `10.6.18.76`; update
-`allowedDevOrigins` in `frontend/next.config.ts` for another LAN host.
+Mặc định frontend proxy các request tương đối `/api/*` đến
+`http://127.0.0.1:50177`. Chỉ đặt `OCR_BACKEND_URL` khi backend trực tiếp dùng
+URL khác. Môi trường phát triển Next hiện cho phép `127.0.0.1` và `10.6.18.76`;
+hãy cập nhật `allowedDevOrigins` trong `frontend/next.config.ts` nếu dùng một
+máy chủ LAN khác.
 
-For a direct worker, point both Celery URLs at the same reachable Redis, then
-run:
+Để chạy worker trực tiếp, trỏ cả hai URL Celery đến cùng một Redis có thể kết
+nối được, sau đó chạy:
 
 ```powershell
 uv run --env-file .env --project backend celery -A app.workers.tasks:celery_app worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1
 ```
 
-## Verification
+## Kiểm tra
 
-Local checks do not require Redis, a running worker, Docker, GPU, or a real
-provider:
+Các kiểm tra cục bộ không cần Redis, worker đang chạy, Docker, GPU hoặc provider
+thật:
 
 ```powershell
 uv run --project backend pytest backend/tests -q
@@ -91,32 +92,33 @@ pnpm api:check
 git diff --check
 ```
 
-Playwright covers a mocked workflow, a real Next/FastAPI/eager-task flow with a
-local fake provider, and the locked `1440×900` desktop plus `390×844` mobile
-viewports. These checks do not prove production Redis/Celery/provider behavior.
+Playwright kiểm tra workflow dùng mock, một luồng Next/FastAPI/eager-task thật
+với fake provider cục bộ, cùng hai viewport đã khóa là desktop `1440×900` và
+mobile `390×844`. Các kiểm tra này không chứng minh hành vi của
+Redis/Celery/provider trong production.
 
-When FastAPI schemas change, run `pnpm api:generate` and commit both
-`frontend/openapi.json` and `frontend/lib/api-schema.ts`.
+Khi schema FastAPI thay đổi, chạy `pnpm api:generate` và commit cả
+`frontend/openapi.json` lẫn `frontend/lib/api-schema.ts`.
 
-## Compose
+## Chạy bằng Docker Compose
 
-Only Nginx publishes a host port (`52409`). Backend, frontend, Redis, and the
-worker remain internal.
+Chỉ Nginx publish cổng host `52409`. Backend, frontend, Redis và worker chỉ hoạt
+động trong mạng nội bộ của Compose.
 
 ```bash
 cp .env.example .env
-# edit server-only values first
+# chỉnh các giá trị chỉ dùng phía máy chủ trước khi chạy
 docker compose config
 docker compose up -d --build redis backend worker frontend nginx
 docker compose ps
 curl -fsS http://127.0.0.1:52409/health
 ```
 
-Do not use Compose against the real `OCR_DATA_DIR` until uploads are paused,
-the legacy worker is drained and stopped, and a checksum-backed backup exists.
-Never run legacy and new workers on the same job directory.
+Không dùng Compose với `OCR_DATA_DIR` thật cho đến khi đã dừng nhận upload,
+drain và dừng worker legacy, đồng thời tạo bản sao lưu có checksum. Không bao
+giờ chạy worker legacy và worker mới trên cùng một thư mục job.
 
-## Legacy rollback runtime
+## Runtime rollback legacy
 
 ```powershell
 python -m pip install -e .
@@ -124,21 +126,21 @@ $env:PYTHONPATH = "src"
 python -m ocr
 ```
 
-Keep this runtime available until Milestone C passes and the one-day rollback
-window closes.
+Giữ runtime này sẵn sàng cho đến khi Milestone C đạt và cửa sổ rollback một
+ngày kết thúc.
 
-## Ports and data
+## Cổng và dữ liệu
 
-- Legacy runtime: `62472`.
-- Direct FastAPI: `50177`.
-- Direct Next.js: `54846`.
-- Compose entry point: `52409`.
-- Compose-internal Redis: `6379`.
+- Runtime legacy: `62472`.
+- FastAPI chạy trực tiếp: `50177`.
+- Next.js chạy trực tiếp: `54846`.
+- Điểm truy cập Compose: `52409`.
+- Redis nội bộ trong Compose: `6379`.
 
-`OCR_ENDPOINT_EXTERNAL` defaults to `true`; each job must record consent before
-page images are sent to an external endpoint. `BACKEND_PORT` is intentionally
-unsupported—the backend listener is fixed at `50177`.
+`OCR_ENDPOINT_EXTERNAL` mặc định là `true`; mỗi job phải ghi nhận sự đồng ý
+trước khi gửi ảnh trang đến endpoint bên ngoài. `BACKEND_PORT` cố ý không được
+hỗ trợ — backend luôn lắng nghe tại `50177`.
 
-See [implementation_plan.md](implementation_plan.md) for the remaining gate and
-[docs/phase4_cutover_runbook.md](docs/phase4_cutover_runbook.md) for cutover and
-rollback.
+Xem [implementation_plan.md](implementation_plan.md) để biết gate còn lại và
+[docs/phase4_cutover_runbook.md](docs/phase4_cutover_runbook.md) để thực hiện
+cutover và rollback.
