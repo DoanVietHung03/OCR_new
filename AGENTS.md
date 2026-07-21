@@ -2,83 +2,117 @@
 
 ## Current state
 
-Milestones A and B are implemented and locally verified: strict PDF upload,
-typed API, one-shot dispatch, worker lifecycle, safe persistence, the PDF-only
-VI/EN UI, and mocked plus real eager-task browser paths pass without Redis or
-a real provider. The strong-server gate remains open. Legacy `src/ocr/` plus
-`web/` remains the rollback runtime until Milestone C in
-`implementation_plan.md` passes.
+Milestones A and B are implemented and locally verified. The Next.js/FastAPI
+stack supports strict PDF upload, typed OpenAPI, one-shot Celery dispatch,
+durable job persistence, correction/approval/crop evidence, rerun, and the
+PDF-only VI/EN UI. Local coverage includes backend tests, legacy compatibility
+tests, mocked browser paths, and a real eager-task/fake-provider browser flow.
 
-## Target stack and scope
+Milestone C is not complete. Do not claim production readiness until
+`docs/phase4_acceptance.md` contains real Nginx/Redis/Celery/provider, fixture,
+restart, cross-version, and rollback evidence. Keep `src/ocr/` and `web/` as the
+rollback runtime until the one-day rollback window closes.
 
-- `frontend/`: Next.js App Router + TypeScript, Node 22/pnpm.
-- `backend/`: Python 3.12, async FastAPI, Pydantic v2, Celery + Redis.
-- PDF-only: 15 files/job, 200 MiB/job, 100 pages/PDF, rendered at 200 DPI.
-- `data/jobs/` is durable offline state. Redis is disposable broker/result
-  infrastructure only; do not add AOF, a Redis volume, or a database.
-- OCR uses one server-configured OpenAI-compatible HTTP endpoint. The browser
-  never selects provider/model or receives secrets.
+## Repository map
 
-## Architecture rules
+- `frontend/`: Next.js App Router, native CSS/browser APIs, generated API types.
+- `backend/app/api/`: `/api/*` transport and Pydantic response contracts.
+- `backend/app/services/`: durable filesystem state and provider HTTP client.
+- `backend/app/workers/`: Celery ownership of render/provider work.
+- `backend/tests/`: local contract, lifecycle, persistence, and worker checks.
+- `data/jobs/`: durable offline state; Redis is disposable.
+- `src/ocr/`, `web/`, `tests/`: legacy rollback runtime.
+- `implementation_plan.md`: locked decisions and remaining gate.
+- `docs/phase4_cutover_runbook.md`: strong-server commands.
+- `docs/phase4_acceptance.md`: sole Milestone C evidence record.
 
-- FastAPI must not render PDFs or call the provider in an HTTP request. Celery
-  owns OCR; test-only eager execution is allowed for the integration smoke.
-- Preserve `/api/*`, artifact URLs, filesystem layout, safe errors, and
-  two-way legacy/new job compatibility through the one-day rollback window.
-- Pydantic v2/OpenAPI fully describes known public response fields and is the
-  source for committed frontend API types. Persistence remains tolerant of
-  legacy extras and must not rewrite old jobs merely by reading them.
-- `/start` is one-shot and idempotent. Production Celery uses
-  `--concurrency=1 --prefetch-multiplier=1`; no automatic job retry/resume.
-- Use single-writer ownership: backend before dispatch, worker while active,
-  backend again after terminal. Cancel writes a marker; do not add Redis/file
-  distributed locks.
-- Provider/model/prompt/external status are snapshotted per job without URL,
-  key, or headers. `OCR_ENDPOINT_EXTERNAL` defaults true and controls consent.
-- Persist correction values plus immutable audit, manual-crop evidence, and
-  approval. Rerun copies only PDFs into a clean job; the old job remains.
-- Store only stable safe error codes in job/API data. Redact logs; never store
-  API keys, raw provider responses, or unredacted payloads.
-- Keep frontend dependency-light: Next/React, CSS, and native browser APIs.
-  Do not add a UI kit, state manager, BFF, database, or shared-types package.
+## Architecture invariants
 
-## Ports and runtime
+- Accept only PDFs: 15 files/job, 200 MiB/job, 100 pages/PDF, rendered at
+  200 DPI.
+- FastAPI must not render PDFs or call the provider. Celery owns OCR; eager
+  execution is test-only.
+- `data/jobs/` JSON and artifacts are durable truth. Do not add a database,
+  Redis AOF, or a Redis volume.
+- Preserve `/api/*`, artifact URLs, filesystem layout, safe error codes, and
+  two-way legacy/new readability through rollback. Legacy extras remain
+  readable and reading an old job must not rewrite it.
+- Pydantic v2/OpenAPI is canonical for public fields. `frontend/lib/api.ts`
+  must consume generated types; do not add handwritten API DTOs.
+- `/start` atomically transitions `ready → starting` once. Publish uncertainty
+  becomes `interrupted`; never auto-retry or resume a whole job.
+- Retry a page once only for a pre-response connection failure or HTTP
+  `429/502/503/504`; cap `Retry-After` at 10 seconds. Do not retry read timeout,
+  invalid JSON, or validation errors.
+- Production Celery always uses `--concurrency=1 --prefetch-multiplier=1`.
+- Backend writes before dispatch, worker writes while active, backend writes
+  again after terminal. Cancel creates a marker; do not add distributed locks.
+- Snapshot provider/model/prompt/external status without URL, key, or headers.
+  `OCR_ENDPOINT_EXTERNAL` defaults to `true` and requires per-job consent.
+- Persist corrections with original OCR value and immutable audit. Manual crop
+  is evidence only. Approval persists even with no correction.
+- Rerun copies only source PDFs into a clean job and leaves the old job intact.
+- Delete only `uploading`, `ready`, or terminal jobs; never delete active jobs.
+- Persist only stable safe errors. Never persist secrets, raw provider
+  responses, or unredacted request/response payloads.
+- Keep the frontend dependency-light: Next/React, CSS, and native browser APIs;
+  no UI kit, state manager, BFF, database, or shared-types package.
+- Preserve valid VI/EN UTF-8, Vietnamese default,
+  `localStorage["intellidoc.language"]`, and parity checks at `1440×900` and
+  `390×844`.
 
-- Direct backend: `50177` (`uv run --project backend uvicorn app.main:app --host 0.0.0.0 --port 50177 --reload`).
-- Direct frontend: `54846` (`pnpm --dir frontend dev -- --hostname 0.0.0.0 --port 54846`).
-- Compose entry point: Nginx host port `52409`; backend/frontend/Redis remain
-  internal on `50177`/`54846`/`6379`.
-- Do not add `BACKEND_PORT`; it does not control the internal listener.
+## Runtime contract
 
-## Locked rollout decisions
+- Legacy: `62472`.
+- Direct backend: `50177`.
+- Direct frontend: `54846`.
+- Compose: only Nginx publishes `52409`; backend/frontend/Redis stay internal
+  on `50177`/`54846`/`6379`.
+- Do not add `BACKEND_PORT`; it does not configure the listener.
+- Browser API calls remain relative `/api/*`; TLS terminates outside Compose.
 
-- Production Compose is Nginx, frontend, backend, worker, and Redis under one
-  domain. TLS stays outside Compose; browser API calls are relative `/api/*`.
-- Back up the real `OCR_DATA_DIR`, pause uploads, and drain/stop legacy before
-  the new worker uses it. Never run two worker versions on the same directory.
-- Storage is offline only; the configured OCR endpoint may be external and
-  then requires per-job consent.
-- Visual/behavior parity is checklist-based at `1440×900` and `390×844`, not
-  pixel-perfect. Preserve valid VI/EN UTF-8, Vietnamese default, and
-  `localStorage["intellidoc.language"]`.
-- Keep mocked Playwright cases plus one real Next/FastAPI/eager-task/fake-HTTP
-  happy path. Real Redis/Celery/Nginx/provider evidence is strong-server only.
-- Strong-server uses three sanitized fixed PDFs stored outside Git and
-  `OCR_DATA_DIR`; record their SHA-256 in `docs/phase4_acceptance.md`.
-- Legacy receives only PDF-only synchronization, two-way data compatibility,
-  and fixes required to prevent data loss/corruption.
+## Working procedure
 
-## Working rules
+1. Read `implementation_plan.md` before migration work.
+2. Before editing code, use the CodeGraph MCP against `C:\HProjecT\OCR` to
+   inspect the target symbols, callers, routes, and blast radius. Do not infer
+   flow from filenames or query `.codegraph/codegraph.db` directly.
+3. Reuse existing modules and native platform features; keep changes minimal.
+4. Preserve unrelated worktree changes. Do not delete legacy code.
+5. Add focused checks for non-trivial branches and persistence behavior.
+6. Regenerate OpenAPI/types whenever public schemas change.
+7. Keep `README.md`, this file, the plan, runbook, and acceptance report aligned
+   when architecture, commands, or rollout state changes.
 
-1. Read `implementation_plan.md` and crawl `.codegraph/codegraph.db` before a
-   structural migration change; confirm caller/route flow, not filenames only.
-2. Keep each milestone independently runnable and finish A before B, then C.
-3. Add focused checks for non-trivial behavior. Local tests need no Redis,
-   running Celery worker, GPU, Docker, or real provider.
-4. Do not delete legacy `src/`/`web/` until the explicit post-rollback cleanup.
-5. Update this file, `README.md`, and the plan when architecture or commands
-   materially change.
-6. Phase B needs all UI actions plus integration smoke. Phase C additionally
-   needs three real-provider fixtures, restart/interrupted behavior,
-   cross-version round-trip, rollback rehearsal, and a completed acceptance
-   report.
+## Required local checks
+
+Run from the repository root:
+
+```powershell
+uv run --project backend pytest backend/tests -q
+$env:PYTHONPATH = "src"
+python -m unittest discover -s tests -v
+pnpm --dir frontend typecheck
+pnpm --dir frontend build
+pnpm --dir frontend e2e:smoke
+pnpm api:check
+python -m compileall -q src backend/app
+git diff --check
+```
+
+Local checks need no Redis, running worker, Docker, GPU, or real provider. They
+are contract evidence, not proof of OCR quality or production readiness.
+
+## Milestone C rules
+
+- Use three sanitized fixed PDFs outside Git and `OCR_DATA_DIR`; record SHA-256.
+- Pause uploads, drain and stop legacy, then back up the real data directory
+  with a checksum before the new worker touches it.
+- Never run both worker versions against the same directory.
+- Verify Nginx health, registered task, concurrency/prefetch, artifacts/report,
+  manual fields, restart/interrupted behavior, cross-version round-trip, and
+  rollback rehearsal.
+- Record sanitized evidence in `docs/phase4_acceptance.md`. Do not replace live
+  evidence with mock/unit-test claims.
+- Delete `src/`, `web/`, legacy packaging, or tests only in a separate cleanup
+  request after the rollback window.
