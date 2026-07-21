@@ -13,6 +13,12 @@ Milestone C is not complete. Do not claim production readiness until
 restart, cross-version, and rollback evidence. Keep `src/ocr/` and `web/` as the
 rollback runtime until the one-day rollback window closes.
 
+The detailed legacy-browser recreation plan in `legacy_browser_recreated.md`
+was approved on 2026-07-21 but is not implemented. It changes the follow-up UI
+scope to desktop-first responsive behavior and approves one backend addition:
+real, minimal `/api/system-metrics` telemetry. Do not describe either as current
+runtime behavior until the relevant phase and checks are complete.
+
 ## Repository map
 
 - `frontend/`: Next.js App Router, native CSS/browser APIs, generated API types.
@@ -23,6 +29,7 @@ rollback runtime until the one-day rollback window closes.
 - `data/jobs/`: durable offline state; Redis is disposable.
 - `src/ocr/`, `web/`, `tests/`: legacy rollback runtime.
 - `implementation_plan.md`: locked decisions and remaining gate.
+- `legacy_browser_recreated.md`: approved UI/telemetry follow-up plan and gates.
 - `docs/phase4_cutover_runbook.md`: strong-server commands.
 - `docs/phase4_acceptance.md`: sole Milestone C evidence record.
 
@@ -57,9 +64,24 @@ rollback runtime until the one-day rollback window closes.
   responses, or unredacted request/response payloads.
 - Keep the frontend dependency-light: Next/React, CSS, and native browser APIs;
   no UI kit, state manager, BFF, database, or shared-types package.
-- Preserve valid VI/EN UTF-8, Vietnamese default,
-  `localStorage["intellidoc.language"]`, and parity checks at `1440×900` and
-  `390×844`.
+- The primary UI persona is an operations reviewer completing upload → monitor
+  → review/correct/approve. Keep permanent navigation to Jobs and New OCR only;
+  documents, reports, and legacy logs stay contextual to a job.
+- `/corrections` saves and approves in one call. UI with drafts must say “Save
+  and approve”; do not invent an unapproved saved-correction state. Unknown or
+  non-scalar legacy fields remain visible but read-only.
+- OCR `bbox` has no stable pixel/normalized contract and is not a crop seed.
+  Manual crop starts from a user-drawn natural-pixel rectangle and remains
+  append-only evidence.
+- Preserve valid VI/EN UTF-8, Vietnamese default, and
+  `localStorage["intellidoc.language"]`. The approved follow-up is responsive
+  desktop-first: visual/functional anchors at `1440×900` and `1366×768`; at
+  `390×844` require only no horizontal overflow, no broken layout, and closable
+  modals.
+- Planned system telemetry describes the environment visible to the backend:
+  CPU/RAM, disk containing `OCR_DATA_DIR`, and best-effort visible GPUs. It must
+  not expose hostname, paths, processes, raw command output, secrets, or provider
+  configuration; do not require GPU access in the default Compose stack.
 
 ## Runtime contract
 
@@ -73,7 +95,9 @@ rollback runtime until the one-day rollback window closes.
 
 ## Working procedure
 
-1. Read `implementation_plan.md` before migration work.
+1. Read `implementation_plan.md` before migration work. For legacy-browser
+   recreation, also read `legacy_browser_recreated.md` and align the known host
+   telemetry/mobile-acceptance wording in the main plan before runtime edits.
 2. Before editing code, use the CodeGraph MCP against `C:\HProjecT\OCR` to
    inspect the target symbols, callers, routes, and blast radius. Do not infer
    flow from filenames or query `.codegraph/codegraph.db` directly.
@@ -83,6 +107,23 @@ rollback runtime until the one-day rollback window closes.
 6. Regenerate OpenAPI/types whenever public schemas change.
 7. Keep `README.md`, this file, the plan, runbook, and acceptance report aligned
    when architecture, commands, or rollout state changes.
+8. Do not create commits unless the user explicitly asks for them.
+
+## Approved legacy-browser phases (not started)
+
+1. Capture sanitized baseline and map every UI block to real schema/API data.
+2. Implement minimal backend telemetry, focused tests, and generated API types.
+3. Recreate the minimal shell, inline upload, dashboard, filters, and lifecycle
+   actions without fake progress or placeholder screens.
+4. Rebuild job detail, numeric page navigation, review, Save-and-Approve,
+   conflict handling, and inline report.
+5. Replace coordinate inputs with pointer/keyboard visual crop and verify
+   natural-image coordinate conversion.
+6. Add conditional legacy logs, the real System Monitor, desktop/accessibility
+   parity, and aligned documentation.
+
+Each phase must leave relevant checks passing. This plan does not authorize
+automatic commits or deleting the legacy runtime.
 
 ## Required local checks
 
