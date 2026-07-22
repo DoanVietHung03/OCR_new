@@ -823,6 +823,19 @@ export interface components {
             logical_document_type?: ("dossier_cover" | "administrative_document") | null;
             /** Source Pdf Id */
             source_pdf_id?: string | null;
+            /** Expected Fields */
+            expected_fields?: string[];
+            /** Required Fields */
+            required_fields?: string[];
+            /** Approval Blockers */
+            approval_blockers?: components["schemas"]["ReviewIssue"][];
+            /** Review Risks */
+            review_risks?: components["schemas"]["ReviewIssue"][];
+            /**
+             * Review Risk Count
+             * @default 0
+             */
+            review_risk_count: number;
         } & {
             [key: string]: unknown;
         };
@@ -969,6 +982,16 @@ export interface components {
             corrected_value?: unknown | null;
             /** Corrected At */
             corrected_at?: string | null;
+            /**
+             * Evidence Url
+             * @default
+             */
+            evidence_url: string;
+            /**
+             * Suggestion Source
+             * @default
+             */
+            suggestion_source: string;
         } & {
             [key: string]: unknown;
         };
@@ -1158,6 +1181,8 @@ export interface components {
              * @default 0
              */
             segmentation_total_pages: number;
+            /** Review Status */
+            review_status?: ("unreviewed" | "partially_approved" | "approved") | null;
         } & {
             [key: string]: unknown;
         };
@@ -1386,6 +1411,15 @@ export interface components {
              * @enum {string}
              */
             rerun_mode: "reuse_segmentation" | "resegment";
+        };
+        /** ReviewIssue */
+        ReviewIssue: {
+            /** Code */
+            code: string;
+            /** Field */
+            field?: string | null;
+            /** Page Index */
+            page_index?: number | null;
         };
         /** RuntimeMetricsResponse */
         RuntimeMetricsResponse: {

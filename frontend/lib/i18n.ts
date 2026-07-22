@@ -137,6 +137,16 @@ export const statusText = (status: string) => {
 };
 
 const errorLabels: Record<string, [string, string]> = {
+  approval_blocked: ["Tài liệu còn điều kiện chặn duyệt", "Approval is blocked"],
+  missing_required_field: ["Thiếu trường bắt buộc", "Required field is missing"],
+  invalid_required_value: ["Giá trị bắt buộc không hợp lệ", "Required value is invalid"],
+  failed_page: ["Trang OCR thất bại", "OCR page failed"],
+  segmentation_unconfirmed: ["Phân đoạn chưa được xác nhận", "Segmentation is not confirmed"],
+  optional_missing_field: ["Thiếu trường tùy chọn", "Optional field is missing"],
+  field_needs_review: ["Trường cần rà soát", "Field needs review"],
+  field_suggestion: ["Trường có gợi ý", "Field has a suggestion"],
+  page_warning: ["Trang có cảnh báo", "Page has a warning"],
+  invalid_optional_value: ["Giá trị tùy chọn không hợp lệ", "Optional value is invalid"],
   unknown_field: ["Provider trả về trường không xác định", "Provider returned an unknown field"],
   invalid_field_value: ["Provider trả về giá trị trường không hợp lệ", "Provider returned an invalid field value"],
   incomplete_field: ["Provider trả về trường chưa đầy đủ", "Provider returned an incomplete field"],

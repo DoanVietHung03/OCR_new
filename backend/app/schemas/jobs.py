@@ -52,6 +52,14 @@ class FieldResponse(PublicModel):
     ocr_value: Any | None = None
     corrected_value: Any | None = None
     corrected_at: str | None = None
+    evidence_url: str = ""
+    suggestion_source: str = ""
+
+
+class ReviewIssue(BaseModel):
+    code: str
+    field: str | None = None
+    page_index: int | None = None
 
 
 class PageResponse(PublicModel):
@@ -119,6 +127,11 @@ class DocumentResponse(PublicModel):
     crop_evidence: list[CropEvidence] = Field(default_factory=list)
     logical_document_type: Literal["dossier_cover", "administrative_document"] | None = None
     source_pdf_id: str | None = None
+    expected_fields: list[str] = Field(default_factory=list)
+    required_fields: list[str] = Field(default_factory=list)
+    approval_blockers: list[ReviewIssue] = Field(default_factory=list)
+    review_risks: list[ReviewIssue] = Field(default_factory=list)
+    review_risk_count: int = 0
 
 
 class JobResponse(PublicModel):
@@ -156,6 +169,7 @@ class JobResponse(PublicModel):
     excluded_page_count: int = 0
     segmentation_completed_pages: int = 0
     segmentation_total_pages: int = 0
+    review_status: Literal["unreviewed", "partially_approved", "approved"] | None = None
 
 
 class ConfirmSegmentationRequest(BaseModel):

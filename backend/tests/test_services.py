@@ -3,8 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from app.services.jobs import JobStore, materialize_documents, validate_segments
-from app.services.ocr_runner import message_text, parse_json_object, validate_result
+from app.services.field_policy import ADMIN_FIELDS, COVER_FIELDS, annotate
+from app.services.jobs import ApprovalBlocked, JobStore, materialize_documents, validate_segments
+from app.services.ocr_runner import message_text, parse_json_object, request_body, validate_result
 
 
 def completed_job(store: JobStore, pdf_bytes: bytes) -> dict:
@@ -116,3 +117,52 @@ def test_segmentation_requires_complete_dossier_and_materializes_one_document_st
     documents = materialize_documents("job-id", sources)
     assert [item["logical_document_type"] for item in documents] == ["dossier_cover", "administrative_document"]
     assert [page["source_page_index"] for page in documents[1]["pages"]] == [1, 2]
+
+
+def test_new_document_policy_adds_missing_field_atomically(tmp_path, pdf_bytes):
+    store = JobStore(tmp_path)
+    job = store.create({"file_count": 1, "processing_mode": "administrative_document"})
+    store.add_pdf(job["id"], "document.pdf", pdf_bytes)
+    document = annotate({
+        "id": "document", "logical_document_type": "administrative_document", "fields": {
+            "co_quan_ban_hanh": {"value": "A"}, "so_van_ban": {"value": "1"}, "trich_yeu": {"value": "T"},
+        }, "pages": [{"page_index": 0, "status": "completed", "error": ""}],
+    })
+    store.update(job["id"], status="completed", documents=[document])
+    with pytest.raises(ApprovalBlocked):
+        store.apply_review(job["id"], "document", [{"field": "nguoi_ky", "old_value": None, "new_value": "B"}])
+    assert "nguoi_ky" not in store.read(job["id"])["documents"][0]["fields"]
+    saved, approved = store.apply_review(job["id"], "document", [{"field": "ngay_ban_hanh", "old_value": None, "new_value": "2026-07-22"}])
+    assert approved["review_status"] == "approved"
+    assert approved["fields"]["ngay_ban_hanh"]["ocr_value"] is None
+    assert approved["expected_fields"] == list(ADMIN_FIELDS)
+    assert len(COVER_FIELDS) == 13
+    assert saved["correction_count"] == 1
+
+
+def test_dossier_approval_requires_confirmed_segmentation(tmp_path, pdf_bytes):
+    store = JobStore(tmp_path)
+    job = store.create({"file_count": 1, "processing_mode": "combined_dossier"})
+    store.add_pdf(job["id"], "dossier.pdf", pdf_bytes)
+    store.update(job["id"], status="completed", source_pdfs=[{"id": "source-1", "confirmed": False}], documents=[{
+        "id": "document", "logical_document_type": "administrative_document", "fields": {}, "pages": [],
+    }])
+    with pytest.raises(ApprovalBlocked) as blocked:
+        store.apply_review(job["id"], "document", [])
+    assert blocked.value.blockers == [{"code": "segmentation_unconfirmed"}]
+
+
+def test_cover_prompt_and_parser_share_the_policy_allowlist():
+    body = request_body(b"image", "model", expected_fields=COVER_FIELDS)
+    prompt = body["messages"][0]["content"][0]["text"]
+    assert all(name in prompt for name in COVER_FIELDS)
+    assert "co_quan_ban_hanh" not in prompt
+    result = validate_result({"fields": {"co_quan_luu_tru": "A", "so_van_ban": "ignored"}}, expected_fields=COVER_FIELDS)
+    assert set(result["fields"]) == {"co_quan_luu_tru"}
+    assert result["warnings"] == ["unknown_field"]
+    cover = annotate({"logical_document_type": "dossier_cover", "fields": {
+        "bat_dau": {"value": "2026"}, "ket_thuc": {"value": "2025"},
+        "so_tai_lieu": {"value": 0},
+    }})
+    assert {issue["field"] for issue in cover["approval_blockers"] if issue["code"] == "invalid_required_value"} == {"ket_thuc"}
+    assert {issue["field"] for issue in cover["review_risks"] if issue["code"] == "invalid_optional_value"} == {"so_tai_lieu"}

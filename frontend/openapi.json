@@ -2173,6 +2173,39 @@
               }
             ],
             "title": "Source Pdf Id"
+          },
+          "expected_fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Expected Fields"
+          },
+          "required_fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required Fields"
+          },
+          "approval_blockers": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewIssue"
+            },
+            "type": "array",
+            "title": "Approval Blockers"
+          },
+          "review_risks": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewIssue"
+            },
+            "type": "array",
+            "title": "Review Risks"
+          },
+          "review_risk_count": {
+            "type": "integer",
+            "title": "Review Risk Count",
+            "default": 0
           }
         },
         "additionalProperties": true,
@@ -2472,6 +2505,16 @@
               }
             ],
             "title": "Corrected At"
+          },
+          "evidence_url": {
+            "type": "string",
+            "title": "Evidence Url",
+            "default": ""
+          },
+          "suggestion_source": {
+            "type": "string",
+            "title": "Suggestion Source",
+            "default": ""
           }
         },
         "additionalProperties": true,
@@ -2820,6 +2863,22 @@
             "type": "integer",
             "title": "Segmentation Total Pages",
             "default": 0
+          },
+          "review_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "unreviewed",
+                  "partially_approved",
+                  "approved"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Status"
           }
         },
         "additionalProperties": true,
@@ -3352,6 +3411,41 @@
         },
         "type": "object",
         "title": "RerunRequest"
+      },
+      "ReviewIssue": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "page_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "ReviewIssue"
       },
       "RuntimeMetricsResponse": {
         "properties": {

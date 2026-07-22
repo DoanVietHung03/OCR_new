@@ -13,7 +13,7 @@ function fixtureJob(status = "completed", document: Record<string, unknown> = fi
   return { id, status, created_at: now, updated_at: now, started_at: now, completed_at: now, ocr_method: "qwen", provider: "qwen", provider_profile_id: "qwen", model: "test-model", prompt_version: "3", endpoint_external: false, cloud_data_confirmed: false, expected_files: 1, uploaded_files: 1, upload_name: "smoke.pdf", documents: [document], logs: ["sanitized legacy log"], page_count: 1, failed_pages: 0, correction_count: 0, vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0, report_url: `/api/jobs/${id}/artifacts/report.json` };
 }
 function fixtureDocument() {
-  return { id: "smoke", file_name: "smoke.pdf", status: "completed", review_status: null as string | null, fields: { so_van_ban: { value: "OLD", ocr_value: "OLD", confidence: .91, bbox: [0, 0, 10, 10], page_index: 0 } }, pages: [{ page_index: 0, image_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }], crop_evidence: [] as Record<string, unknown>[] };
+  return { id: "smoke", file_name: "smoke.pdf", status: "completed", review_status: null as string | null, fields: { so_van_ban: { value: "OLD", ocr_value: "OLD", confidence: .91, bbox: [0, 0, 10, 10], page_index: 0, evidence_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` } }, pages: [{ page_index: 0, image_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }], crop_evidence: [] as Record<string, unknown>[] };
 }
 const state = (jobs: ReturnType<typeof fixtureJob>[], external = false) => ({ server_mode: true, jobs, documents: [], logs: [], metrics: { total_jobs: jobs.length, active_jobs: jobs.filter((job) => ["starting", "queued", "running", "cancelling"].includes(job.status)).length, completed_jobs: jobs.filter((job) => ["completed", "completed_with_warnings"].includes(job.status)).length, documents: jobs.reduce((count, job) => count + job.documents.length, 0), pages: jobs.length, correction_count: 0, error_jobs: 0 }, ocr_methods: [{ id: "qwen", label: "Qwen", status: "configured", external }], limits: { max_files_per_job: 15, max_job_upload_bytes: 209715200 }, pagination: { page: 1, page_size: 25, pages: 1, total: jobs.length } });
 
@@ -51,6 +51,7 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
   await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`));
   await expect(page.locator(".field-card input").first()).toHaveValue("OLD");
+  await page.locator(".evidence-thumb").click(); await expect(page.locator(".evidence-modal[open] img")).toBeVisible(); await page.locator(".evidence-modal[open] .modal-actions").getByRole("button", { name: /đóng|close/i }).click();
   await page.locator(".field-card input").first().fill("NEW");
   await page.getByRole("button", { name: /lưu và duyệt|save and approve/i }).click();
   await expect(page.locator(".conflict")).toContainText("SERVER"); await expect(page.locator(".field-card input").first()).toHaveValue("NEW");
@@ -90,12 +91,13 @@ test("real Next and FastAPI use eager Celery with a fake HTTP provider", async (
   await page.locator('input[type="file"]').setInputFiles({ name: "integration.pdf", mimeType: "application/pdf", buffer: pdf });
   await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
   await expect(page).toHaveURL(/\/jobs\//);
-  await expect(page.locator(".field-card input").first()).toHaveValue("DOC-001", { timeout: 20_000 });
+  const documentNumber = page.locator(".field-card").filter({ hasText: "Số văn bản" }).locator("input");
+  await expect(documentNumber).toHaveValue("DOC-001", { timeout: 20_000 });
   const sourceId = new URL(page.url()).pathname.split("/").pop()!;
-  await page.locator(".field-card input").first().fill("DOC-002");
+  await documentNumber.fill("DOC-002");
   await page.getByRole("button", { name: /lưu và duyệt|save and approve/i }).click();
-  await page.reload(); await expect(page.locator(".field-card input").first()).toHaveValue("DOC-002");
-  await page.locator(".field-card input").first().focus(); await page.getByRole("button", { name: /vẽ crop|draw crop/i }).click();
+  await page.reload(); await expect(documentNumber).toHaveValue("DOC-002");
+  await documentNumber.focus(); await page.getByRole("button", { name: /vẽ crop|draw crop/i }).click();
   const image = page.locator(".crop-canvas img"), box = await image.boundingBox(); expect(box).toBeTruthy();
   await page.mouse.move(box!.x + 10, box!.y + 10); await page.mouse.down(); await page.mouse.move(box!.x + 50, box!.y + 50); await page.mouse.up();
   await page.getByRole("button", { name: /lưu crop|save crop/i }).click(); await expect(page.locator(".evidence-list")).toBeVisible();
@@ -337,6 +339,32 @@ test("combined dossier keeps revisioned segmentation review in the job detail", 
   await page.goto(`/jobs/${id}`); await expect(page.getByRole("heading", { name: /xác nhận phân đoạn|confirm segmentation/i })).toBeVisible();
   await page.getByRole("button", { name: /xác nhận PDF này|confirm this PDF/i }).click();
   expect(body).toEqual({ revision: 1, segments: source.proposal });
+});
+
+test("missing canonical fields keep drafts until atomic approval succeeds", async ({ page }) => {
+  const document: any = fixtureDocument();
+  document.expected_fields = ["co_quan_ban_hanh", "so_van_ban", "ngay_ban_hanh", "trich_yeu", "nguoi_ky"];
+  document.required_fields = document.expected_fields.slice(0, 4);
+  document.fields = { co_quan_ban_hanh: { value: "A" }, so_van_ban: { value: "1" }, trich_yeu: { value: "T" }, document_type: { value: "legacy" } };
+  document.approval_blockers = [{ code: "missing_required_field", field: "ngay_ban_hanh" }]; document.review_risks = []; document.review_risk_count = 0;
+  let calls = 0, body: any;
+  await page.route("**/api/**", async (route) => {
+    const request = route.request(), apiPath = new URL(request.url()).pathname;
+    if (apiPath === `/api/jobs/${id}` && request.method() === "GET") return route.fulfill({ json: fixtureJob("completed", document) });
+    if (apiPath.endsWith("/corrections")) {
+      body = request.postDataJSON(); calls += 1;
+      if (calls === 1) return route.fulfill({ status: 409, json: { detail: { code: "approval_blocked", message: "approval_blocked", blockers: document.approval_blockers } } });
+      document.fields.ngay_ban_hanh = { value: "2026-07-22", method: "manual" }; document.fields.nguoi_ky = { value: "B", method: "manual" }; document.approval_blockers = []; document.review_status = "approved";
+      return route.fulfill({ json: { saved_count: 2, job: fixtureJob("completed", document), document_status: { approved: true } } });
+    }
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.goto(`/jobs/${id}`);
+  await expect(page.locator(".field-card").filter({ hasText: "Loại tài liệu" }).locator("input, textarea")).toHaveCount(0);
+  await page.getByLabel(/người ký|signatory/i).fill("B"); await page.getByRole("button", { name: /lưu và duyệt|save and approve/i }).click();
+  await expect(page.getByLabel(/người ký|signatory/i)).toHaveValue("B");
+  await page.getByLabel(/ngày ban hành|issue date/i).fill("2026-07-22"); await page.getByRole("button", { name: /lưu và duyệt|save and approve/i }).click();
+  expect(body.corrections).toEqual(expect.arrayContaining([{ field: "ngay_ban_hanh", old_value: null, new_value: "2026-07-22" }, { field: "nguoi_ky", old_value: null, new_value: "B" }]));
 });
 
 test("capture sanitized populated legacy dashboard", async ({ page }) => {

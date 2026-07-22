@@ -110,3 +110,8 @@
 .source-pages small { display: block; overflow-wrap: anywhere; }
 .segment-list { display: grid; gap: .5rem; margin: .75rem 0; }
 .segment-list > div { align-items: center; display: flex; flex-wrap: wrap; gap: .75rem; }
+.evidence-thumb { align-items: center; background: none; border: 0; color: inherit; cursor: pointer; display: inline-flex; gap: .4rem; padding: 0; }
+.evidence-thumb img { height: 40px; object-fit: cover; width: 32px; }
+.evidence-preview { max-height: 65vh; overflow: auto; text-align: center; }
+.evidence-preview.fit img { max-height: 65vh; max-width: 100%; }
+.evidence-preview.actual img { max-width: none; }

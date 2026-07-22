@@ -5,8 +5,8 @@ cutover và bằng chứng Milestone C. Kế hoạch frontend nằm trong
 [`legacy_browser_recreated.md`](legacy_browser_recreated.md).
 
 **Trạng thái 2026-07-22:** Repair Gate `BE-X1`–`BE-X3` và `FE-X1`–`FE-X3` đã pass
-local. Scope P0 đã được mở rộng bằng fixture nghiệp vụ thật: ngoài `X7`–`X11`,
-`X16` bắt buộc hỗ trợ một PDF gồm Bìa và nhiều văn bản logic. Milestone C là
+local. `X8`/`X9` đã pass local; `X7` có contract/worker/UI local nhưng còn chờ
+bốn fixture và restart thật. `X10`/`X16` vẫn IN PROGRESS. Milestone C là
 **internal production-like pilot**, không phải customer-production-ready; chỉ ký
 sau local contract gate và evidence strong-server. `src/ocr/` và `web/` vẫn là
 runtime rollback.
@@ -249,8 +249,11 @@ Tham chiếu cũ: `OCR_paper/Web/src/app.js:1724-1747,3111-3133,3492-3503`.
 
 ### BE-X7
 
-**P0 — Field evidence tối thiểu cho job mới — OPEN.** Counterpart:
+**P0 — Field evidence tối thiểu cho job mới — IN PROGRESS 2026-07-22.** Counterpart:
 [`FE-X7`](legacy_browser_recreated.md#fe-x7).
+
+Contract typed, worker persistence, provenance trang và coverage aggregate đã
+pass local; gate bốn fixture/reload/restart thật chưa có evidence.
 
 - Chuẩn hóa contract nhỏ: `source_text`, `page_index`, confidence nullable,
   typed review reason, suggestion có provenance và `evidence_url` trỏ ảnh trang.
@@ -269,7 +272,7 @@ Nguồn đối chiếu cũ: `src/ocr_poc/extraction/`, `field_normalizers.py`,
 
 ### BE-X8
 
-**P0 — Expected field, missing field và prompt — OPEN.** Counterpart:
+**P0 — Expected field, missing field và prompt — PASS LOCAL 2026-07-22.** Counterpart:
 [`FE-X8`](legacy_browser_recreated.md#fe-x8).
 
 - Dùng một policy backend làm nguồn chung cho schema, prompt, write allowlist và
@@ -289,7 +292,7 @@ Nguồn đối chiếu cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
 
 ### BE-X9
 
-**P0 — Approval blocker và review risk — OPEN.** Counterpart:
+**P0 — Approval blocker và review risk — PASS LOCAL 2026-07-22.** Counterpart:
 [`FE-X9`](legacy_browser_recreated.md#fe-x9).
 
 - Tính `approval_blockers`/`review_risks` dạng `{code, field?, page_index?}` và

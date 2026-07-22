@@ -12,9 +12,12 @@ class Provider(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
         self.rfile.read(length)
-        content = json.dumps({"fields": {"so_van_ban": {
-            "value": "DOC-001", "confidence": 0.99, "bbox": [0, 0, 20, 20], "page_index": 0,
-        }}})
+        content = json.dumps({"fields": {
+            "co_quan_ban_hanh": "Cơ quan thử nghiệm",
+            "so_van_ban": {"value": "DOC-001", "confidence": 0.99, "page_index": 0},
+            "ngay_ban_hanh": "2026-07-22",
+            "trich_yeu": "Tài liệu kiểm thử",
+        }})
         body = json.dumps({"choices": [{"message": {"content": content}}]}).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")

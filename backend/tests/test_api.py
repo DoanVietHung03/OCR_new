@@ -75,6 +75,25 @@ def test_combined_dossier_confirmation_is_revisioned_and_dispatches_once(tmp_pat
     assert store.read(job["id"])["source_pdfs"][0]["confirmed_segments"] == segments
 
 
+def test_missing_field_correction_is_atomic_and_returns_typed_blockers(tmp_path, monkeypatch, pdf_bytes):
+    from app.services.field_policy import annotate
+
+    store = use_store(tmp_path, monkeypatch)
+    job = create_and_upload(pdf_bytes)
+    document = annotate({
+        "id": "document", "file_name": "document.pdf", "status": "completed",
+        "logical_document_type": "administrative_document", "pages": [{"page_index": 0, "status": "completed"}],
+        "fields": {"co_quan_ban_hanh": {"value": "A"}, "so_van_ban": {"value": "1"}, "trich_yeu": {"value": "T"}},
+    })
+    store.update(job["id"], status="completed", documents=[document])
+    blocked = client.post(f"/api/jobs/{job['id']}/corrections", json={
+        "document_id": "document", "corrections": [{"field": "nguoi_ky", "old_value": None, "new_value": "B"}],
+    })
+    assert blocked.status_code == 409, blocked.text
+    assert blocked.json()["detail"]["blockers"] == [{"code": "missing_required_field", "field": "ngay_ban_hanh"}]
+    assert "nguoi_ky" not in store.read(job["id"])["documents"][0]["fields"]
+
+
 def test_invalid_pdf_fails_job_before_dispatch(tmp_path, monkeypatch):
     store = use_store(tmp_path, monkeypatch)
     job = client.post("/api/jobs", json={"file_count": 1}).json()
@@ -355,7 +374,7 @@ def test_documents_events_and_reports_are_real_safe_projections(tmp_path, monkey
         "secret=/srv/private api_key=must-not-leak",
     ], documents=[{
         "id": "report & 1", "file_name": "report.pdf", "status": "completed",
-        "review_status": "approved", "approved_at": "2026-07-21T11:00:00+00:00",
+        "review_status": "approved", "review_risk_count": 2, "approved_at": "2026-07-21T11:00:00+00:00",
         "pages": [{"page_index": 0, "image_url": "/page.png"}],
         "fields": {
             "so_van_ban": {"value": "01", "confidence": 0.8, "page_index": 0, "evidence_source": "provider"},
@@ -368,7 +387,7 @@ def test_documents_events_and_reports_are_real_safe_projections(tmp_path, monkey
     assert documents["pagination"]["total"] == 1
     assert documents["items"][0]["deep_link"].endswith("document=report%20%26%201&view=review")
     assert documents["items"][0]["confidence_average"] == 0.9
-    assert (documents["items"][0]["document_type"], documents["items"][0]["warning_count"]) == ("Thông báo", 0)
+    assert (documents["items"][0]["document_type"], documents["items"][0]["warning_count"]) == ("Thông báo", 2)
 
     events = client.get(f"/api/events?job_id={job['id']}").json()
     assert {event["code"] for event in events["items"]} == {"job_created", "job_completed", "document_approved"}
@@ -388,7 +407,7 @@ def test_documents_events_and_reports_are_real_safe_projections(tmp_path, monkey
         "documents": 1, "approved_documents": 1,
         "corrected_fields": 1, "confidence_average": 0.9, "total_fields": 3,
         "confidence_coverage": 0.667, "evidence_coverage": 0.333,
-        "warning_documents": 0,
+        "warning_documents": 1,
     }
     assert report["benchmark_samples"] == []
     assert client.get("/api/state").json()["metrics"] == {
@@ -445,6 +464,7 @@ def test_documents_support_sort_filter_pagination_and_deep_links(tmp_path, monke
         {"id": "z", "file_name": "z.pdf", "status": "completed"},
     ])
 
+    assert client.get(f"/api/jobs/{job['id']}").json()["review_status"] == "partially_approved"
     page = client.get("/api/documents?sort=name_desc&page_size=1").json()
     assert ([item["file_name"] for item in page["items"]], page["pagination"]["total"]) == (["z.pdf"], 2)
     pending = client.get("/api/documents?review_status=unreviewed").json()

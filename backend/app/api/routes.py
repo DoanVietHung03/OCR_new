@@ -36,7 +36,7 @@ from ..schemas.jobs import (
     UploadResponse,
 )
 from ..services.codes import CodeCatalog
-from ..services.jobs import DELETABLE, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
+from ..services.jobs import ApprovalBlocked, DELETABLE, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
 from ..services.ocr_runner import PROMPT_VERSION, configured
 from ..services.system_metrics import system_metrics as read_system_metrics
 from ..settings import settings
@@ -58,7 +58,12 @@ def job_or_404(job_id: str) -> dict:
 
 
 def public_job(job: dict) -> dict:
-    return {**job, "logs": safe_events([job])[-200:]}
+    documents = job.get("documents", [])
+    approved = sum(item.get("review_status") == "approved" for item in documents)
+    review_status = None
+    if documents:
+        review_status = "approved" if approved == len(documents) else "partially_approved" if approved else "unreviewed"
+    return {**job, "review_status": review_status, "logs": safe_events([job])[-200:]}
 
 
 def confidence_average(documents: list[dict]) -> float | None:
@@ -379,8 +384,10 @@ async def get_documents(
     for job in store.list():
         for document in job.get("documents", []):
             errors = document.get("errors")
-            warning_count = len(errors) if isinstance(errors, list) else int(bool(errors))
-            warning_count += int(bool(document.get("error")))
+            legacy_warnings = (
+                len(errors) if isinstance(errors, list) else int(bool(errors))
+            ) + int(bool(document.get("error")))
+            warning_count = int(document.get("review_risk_count", legacy_warnings))
             item = {
                 "id": str(document.get("id", "")), "job_id": job["id"],
                 "job_status": str(job.get("status", "")), "file_name": str(document.get("file_name", "")),
@@ -470,7 +477,10 @@ async def get_reports():
             "total_fields": len(fields),
             "confidence_coverage": round(confidence_fields / len(fields), 3) if fields else None,
             "evidence_coverage": round(evidence_fields / len(fields), 3) if fields else None,
-            "warning_documents": sum(bool(document.get("error") or document.get("errors")) for document in documents),
+            "warning_documents": sum(
+                bool(document.get("review_risk_count", document.get("error") or document.get("errors")))
+                for document in documents
+            ),
         },
         "benchmark_samples": [],
     }
@@ -575,6 +585,9 @@ async def corrections(job_id: str, payload: CorrectionRequest):
             payload.document_id,
             [item.model_dump() for item in payload.corrections],
         )
+    except ApprovalBlocked as exc:
+        detail = {"code": "approval_blocked", "message": "approval_blocked", "blockers": exc.blockers}
+        raise HTTPException(status_code=409, detail=detail) from exc
     except ValueError as exc:
         code = str(exc)
         fail(409 if code in {"correction_conflict", "job_not_terminal"} else 400, code)
@@ -582,7 +595,7 @@ async def corrections(job_id: str, payload: CorrectionRequest):
         "saved_count": len(payload.corrections),
         "job": public_job(job),
         "document_status": {
-            "review_status": {"value": document["review_status"], "risk_count": 0},
+            "review_status": {"value": document["review_status"], "risk_count": document.get("review_risk_count", 0)},
             "approved": True,
             "last_saved_at": document["approved_at"],
         },

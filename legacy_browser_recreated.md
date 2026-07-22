@@ -5,9 +5,9 @@ parity và browser evidence. Backend contract, worker, cutover và Milestone C n
 trong [`implementation_plan.md`](implementation_plan.md).
 
 **Trạng thái 2026-07-22:** Repair Gate `FE-X1`–`FE-X3` và counterpart backend đã
-pass local. P0 hiện gồm `X7`–`X11` và `X16`: fixture thật đã xác nhận một PDF có
-Bìa và nhiều văn bản logic, nên segmentation/review hồ sơ gộp không còn
-conditional. Milestone C là internal production-like pilot; live evidence vẫn
+pass local. `FE-X8`/`FE-X9` đã pass local; `FE-X7` có UI/contract local nhưng
+còn chờ bốn fixture và restart thật. `FE-X10`/`FE-X16` vẫn IN PROGRESS.
+Milestone C là internal production-like pilot; live evidence vẫn
 ghi duy nhất trong `BE-C-EVIDENCE`.
 
 ## Cách dùng hai kế hoạch
@@ -208,8 +208,11 @@ Reference cũ: `OCR_paper/Web/src/app.js:1724-1747,3111-3133,3492-3503`.
 
 ### FE-X7
 
-**P0 — Field evidence tối thiểu cho job mới — OPEN.** Counterpart:
+**P0 — Field evidence tối thiểu cho job mới — IN PROGRESS 2026-07-22.** Counterpart:
 [`BE-X7`](implementation_plan.md#be-x7).
+
+Provenance, trạng thái unavailable và native evidence dialog đã pass local;
+fixture/provider/restart thật vẫn thuộc gate còn mở của `BE-X7`.
 
 - Field card render source/page/confidence, typed review reason, suggestion +
   provenance và page-level `evidence_url`; thiếu dữ liệu hiển thị unavailable.
@@ -224,7 +227,7 @@ Reference cũ: `OCR_paper/Web/src/app.js:1960-2255`.
 
 ### FE-X8
 
-**P0 — Expected/missing field workflow — OPEN.** Counterpart:
+**P0 — Expected/missing field workflow — PASS LOCAL 2026-07-22.** Counterpart:
 [`BE-X8`](implementation_plan.md#be-x8).
 
 - Render ordered `expected_fields`/`required_fields` từ public contract,
@@ -241,7 +244,7 @@ Reference cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
 
 ### FE-X9
 
-**P0 — Approval blocker/risk UX — OPEN.** Counterpart:
+**P0 — Approval blocker/risk UX — PASS LOCAL 2026-07-22.** Counterpart:
 [`BE-X9`](implementation_plan.md#be-x9).
 
 - Hiển thị blocker/risk typed `{code, field?, page_index?}` cạnh action. **Lưu và duyệt** là atomic:
@@ -431,15 +434,16 @@ khó và review/approval độc lập trước khi đóng.
 | Artifacts/timeline/logs | PASS LOCAL `X2` | Per-page safe diagnostics render đúng |
 | Reports/benchmark/Codes/Monitor | PROTECT | Nullable/unavailable và durable data vẫn đúng |
 | Generated API/compatibility | PASS LOCAL `X3` | OpenAPI check và legacy read pass |
-| Evidence/missing field/approval/rerun/readiness | OPEN `X7`–`X11` | Nhóm P0 pass focused/local và fixture |
-| Segmentation/Bìa/logical documents | OPEN P0 `X16` | Bốn fixture, confirm/restart/review và legacy read pass |
+| Evidence/missing field/approval/rerun/readiness | `X8`/`X9` PASS LOCAL; `X7`/`X10` IN PROGRESS; `X11` OPEN | Nhóm P0 pass focused/local và fixture |
+| Segmentation/Bìa/logical documents | IN PROGRESS P0 `X16` | Bốn fixture, confirm/restart/review và legacy read pass |
 | Progress/timeline/triage | OPEN `X12`–`X13` | X16 counters/audit P0; phần P1 reload/deep-link pass |
 | Report/export/URL/polish | OPEN `X14`–`X15` | Không placeholder, native state và VI/EN pass |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 
 Không dùng lại con số `18/19` cho trạng thái hiện tại cho đến khi các mục OPEN đã
-pass. Repair Gate ngày 2026-07-22 là baseline hiện hành: backend `28 passed`,
+pass. Repair Gate ngày 2026-07-22 là baseline hiện hành: backend `28 passed`;
+suite mở rộng hiện tại `35 passed`,
 legacy compatibility `10 passed`, focused browser coverage cho task/page retry
 và partial review, typecheck/build/OpenAPI/compile/diff đều pass.
 

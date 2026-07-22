@@ -54,6 +54,9 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
         "text": "OCR text", "ocr_line_count": 1,
         "source_pdf_id": "document", "source_page_index": 0,
     }
+    assert result["documents"][0]["fields"]["so_van_ban"]["evidence_url"].endswith("/artifacts/document/page-1.png")
+    assert result["documents"][0]["fields"]["so_van_ban"]["source_text"] == "1"
+    assert result["documents"][0]["approval_blockers"]
     assert (store.path(job["id"]) / "artifacts" / "document" / "page-1.png").is_file()
 
 

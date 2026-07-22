@@ -8,14 +8,10 @@ import json
 
 import httpx
 
+from .field_policy import ADMIN_FIELDS
 from .jobs import FIELDS
 
 PROMPT_VERSION = "3"
-ADMIN_FIELDS = (
-    "co_quan_ban_hanh", "so_van_ban", "quoc_hieu_tieu_ngu", "dia_diem_ban_hanh",
-    "ngay_ban_hanh", "loai_van_ban", "trich_yeu", "quyen_han_ky_thay",
-    "chuc_vu_nguoi_ky", "nguoi_ky", "ma_luu_tru",
-)
 FIELD_ALIASES = {
     "co_quan": "co_quan_ban_hanh", "so_hieu": "so_van_ban",
     "so_ky_hieu": "so_van_ban", "ma_van_ban": "so_van_ban",
@@ -26,13 +22,17 @@ FIELD_ALIASES = {
     "chuc_vu": "chuc_vu_nguoi_ky", "chuc_vu_ky": "chuc_vu_nguoi_ky",
     "nguoi_ky_ten": "nguoi_ky", "ten_nguoi_ky": "nguoi_ky",
 }
-PROMPT = (
-    "Return one JSON object only, with no Markdown or explanation. Its only top-level key is fields. "
-    "Each fields entry uses an existing archival field name and has value (string), confidence "
-    "(number 0..1), bbox ([left, top, right, bottom]), and page_index (integer). "
-    f"Extract every visible field from this administrative-document schema: {', '.join(ADMIN_FIELDS)}. "
-    "Do not invent fields. Use {\"fields\": {}} when nothing is found."
-)
+def metadata_prompt(fields: tuple[str, ...]) -> str:
+    return (
+        "Return one JSON object only, with no Markdown or explanation. Its only top-level key is fields. "
+        "Each fields entry uses an existing archival field name and has value (string), confidence "
+        "(number 0..1), bbox ([left, top, right, bottom]), and page_index (integer). "
+        f"Extract every visible field from this schema: {', '.join(fields)}. "
+        "Do not invent fields. Use {\"fields\": {}} when nothing is found."
+    )
+
+
+PROMPT = metadata_prompt(ADMIN_FIELDS)
 OCR_PROMPT = (
     'Return one JSON object only: {"text": "..."}. Transcribe all visible text '
     "in reading order without summarizing or inventing content."
@@ -57,7 +57,7 @@ def parse_json_object(content: str) -> object:
     raise ValueError("invalid_model_json:malformed_json")
 
 
-def validate_result(payload: object, *, page_index: int = 0, task: str = "metadata") -> dict:
+def validate_result(payload: object, *, page_index: int = 0, task: str = "metadata", expected_fields: tuple[str, ...] | None = None) -> dict:
     if task == "segmentation":
         classification = payload.get("classification") if isinstance(payload, dict) else None
         if classification not in {"cover", "document_start", "continuation", "blank", "separator"}:
@@ -73,7 +73,7 @@ def validate_result(payload: object, *, page_index: int = 0, task: str = "metada
     for raw_name, item in payload["fields"].items():
         normalized = str(raw_name).strip().casefold().replace("-", "_").replace(" ", "_")
         name = FIELD_ALIASES.get(normalized, raw_name)
-        if name not in FIELDS:
+        if name not in (expected_fields or FIELDS):
             warnings.append("unknown_field")
             continue
         if isinstance(item, dict) and "value" not in item:
@@ -94,6 +94,14 @@ def validate_result(payload: object, *, page_index: int = 0, task: str = "metada
             confidence, bbox = None, []
         field = {"value": value, "confidence": confidence, "bbox": bbox, "page_index": page_index,
                  "needs_review": confidence is None or not bbox}
+        if isinstance(item, dict):
+            if isinstance(item.get("source_text"), str):
+                field["source_text"] = item["source_text"]
+            if item.get("review_reason") in {"low_confidence", "missing_evidence", "validation_warning"}:
+                field["review_reason"] = item["review_reason"]
+            suggestion = item.get("suggested_value")
+            if not isinstance(suggestion, (dict, list)) and suggestion is not None:
+                field.update(suggested_value=suggestion, suggestion_source=str(item.get("suggestion_source") or "provider"))
         if name not in fields or (confidence or -1) > (fields[name]["confidence"] or -1):
             fields[name] = field
     return {"fields": fields, "warnings": list(dict.fromkeys(warnings))}
@@ -118,7 +126,7 @@ def message_text(response: object) -> str:
     return ""
 
 
-def request_body(image: bytes, model: str, task: str = "metadata") -> dict:
+def request_body(image: bytes, model: str, task: str = "metadata", expected_fields: tuple[str, ...] | None = None) -> dict:
     encoded = base64.b64encode(image).decode()
     return {
         "model": model,
@@ -126,7 +134,7 @@ def request_body(image: bytes, model: str, task: str = "metadata") -> dict:
         "thinking": {"type": "disabled"},
         "response_format": {"type": "json_object"},
         "messages": [{"role": "user", "content": [
-            {"type": "text", "text": OCR_PROMPT if task == "full_ocr" else SEGMENTATION_PROMPT if task == "segmentation" else PROMPT},
+            {"type": "text", "text": OCR_PROMPT if task == "full_ocr" else SEGMENTATION_PROMPT if task == "segmentation" else metadata_prompt(expected_fields or ADMIN_FIELDS)},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},
         ]}],
     }
@@ -141,14 +149,14 @@ def retry_delay(response: httpx.Response) -> float:
 
 async def request_page(
     image: bytes, *, base_url: str, api_key: str, model: str, timeout: float = 120,
-    page_index: int = 0, task: str = "metadata",
+    page_index: int = 0, task: str = "metadata", expected_fields: tuple[str, ...] | None = None,
 ) -> dict:
     async with httpx.AsyncClient(timeout=timeout) as client:
         for attempt in range(2):
             try:
                 response = await client.post(
                     base_url.rstrip("/") + "/chat/completions",
-                    json=request_body(image, model, task),
+                    json=request_body(image, model, task, expected_fields),
                     headers={"Authorization": f"Bearer {api_key}"},
                 )
             except httpx.ReadTimeout as exc:
@@ -172,7 +180,7 @@ async def request_page(
                 content = message_text(response.json())
                 if not content:
                     raise ValueError("invalid_model_json:missing_content")
-                return validate_result(parse_json_object(content), page_index=page_index, task=task)
+                return validate_result(parse_json_object(content), page_index=page_index, task=task, expected_fields=expected_fields)
             except ValueError as exc:
                 raise ValueError(str(exc) if str(exc).startswith("invalid_model_json") else "invalid_model_json") from exc
     raise RuntimeError("provider_unavailable")

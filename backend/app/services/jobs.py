@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -15,19 +16,21 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
+from .field_policy import ADMIN_FIELDS, COVER_FIELDS, annotate
+
 MAX_FILES = 15
 MAX_BYTES = 200 * 1024 * 1024
 MAX_PAGES = 100
 TERMINAL = {"completed", "completed_with_warnings", "error", "cancelled", "interrupted"}
 ACTIVE = {"starting", "queued", "running", "cancelling", "segmenting", "extraction_starting"}
 DELETABLE = TERMINAL | {"uploading", "ready"}
-FIELDS = (
-    "co_quan_ban_hanh", "quoc_hieu_tieu_ngu", "so_van_ban", "dia_diem_ban_hanh",
-    "ngay_ban_hanh", "loai_van_ban", "trich_yeu", "quyen_han_ky_thay",
-    "chuc_vu_nguoi_ky", "nguoi_ky", "ma_luu_tru", "co_quan_luu_tru", "nhiem_ky",
-    "tieu_de_ho_so", "hop_so", "phong_so", "muc_luc_so", "bat_dau", "ho_so_dvbq",
-    "ket_thuc", "so_tai_lieu", "thoi_han_bao_quan", "so_trang", "document_type",
-)
+FIELDS = ADMIN_FIELDS + COVER_FIELDS + ("document_type",)
+
+
+class ApprovalBlocked(ValueError):
+    def __init__(self, blockers: list[dict[str, Any]]) -> None:
+        super().__init__("approval_blocked")
+        self.blockers = blockers
 
 
 def now() -> str:
@@ -86,10 +89,10 @@ def materialize_documents(job_id: str, sources: list[dict[str, Any]]) -> list[di
                 "image_url": f"/api/jobs/{job_id}/artifacts/{source['id']}/page-{source_page_index + 1}.png",
                 "ocr_scope": "none", "status": "pending", "error": "",
             } for page_index, source_page_index in enumerate(range(segment["start_page"], segment["end_page"] + 1))]
-            documents.append({
+            documents.append(annotate({
                 "id": document_id, "file_name": source["file_name"], "status": "pending", "fields": {},
                 "pages": pages, "logical_document_type": kind, "source_pdf_id": source["id"],
-            })
+            }))
     return documents
 
 
@@ -308,22 +311,36 @@ class JobStore:
             document = next((item for item in job.get("documents", []) if item.get("id") == document_id), None)
             if document is None:
                 raise ValueError("not_found")
+            if job.get("processing_mode") == "combined_dossier" and not all(
+                source.get("confirmed") for source in job.get("source_pdfs", [])
+            ):
+                raise ApprovalBlocked([{"code": "segmentation_unconfirmed"}])
+            projected = copy.deepcopy(document)
+            allowed = set(projected.get("expected_fields") or FIELDS)
             for correction in corrections:
                 name = correction.get("field")
-                field = document.get("fields", {}).get(name)
-                if name not in FIELDS or field is None:
+                field = projected.get("fields", {}).get(name)
+                if name not in allowed or (field is None and not projected.get("expected_fields")):
                     raise ValueError("invalid_field")
-                if field.get("value", "") != correction.get("old_value", ""):
+                if (field.get("value") if field else None) != correction.get("old_value"):
                     raise ValueError("correction_conflict")
+                if isinstance(correction.get("new_value"), (dict, list)):
+                    raise ValueError("invalid_field")
             stamp = now()
             for correction in corrections:
-                field = document["fields"][correction["field"]]
-                field.setdefault("ocr_value", field.get("value", ""))
+                field = projected.setdefault("fields", {}).setdefault(correction["field"], {"value": None})
+                field.setdefault("ocr_value", field.get("value"))
                 field["value"] = correction.get("new_value", "")
                 field["corrected_value"] = field["value"]
                 field["corrected_at"] = stamp
-            document["review_status"] = "approved"
-            document["approved_at"] = stamp
+                field.update(method="manual", needs_review=False)
+            annotate(projected)
+            if projected.get("approval_blockers"):
+                raise ApprovalBlocked(projected["approval_blockers"])
+            projected["review_status"] = "approved"
+            projected["approved_at"] = stamp
+            document.clear()
+            document.update(projected)
             job["correction_count"] = int(job.get("correction_count", 0)) + len(corrections)
             job["updated_at"] = stamp
             audit = {
@@ -331,6 +348,7 @@ class JobStore:
                 "timestamp": stamp,
                 "document_id": document_id,
                 "action": "correction" if corrections else "approval",
+                "schema_version": "1",
                 "corrections": corrections,
             }
             audit_path = self.path(job_id) / "corrections" / f"{stamp.replace(':', '-')}-{uuid.uuid4().hex}.json"

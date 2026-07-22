@@ -8,6 +8,7 @@ from threading import Thread
 from celery import Celery
 from celery.signals import worker_ready
 
+from ..services.field_policy import annotate
 from ..services.jobs import ACTIVE, MAX_PAGES, JobStore, now
 from ..services.ocr_runner import request_page
 
@@ -179,7 +180,7 @@ async def process_job_async(job_id: str) -> dict:
                 "classification": "cover" if logical_type == "dossier_cover" and index == 0 else "document_start" if index == 0 else "continuation",
                 "error": "",
             } for index in range(len(images))])
-            document = {"id": pdf.stem, "file_name": pdf.name, "status": "processing", "fields": {}, "pages": [], "logical_document_type": logical_type, "source_pdf_id": source["id"]}
+            document = annotate({"id": pdf.stem, "file_name": pdf.name, "status": "processing", "fields": {}, "pages": [], "logical_document_type": logical_type, "source_pdf_id": source["id"]})
             documents.append(document)
             work.append((document, images))
         store.update(job_id, source_pdfs=job.get("source_pdfs", []))
@@ -221,12 +222,17 @@ async def process_job_async(job_id: str) -> dict:
                         timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "120")),
                         page_index=index,
                         task=pass_task,
+                        expected_fields=tuple(document.get("expected_fields", ())),
                     )
                     if pass_task == "full_ocr":
                         state["text"] = result["text"]
                         state["ocr_line_count"] = len(result["text"].splitlines())
                     else:
                         for name, field in result["fields"].items():
+                            field.setdefault("source_text", str(field.get("value", "")))
+                            field.setdefault("evidence_url", state["image_url"])
+                            if field.get("needs_review"):
+                                field.setdefault("review_reason", "missing_evidence")
                             current = document["fields"].get(name)
                             if current is None or (field.get("confidence") or -1) > (current.get("confidence") or -1):
                                 document["fields"][name] = field
@@ -248,6 +254,7 @@ async def process_job_async(job_id: str) -> dict:
                 document.update(status="error", error="invalid_model_json")
         except Exception as exc:
             document.update(status="error", error=safe_error(exc))
+        annotate(document)
         persist()
     failures = sum(bool(page.get("error")) for item in documents for page in item.get("pages", []))
     status = "completed" if successes and not failures else "completed_with_warnings" if successes else "error"

@@ -1,10 +1,10 @@
 "use client";
 
-import { KeyboardEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import { KeyboardEvent, PointerEvent, useEffect, useRef, useState } from "react";
 import { ApiError, crop, Document, Field, getJob, Job, saveCorrections } from "../../../lib/api";
 import { language, safeError, text } from "../../../lib/i18n";
 
-const fieldOrder = [
+const legacyFieldOrder = [
   "co_quan_ban_hanh", "quoc_hieu_tieu_ngu", "so_van_ban", "dia_diem_ban_hanh", "ngay_ban_hanh", "loai_van_ban", "trich_yeu",
   "quyen_han_ky_thay", "chuc_vu_nguoi_ky", "nguoi_ky", "ma_luu_tru", "co_quan_luu_tru", "nhiem_ky", "tieu_de_ho_so",
   "hop_so", "phong_so", "muc_luc_so", "bat_dau", "ho_so_dvbq", "ket_thuc", "so_tai_lieu", "thoi_han_bao_quan", "so_trang", "document_type",
@@ -21,7 +21,7 @@ const fieldMeta: Record<string, [string, string, string, boolean?]> = {
   ho_so_dvbq: ["Hồ sơ ĐVBQ", "Retention file", "Hồ sơ"], ket_thuc: ["Kết thúc", "End", "Thời hạn"], so_tai_lieu: ["Số tài liệu", "Documents", "Thống kê"],
   thoi_han_bao_quan: ["Thời hạn bảo quản", "Retention", "Thời hạn"], so_trang: ["Số trang", "Page count", "Thống kê"], document_type: ["Loại tài liệu", "Document type", "Văn bản"],
 };
-const canonical = new Set<string>(fieldOrder);
+const legacyCanonical = new Set<string>(legacyFieldOrder);
 const scalar = (value: unknown): value is string | number | boolean | null => value == null || ["string", "number", "boolean"].includes(typeof value);
 const display = (value: unknown) => value == null ? "" : scalar(value) ? String(value) : JSON.stringify(value, null, 2);
 const fieldLabel = (name: string) => fieldMeta[name]?.[language() === "vi" ? 0 : 1] || name;
@@ -36,20 +36,25 @@ export default function ReviewWorkspace({ jobId, document, terminal, onJob, onDi
   const [selectedPage, setSelectedPage] = useState(pages[0]?.page_index ?? 0); const [selectedField, setSelectedField] = useState("");
   const [zoom, setZoom] = useState<"fit" | "actual">("fit"); const [imageFailed, setImageFailed] = useState(false); const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [conflict, setConflict] = useState(false); const [cropOpen, setCropOpen] = useState(false); const [rect, setRect] = useState<Rect | null>(null);
+  const [evidenceUrl, setEvidenceUrl] = useState(""); const [evidenceZoom, setEvidenceZoom] = useState<"fit" | "actual">("fit");
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null); const [saving, setSaving] = useState(false);
-  const cropDialog = useRef<HTMLDialogElement>(null); const cropImage = useRef<HTMLImageElement>(null);
-  const page = pages.find((item) => item.page_index === selectedPage); const fields = Object.entries(document.fields || {});
-  const orderedFields = useMemo(() => [...fields].sort(([a], [b]) => {
-    const ai = fieldOrder.indexOf(a as typeof fieldOrder[number]), bi = fieldOrder.indexOf(b as typeof fieldOrder[number]);
+  const cropDialog = useRef<HTMLDialogElement>(null); const evidenceDialog = useRef<HTMLDialogElement>(null); const cropImage = useRef<HTMLImageElement>(null);
+  const page = pages.find((item) => item.page_index === selectedPage); const fields = Object.entries(document.fields || {}); const expected = document.expected_fields || [];
+  const orderedFields = expected.length ? [
+    ...expected.map((name) => [name, document.fields?.[name] || { value: null, page_index: pages[0]?.page_index || 0 }] as [string, Field]),
+    ...fields.filter(([name]) => !expected.includes(name)),
+  ] : [...fields].sort(([a], [b]) => {
+    const ai = legacyFieldOrder.indexOf(a as typeof legacyFieldOrder[number]), bi = legacyFieldOrder.indexOf(b as typeof legacyFieldOrder[number]);
     return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
-  }), [document.fields]);
-  const groups = useMemo(() => orderedFields.reduce<Record<string, [string, Field][]>>((result, item) => {
+  });
+  const groups = orderedFields.reduce<Record<string, [string, Field][]>>((result, item) => {
     const group = fieldMeta[item[0]]?.[2] || "Khác"; (result[group] ||= []).push(item); return result;
-  }, {}), [orderedFields]);
+  }, {});
 
   useEffect(() => onDirty(Boolean(Object.keys(drafts).length)), [drafts, onDirty]);
   useEffect(() => { setImageFailed(false); }, [selectedPage]);
   useEffect(() => { if (cropOpen) cropDialog.current?.showModal(); else cropDialog.current?.close(); }, [cropOpen]);
+  useEffect(() => { if (evidenceUrl) evidenceDialog.current?.showModal(); else evidenceDialog.current?.close(); }, [evidenceUrl]);
 
   function select(name: string, data: Field) {
     setSelectedField(name);
@@ -105,7 +110,7 @@ export default function ReviewWorkspace({ jobId, document, terminal, onJob, onDi
   const evidence = [...(document.crop_evidence || [])].filter((item) => !selectedField || item.field === selectedField).reverse();
   const failedPages = pages.filter((item) => item.error || ["error", "completed_with_warnings"].includes(item.status || ""));
   const warnings = Array.from(new Set([document.error, ...(document.errors || []), ...failedPages.map((item) => item.error)].filter(Boolean) as string[]));
-  const usable = fields.length > 0 || pages.some((item) => item.text || ["completed", "completed_with_warnings"].includes(item.status || ""));
+  const usable = expected.length > 0 || fields.length > 0 || pages.some((item) => item.text || ["completed", "completed_with_warnings"].includes(item.status || ""));
 
   if (!usable) return <section className="panel document-error"><h2>{document.file_name}</h2><p className="error">{warnings.map(safeError).join(", ") || text("noFields")}</p><p>{text("rerunRequired")}</p></section>;
   return <>
@@ -120,12 +125,14 @@ export default function ReviewWorkspace({ jobId, document, terminal, onJob, onDi
       <div className="panel editor-panel">
         <div className="workspace-head"><div><p className="eyebrow">{text("fields")}</p><h2>{fieldLabel(selectedField) || text("selectField")}</h2></div>{document.review_status === "approved" && <span className="status completed">{text("approved")}</span>}</div>
         {conflict && <div className="conflict" role="alert"><b>{text("conflict")}</b><div className="conflict-values">{Object.entries(drafts).map(([name, draft]) => <div key={name}><strong>{fieldLabel(name)}</strong><span>{text("serverValue")}: {display(document.fields?.[name]?.value) || text("emptyValue")}</span><span>{text("draftValue")}: {draft.value || text("emptyValue")}</span></div>)}</div><button className="button secondary" onClick={keepDraft}>{text("keepDraft")}</button><button className="button secondary" onClick={() => { setDrafts({}); setConflict(false); }}>{text("useServer")}</button></div>}
-        <div className="field-groups">{!fields.length && <p className="empty">{text("noFields")}</p>}{Object.entries(groups).map(([group, items]) => <section key={group}><h3>{groupLabel(group)}</h3>{items.map(([name, data]) => {
-          const editable = terminal && canonical.has(name) && scalar(data.value); const value = drafts[name]?.value ?? display(data.value); const score = data.confidence; const confidence = typeof score === "number" && score >= 0 && score <= 1 ? text("confidence", { value: Math.round(score * 100) }) : text("noConfidence");
+        {!!document.approval_blockers?.length && <div className="notice error">{document.approval_blockers.map((issue) => <small key={`${issue.code}-${issue.field || issue.page_index}`}>{safeError(issue.code)}{issue.field ? ` · ${fieldLabel(issue.field)}` : issue.page_index != null ? ` · ${issue.page_index + 1}` : ""}</small>)}</div>}
+        {!!document.review_risks?.length && <div className="notice warning">{document.review_risks.map((issue) => <small key={`${issue.code}-${issue.field || issue.page_index}`}>{safeError(issue.code)}{issue.field ? ` · ${fieldLabel(issue.field)}` : issue.page_index != null ? ` · ${issue.page_index + 1}` : ""}</small>)}</div>}
+        <div className="field-groups">{!orderedFields.length && <p className="empty">{text("noFields")}</p>}{Object.entries(groups).map(([group, items]) => <section key={group}><h3>{groupLabel(group)}</h3>{items.map(([name, data]) => {
+          const editable = terminal && (expected.length ? expected.includes(name) : legacyCanonical.has(name)) && scalar(data.value); const value = drafts[name]?.value ?? display(data.value); const score = data.confidence; const confidence = typeof score === "number" && score >= 0 && score <= 1 ? text("confidence", { value: Math.round(score * 100) }) : text("noConfidence");
           const suggested = display(data.suggested_value);
-          return <div className={`field-card ${selectedField === name ? "selected" : ""}`} key={name} onClick={() => select(name, data)}><label><span><b>{fieldLabel(name)}</b><small>{confidence} · {editable ? "" : text("readOnly")}</small></span>{editable ? fieldMeta[name]?.[3] ? <textarea value={value} onFocus={() => select(name, data)} onChange={(event) => edit(name, data, event.target.value)} /> : <input value={value} onFocus={() => select(name, data)} onChange={(event) => edit(name, data, event.target.value)} /> : <pre>{display(data.value)}</pre>}</label>
-            {(data.method || data.source_text || data.review_reason || data.evidence_candidates?.length) && <div className="field-provenance">{data.method && <small>{text("source")}: {data.method}</small>}{data.source_text && <small title={data.source_text}>{data.source_text}</small>}{data.review_reason && <small className="error">{data.review_reason}</small>}{!!data.evidence_candidates?.length && <small>{text("evidence")}: {data.evidence_candidates.length}</small>}</div>}
-            {suggested && suggested !== value && <div className="field-suggestion"><small>{text("suggestion")}: {suggested}</small>{editable && <button className="text-button" onClick={(event) => { event.stopPropagation(); edit(name, data, suggested); }}>{text("applySuggestion")}</button>}</div>}
+          return <div className={`field-card ${selectedField === name ? "selected" : ""}`} key={name} onClick={() => select(name, data)}><label><span><b>{fieldLabel(name)}</b><small>{data.value == null ? (language() === "vi" ? "Chưa nhận dạng" : "Not recognized") : confidence} · {editable ? "" : text("readOnly")}</small></span>{editable ? fieldMeta[name]?.[3] ? <textarea placeholder={language() === "vi" ? "Chưa nhận dạng" : "Not recognized"} value={value} onFocus={() => select(name, data)} onChange={(event) => edit(name, data, event.target.value)} /> : <input placeholder={language() === "vi" ? "Chưa nhận dạng" : "Not recognized"} value={value} onFocus={() => select(name, data)} onChange={(event) => edit(name, data, event.target.value)} /> : <pre>{display(data.value)}</pre>}</label>
+            <div className="field-provenance">{data.method && <small>{text("source")}: {data.method}</small>}<small>{text("pageOf", { page: data.page_index + 1, pages: pages.length })}</small>{data.source_text && <small title={data.source_text}>{data.source_text}</small>}{data.review_reason && <small className="error">{data.review_reason}</small>}{data.evidence_url ? <button className="evidence-thumb" onClick={(event) => { event.stopPropagation(); setEvidenceUrl(data.evidence_url!); }}><img src={data.evidence_url} alt={text("evidence")} />{text("evidence")}</button> : <small>{text("evidence")}: {text("unavailable")}</small>}</div>
+            {suggested && suggested !== value && <div className="field-suggestion"><small>{text("suggestion")}: {suggested}{data.suggestion_source ? ` · ${data.suggestion_source}` : ""}</small>{editable && <button className="text-button" onClick={(event) => { event.stopPropagation(); edit(name, data, suggested); }}>{text("applySuggestion")}</button>}</div>}
             {data.ocr_value !== undefined && display(data.ocr_value) !== display(data.value) && <div className="field-diff"><small>{text("originalValue")}: {display(data.ocr_value) || text("emptyValue")}</small><small>{text("newValue")}: {display(data.value) || text("emptyValue")}</small></div>}</div>;
         })}</section>)}</div>
         {terminal && <div className="approve-bar"><span>{Object.keys(drafts).length ? text("selectedFiles", { count: Object.keys(drafts).length }) : document.review_status === "approved" && document.approved_at ? text("approvedAt", { date: new Date(document.approved_at).toLocaleString(language()) }) : ""}</span>{!(document.review_status === "approved" && !Object.keys(drafts).length) && <button className="button primary" disabled={saving} onClick={save}>{Object.keys(drafts).length ? text("saveApprove") : text("approve")}</button>}</div>}
@@ -134,6 +141,12 @@ export default function ReviewWorkspace({ jobId, document, terminal, onJob, onDi
         </section>
       </div>
     </section>
+    <dialog ref={evidenceDialog} className="modal evidence-modal" onClose={() => setEvidenceUrl("")}>
+      <div className="modal-head"><h2>{text("evidence")}</h2><button className="icon-button" aria-label={text("close")} onClick={() => setEvidenceUrl("")}>×</button></div>
+      <div className="segmented"><button aria-pressed={evidenceZoom === "fit"} onClick={() => setEvidenceZoom("fit")}>{text("fit")}</button><button aria-pressed={evidenceZoom === "actual"} onClick={() => setEvidenceZoom("actual")}>{text("actualSize")}</button></div>
+      {evidenceUrl && <div className={`evidence-preview ${evidenceZoom}`}><img src={evidenceUrl} alt={text("evidence")} /></div>}
+      <footer className="modal-actions"><a className="button secondary" href={evidenceUrl} download>{text("download")}</a><button className="button secondary" onClick={() => setEvidenceUrl("")}>{text("close")}</button></footer>
+    </dialog>
     <dialog ref={cropDialog} className="modal crop-modal" onClose={() => { setCropOpen(false); setRect(null); setDragStart(null); }}>
       <div className="modal-head"><div><p className="eyebrow">{text("cropEvidence")}</p><h2>{fieldLabel(selectedField)}</h2></div><button className="icon-button" aria-label={text("close")} onClick={() => setCropOpen(false)}>×</button></div>
       <p>{text("cropHelp")}</p><div className="crop-canvas"><img ref={cropImage} src={page?.image_url} alt={document.file_name} draggable={false} onPointerDown={(event) => pointer(event, true)} onPointerMove={(event) => pointer(event, false)} onPointerUp={() => setDragStart(null)} />{rect && <div className="crop-rectangle" tabIndex={0} aria-label={text("cropEvidence")} onKeyDown={keyMove} style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }} />}</div>
