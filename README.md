@@ -6,9 +6,10 @@ máy chủ cấu hình.
 
 Milestone A, B, browser baseline v1 và **Legacy+ v2** đã có closure local ngày
 2026-07-21. Legacy+ phục hồi browser tham chiếu trong `OCR_paper`, chỉ loại trừ
-ZIP/ảnh/folder upload. Repair Gate đã pass local ngày 2026-07-22; `X8`–`X13` và
-phần local của `X15` đã pass, `X14` còn benchmark thật, còn `X7`/`X16` đang
-IN PROGRESS. Điều kiện hoàn thành các phần phụ thuộc bên ngoài nằm trong
+ZIP/ảnh/folder upload. Repair Gate đã pass local ngày 2026-07-22; contract local
+của `X7`–`X13`, `X16` và phần local của `X15` đã pass. `X7`/`X16` vẫn IN PROGRESS
+ở gate tổng thể vì còn thiếu fixture/provider live; `X14` còn benchmark thật.
+Điều kiện hoàn thành các phần phụ thuộc bên ngoài nằm trong
 [`incomlpeted.md`](incomlpeted.md).
 Milestone C chỉ là internal production-like pilot,
 không phải customer-production approval. Cho đến khi Gate C đạt, `src/ocr/` và
@@ -24,14 +25,15 @@ report throughput/coverage và CPU load đều đi qua generated typed contract.
 
 Repair Gate ngày 2026-07-22 đạt 28 backend tests, 10 legacy compatibility tests,
 focused browser coverage cho task/page retry và partial-result UI, typecheck,
-build, OpenAPI/types và diff checks. Đây là baseline cần bảo vệ; field policy,
-segmentation hồ sơ gộp và bốn fixture thật vẫn phải qua local/live gate mới.
-Contract local hiện có field policy dùng chung, strict write DTO, missing-field
+build, OpenAPI/types và diff checks. Đây là baseline cần bảo vệ. Contract local
+hiện có field policy dùng chung, strict write DTO, missing-field
 atomic approval, typed blocker/risk/error/Safe Events, field evidence, Processing
 Mode, review segmentation theo revision, Continue, rerun reuse/resegment,
-readiness probe, durable progress/failure/timeline và triage. Bộ backend đạt 47 tests; browser
-`17 passed`, `1 skipped` và eager Celery/fake-provider pass. Đây chưa phải bằng chứng bốn fixture
-hoặc provider production-like thật.
+readiness probe, durable progress/failure/timeline và triage. Create/rerun từ chối
+Provider Profile chưa cấu hình hoặc không hỗ trợ mode/task/page scope đã chọn.
+Bộ backend đạt 47 tests; browser `17 passed`, `1 skipped` và eager
+Celery/fake-provider pass. Đây chưa phải bằng chứng bốn fixture, restart hoặc
+provider production-like thật.
 
 ## Cấu trúc repository
 

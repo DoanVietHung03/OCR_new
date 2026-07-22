@@ -9,8 +9,8 @@ PDF-only VI/EN UI. Local coverage includes backend tests, legacy compatibility
 tests, mocked browser paths, and a real eager-task/fake-provider browser flow.
 
 Milestone C is not complete. It is an internal production-like pilot gate, not
-customer-production approval. Do not claim even that pilot until P0 `X7`–`X11`
-and `X16` pass locally and the `BE-C-EVIDENCE` ledger in
+customer-production approval. Do not claim even that pilot until the overall P0
+`X7`–`X11` and `X16` gates close and the `BE-C-EVIDENCE` ledger in
 `implementation_plan.md` contains real Nginx/Redis/Celery/provider, four-fixture,
 restart, cross-version, and rollback evidence. Keep `src/ocr/` and `web/` as the
 rollback runtime until the one-day rollback window closes.
@@ -24,10 +24,11 @@ The 2026-07-22 Repair Gate passed 28 backend tests, 10 legacy compatibility
 tests, focused browser coverage for task/page retry and partial review, typecheck,
 build, generated OpenAPI/types, and diff checks. These are the protected baseline.
 The current suite has 47 backend tests and 17 passing browser checks (plus one
-sanitized-capture skip); `X8`–`X13` and the locally actionable `X15` scope pass,
-while `X14` still needs real benchmark fingerprints and `X7`/`X16` remain IN
-PROGRESS pending fixture/live gates. `incomlpeted.md` lists every external
-condition still required.
+sanitized-capture skip). The local contracts for `X7`–`X13`, `X16`, and the
+locally actionable `X15` scope pass. `X7`/`X16` remain IN PROGRESS at the overall
+gate only because fixture/live acceptance is missing; `X14` still needs real
+benchmark fingerprints. `incomlpeted.md` lists every external condition still
+required.
 
 The X7/X16 local contract now also preserves typed suggestion confidence/reason
 with provider-owned provenance, validates create/rerun against configured
