@@ -57,7 +57,27 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     assert result["documents"][0]["fields"]["so_van_ban"]["evidence_url"].endswith("/artifacts/document/page-1.png")
     assert result["documents"][0]["fields"]["so_van_ban"]["source_text"] == "1"
     assert result["documents"][0]["approval_blockers"]
+    assert (result["progress_stage"], result["completed_pages"], result["total_pages"]) == ("completed", 2, 2)
+    assert [event["code"] for event in result["events"]] == ["page_pass_completed", "page_pass_completed", "job_completed"]
+    assert JobStore(tmp_path).read(job["id"])["completed_pages"] == 2
     assert (store.path(job["id"]) / "artifacts" / "document" / "page-1.png").is_file()
+
+
+def test_worker_persists_typed_failure_without_provider_detail(tmp_path, monkeypatch, pdf_bytes):
+    import app.workers.tasks as tasks
+
+    store = JobStore(tmp_path)
+    job = store.create({"file_count": 1, "provider": "qwen", "model": "test"})
+    store.add_pdf(job["id"], "document.pdf", pdf_bytes); store.begin_start(job["id"])
+
+    async def fail(*_args, **_kwargs):
+        raise RuntimeError("provider_timeout: secret")
+
+    monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path)); monkeypatch.setattr(tasks, "request_page", fail)
+    result = asyncio.run(tasks.process_job_async(job["id"]))
+    assert (result["status"], result["progress_stage"]) == ("error", "failed")
+    assert result["failure"] == {"code": "provider_timeout", "retryable": True, "operator_hint": "rerun_job", "page_index": 0}
+    assert "secret" not in str(JobStore(tmp_path).read(job["id"]))
 
 
 def test_cancel_and_restart_never_call_provider(tmp_path, monkeypatch, pdf_bytes):

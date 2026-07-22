@@ -9,7 +9,7 @@ from celery import Celery
 from celery.signals import worker_ready
 
 from ..services.field_policy import annotate
-from ..services.jobs import ACTIVE, MAX_PAGES, JobStore, now
+from ..services.jobs import ACTIVE, MAX_PAGES, JobStore, failure, now
 from ..services.ocr_runner import request_page
 
 celery_app = Celery(
@@ -49,7 +49,7 @@ def render_pdf(pdf: Path, output: Path) -> list[Path]:
 def cancelled(store: JobStore, job_id: str) -> bool:
     if not (store.path(job_id) / "cancel").exists():
         return False
-    store.update(job_id, status="cancelled", error=None, completed_at=now())
+    store.update(job_id, status="cancelled", error=None, failure=None, progress_stage="cancelled", completed_at=now())
     return True
 
 
@@ -98,7 +98,7 @@ def reused_classification(segment: dict, page_index: int) -> str:
 
 
 async def segment_job(store: JobStore, job: dict) -> dict:
-    job = store.update(job["id"], status="segmenting", error=None)
+    job = store.update(job["id"], status="segmenting", error=None, failure=None, progress_stage="segmenting")
     sources = job.get("source_pdfs", [])
     rendered = {}
     for source in sources:
@@ -107,7 +107,7 @@ async def segment_job(store: JobStore, job: dict) -> dict:
         rendered[source["id"]] = render_pdf(store.path(job["id"]) / "uploads" / source["file_name"], store.path(job["id"]) / "artifacts" / source["id"])
     total = sum(map(len, rendered.values()))
     completed = 0
-    store.update(job["id"], segmentation_total_pages=total)
+    store.update(job["id"], segmentation_total_pages=total, total_pages=total, completed_pages=0)
     for source in sources:
         images = rendered[source["id"]]
         source["page_count"] = len(images)
@@ -136,13 +136,13 @@ async def segment_job(store: JobStore, job: dict) -> dict:
                 "classification": classification, "error": error,
             })
             completed += 1
-            store.update(job["id"], source_pdfs=sources, segmentation_completed_pages=completed)
+            store.update(job["id"], source_pdfs=sources, segmentation_completed_pages=completed, completed_pages=completed)
         if not reused:
             source["proposal"] = propose_segments(source["pages"])
             source["revision"] = int(source.get("revision", 0)) + 1
         store.update(job["id"], source_pdfs=sources)
         store.add_event(job["id"], "segmentation_proposed", source_pdf_id=source["id"], revision=source["revision"])
-    return store.update(job["id"], status="awaiting_segmentation_review", source_pdfs=sources)
+    return store.update(job["id"], status="awaiting_segmentation_review", source_pdfs=sources, progress_stage="awaiting_review")
 
 
 async def process_job_async(job_id: str) -> dict:
@@ -156,7 +156,7 @@ async def process_job_async(job_id: str) -> dict:
     store.update(job_id, status="queued")
     if cancelled(store, job_id):
         return store.read(job_id)
-    job = store.update(job_id, status="running", error=None, started_at=job.get("started_at") or now())
+    job = store.update(job_id, status="running", error=None, failure=None, progress_stage="extracting", started_at=job.get("started_at") or now())
     documents: list[dict] = job.get("documents", []) if extracting else []
     successes = 0
 
@@ -184,6 +184,14 @@ async def process_job_async(job_id: str) -> dict:
             documents.append(document)
             work.append((document, images))
         store.update(job_id, source_pdfs=job.get("source_pdfs", []))
+    task = job.get("vlm_task", "full_ocr")
+    total = sum(
+        (len(pages) if task == "full_ocr" else 0)
+        + len(plan_pages(len(pages), job.get("vlm_pages", "all"), int(job.get("vlm_max_pages", 0) or 0)))
+        for _, pages in work
+    )
+    completed = 0
+    store.update(job_id, completed_pages=0, total_pages=total)
     for document, pages in work:
         document.update(status="processing", fields={})
         try:
@@ -201,7 +209,6 @@ async def process_job_async(job_id: str) -> dict:
                 for index in range(len(pages))
                 ]
             selected = plan_pages(len(pages), job.get("vlm_pages", "all"), int(job.get("vlm_max_pages", 0) or 0))
-            task = job.get("vlm_task", "full_ocr")
             if task == "metadata":
                 for index, state in enumerate(document["pages"]):
                     if index not in selected:
@@ -213,6 +220,7 @@ async def process_job_async(job_id: str) -> dict:
                     return store.update(job_id, documents=documents)
                 state = document["pages"][index]
                 state["ocr_scope"] = pass_task if state["ocr_scope"] == "none" else f'{state["ocr_scope"]}+{pass_task}'
+                pass_error = ""
                 try:
                     result = await request_page(
                         pages[index].read_bytes(),
@@ -237,11 +245,24 @@ async def process_job_async(job_id: str) -> dict:
                             if current is None or (field.get("confidence") or -1) > (current.get("confidence") or -1):
                                 document["fields"][name] = field
                     warning = next(iter(result.get("warnings", [])), "")
+                    pass_error = warning
                     state["error"] = state["error"] or warning
                     state["status"] = "completed_with_warnings" if state["error"] else "completed"
                 except Exception as exc:
-                    state["error"] = safe_error(exc)
+                    pass_error = safe_error(exc)
+                    state["error"] = pass_error
                     state["status"] = "completed_with_warnings" if state.get("text") else "error"
+                completed += 1
+                store.add_event(
+                    job_id,
+                    "page_pass_failed" if pass_error else "page_pass_completed",
+                    category="document",
+                    severity="warning" if pass_error else "info",
+                    document_id=document["id"],
+                    page_index=index,
+                    ocr_pass=pass_task,
+                )
+                store.update(job_id, completed_pages=completed, progress_detail=pass_task)
                 persist()
             if cancelled(store, job_id):
                 return store.update(job_id, documents=documents)
@@ -258,8 +279,12 @@ async def process_job_async(job_id: str) -> dict:
         persist()
     failures = sum(bool(page.get("error")) for item in documents for page in item.get("pages", []))
     status = "completed" if successes and not failures else "completed_with_warnings" if successes else "error"
+    first_failure = next((page for item in documents for page in item.get("pages", []) if page.get("error")), None)
+    store.add_event(job_id, "job_completed", severity="error" if status == "error" else "warning" if failures else "info")
     return store.update(
         job_id, status=status, documents=documents, report_url=f"/jobs/{job_id}", completed_at=now(),
+        progress_stage="failed" if status == "error" else "completed",
+        failure=failure(first_failure["error"], first_failure.get("page_index")) if status == "error" and first_failure else None,
         dossier_cover_count=sum(item.get("logical_document_type") == "dossier_cover" for item in documents),
         administrative_document_count=sum(item.get("logical_document_type") == "administrative_document" for item in documents),
     )
@@ -273,7 +298,8 @@ def process_job(job_id: str) -> dict:
         store = JobStore(os.getenv("OCR_DATA_DIR", "data/jobs"))
         try:
             if store.read(job_id).get("status") in ACTIVE:
-                return store.update(job_id, status="error", error=safe_error(exc), completed_at=now())
+                code = safe_error(exc)
+                return store.update(job_id, status="error", error=code, failure=failure(code), progress_stage="failed", completed_at=now())
             return store.read(job_id)
         except (FileNotFoundError, ValueError):
             return {"id": job_id, "status": "error", "error": "ocr_failed"}

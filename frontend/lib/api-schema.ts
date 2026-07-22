@@ -458,6 +458,8 @@ export interface components {
             document_id?: string | null;
             /** Page Index */
             page_index?: number | null;
+            /** Field */
+            field?: string | null;
             /** Download Url */
             download_url: string;
         };
@@ -781,6 +783,65 @@ export interface components {
              * @default 0
              */
             warning_count: number;
+            /**
+             * Needs Review
+             * @default false
+             */
+            needs_review: boolean;
+            /**
+             * Has Blocker
+             * @default false
+             */
+            has_blocker: boolean;
+            /**
+             * Has Risk
+             * @default false
+             */
+            has_risk: boolean;
+            /**
+             * Low Confidence
+             * @default false
+             */
+            low_confidence: boolean;
+            /**
+             * Has Suggestion
+             * @default false
+             */
+            has_suggestion: boolean;
+            /**
+             * Has Manual Crop
+             * @default false
+             */
+            has_manual_crop: boolean;
+            /**
+             * Blocker Count
+             * @default 0
+             */
+            blocker_count: number;
+            /**
+             * Risk Count
+             * @default 0
+             */
+            risk_count: number;
+            /**
+             * Low Confidence Count
+             * @default 0
+             */
+            low_confidence_count: number;
+            /**
+             * Suggestion Count
+             * @default 0
+             */
+            suggestion_count: number;
+            /**
+             * Manual Crop Count
+             * @default 0
+             */
+            manual_crop_count: number;
+            /** Target Page Index */
+            target_page_index?: number | null;
+            /** Target Field */
+            target_field?: string | null;
             /** Updated At */
             updated_at: string;
             /** Deep Link */
@@ -839,11 +900,50 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** DocumentTriageCounts */
+        DocumentTriageCounts: {
+            /**
+             * All
+             * @default 0
+             */
+            all: number;
+            /**
+             * Needs Review
+             * @default 0
+             */
+            needs_review: number;
+            /**
+             * Blocker
+             * @default 0
+             */
+            blocker: number;
+            /**
+             * Risk
+             * @default 0
+             */
+            risk: number;
+            /**
+             * Low Confidence
+             * @default 0
+             */
+            low_confidence: number;
+            /**
+             * Suggestion
+             * @default 0
+             */
+            suggestion: number;
+            /**
+             * Manual Crop
+             * @default 0
+             */
+            manual_crop: number;
+        };
         /** DocumentsResponse */
         DocumentsResponse: {
             /** Items */
             items: components["schemas"]["DocumentIndexItem"][];
             pagination: components["schemas"]["PaginationResponse"];
+            triage_counts?: components["schemas"]["DocumentTriageCounts"];
         };
         /** EngineCheckResponse */
         EngineCheckResponse: {
@@ -883,6 +983,23 @@ export interface components {
             /** Items */
             items: components["schemas"]["SafeEvent"][];
             pagination: components["schemas"]["PaginationResponse"];
+        };
+        /** FailureResponse */
+        FailureResponse: {
+            /** Code */
+            code: string;
+            /**
+             * Retryable
+             * @default false
+             */
+            retryable: boolean;
+            /**
+             * Operator Hint
+             * @default
+             */
+            operator_hint: string;
+            /** Page Index */
+            page_index?: number | null;
         };
         /** FieldResponse */
         FieldResponse: {
@@ -1186,6 +1303,27 @@ export interface components {
             segmentation_total_pages: number;
             /** Review Status */
             review_status?: ("unreviewed" | "partially_approved" | "approved") | null;
+            /**
+             * Progress Stage
+             * @default
+             */
+            progress_stage: string;
+            /**
+             * Progress Detail
+             * @default
+             */
+            progress_detail: string;
+            /**
+             * Completed Pages
+             * @default 0
+             */
+            completed_pages: number;
+            /**
+             * Total Pages
+             * @default 0
+             */
+            total_pages: number;
+            failure?: components["schemas"]["FailureResponse"] | null;
         } & {
             [key: string]: unknown;
         };
@@ -1461,6 +1599,10 @@ export interface components {
             source_pdf_id?: string | null;
             /** Revision */
             revision?: number | null;
+            /** Related Job Id */
+            related_job_id?: string | null;
+            /** Ocr Pass */
+            ocr_pass?: string | null;
             /** Message */
             message: string;
         };
@@ -1933,6 +2075,7 @@ export interface operations {
                 page_size?: number;
                 query?: string;
                 review_status?: string;
+                triage?: string;
                 sort?: string;
             };
             header?: never;

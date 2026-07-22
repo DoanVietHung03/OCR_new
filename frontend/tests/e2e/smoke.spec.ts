@@ -39,7 +39,7 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
     if (apiPath.endsWith("/manual-crop")) { cropCalls += 1; cropBody = request.postDataJSON(); document.crop_evidence.push({ crop_image: `/api/jobs/${id}/artifacts/smoke/crop.png`, field: "so_van_ban", page_index: 0, created_at: now, bbox: cropBody.rect, evidence_source: "manual_crop", evidence_status: "trusted" }); return route.fulfill({ json: document.crop_evidence.at(-1) }); }
     if (apiPath === "/api/jobs/delete-preview") return route.fulfill({ json: { deletable: [{ id, name: "smoke.pdf" }], skipped: [] } });
     if (apiPath === "/api/jobs/bulk-delete") { deleted = true; return route.fulfill({ json: { deleted: [id], skipped: [], failed: [] } }); }
-    if (apiPath === `/api/jobs/${id}/artifacts`) return route.fulfill({ json: { items: [{ name: "page-1.png", kind: "image", status: "available", size_bytes: 200, updated_at: now, document_id: "smoke", page_index: 0, download_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }] } });
+    if (apiPath === `/api/jobs/${id}/artifacts`) return route.fulfill({ json: { items: [{ name: "page-1.png", kind: "image", status: "available", size_bytes: 200, updated_at: now, document_id: "smoke", page_index: 0, field: "so_van_ban", download_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }, { name: "missing-crop.png", kind: "image", status: "missing", size_bytes: 0, updated_at: "", document_id: "smoke", page_index: 0, field: "so_van_ban", download_url: `/api/jobs/${id}/artifacts/smoke/missing-crop.png` }] } });
     if (apiPath.includes("/artifacts/") && apiPath.endsWith(".png")) return route.fulfill({ status: 200, contentType: "image/svg+xml", body: svg });
     if (apiPath.endsWith("report.json")) return route.fulfill({ json: { ok: true } });
     return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
@@ -71,7 +71,7 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   await expect(page.locator(".evidence-list")).toBeVisible(); await expect(page.locator(".evidence-list a").first()).toHaveAttribute("href", /\/crop\.png$/);
   if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/review-workspace.png") }); }
   await page.getByRole("button", { name: /vẽ crop|draw crop/i }).click(); const smallBox = await page.locator(".crop-canvas img").boundingBox(); await page.mouse.move(smallBox!.x + 10, smallBox!.y + 10); await page.mouse.down(); await page.mouse.move(smallBox!.x + 11, smallBox!.y + 11); await page.mouse.up(); await page.getByRole("button", { name: /lưu crop|save crop/i }).click(); await expect(page.locator(".notice.error")).toContainText("Vùng crop không hợp lệ"); expect(cropCalls).toBe(1); await page.locator(".crop-modal .modal-actions").getByRole("button", { name: /đóng|close/i }).click();
-  await page.locator(".detail-tabs").getByRole("button", { name: /artifacts/i }).click(); await expect(page.locator(".artifact-section")).toContainText("page-1.png"); await expect(page.locator(".artifact-section")).toContainText("200 B");
+  await page.locator(".detail-tabs").getByRole("button", { name: /artifacts/i }).click(); await expect(page.locator(".artifact-section")).toContainText("page-1.png"); await expect(page.locator(".artifact-section")).toContainText("200 B"); await expect(page.locator(".artifact-section")).toContainText("missing-crop.png"); await page.locator(".artifact-item").filter({ hasText: "page-1.png" }).click(); await expect(page.locator(".evidence-modal[open] img")).toBeVisible(); await page.locator(".evidence-modal[open] .modal-actions").getByRole("button", { name: /đóng|close/i }).click();
   await page.locator(".detail-tabs").getByRole("button", { name: /nhật ký|logs/i }).click(); await expect(page.locator(".logs-section")).toContainText("sanitized legacy log");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]); await page.getByRole("button", { name: /sao chép|copy/i }).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("sanitized legacy log");
@@ -277,12 +277,35 @@ test("monitor stops polling and preserves nullable GPU values", async ({ page })
   await page.locator(".monitor-modal").getByRole("button", { name: /đóng|close/i }).click(); const closed = metricsCalls; await page.waitForTimeout(2_200); expect(metricsCalls).toBe(closed);
 });
 
+test("terminal detail renders persisted progress, safe failure and timeline", async ({ page }) => {
+  let reads = 0;
+  const failed = {
+    ...fixtureJob("error"), progress_stage: "failed", progress_detail: "metadata", completed_pages: 1, total_pages: 2,
+    failure: { code: "provider_timeout", retryable: true, operator_hint: "rerun_job", page_index: 0 },
+    logs: [{ timestamp: now, severity: "error", category: "document", code: "page_pass_failed", job_id: id, page_index: 0, message: "page_pass_failed" }],
+  };
+  await page.route("**/api/**", async (route) => {
+    const apiPath = new URL(route.request().url()).pathname;
+    if (apiPath === `/api/jobs/${id}`) { reads += 1; return route.fulfill({ json: failed }); }
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(`/jobs/${id}?view=logs`);
+  await expect(page.locator(".job-progress")).toContainText("1/2");
+  await expect(page.locator(".failure-card")).toContainText(/provider|nhà cung cấp/i);
+  await expect(page.locator(".timeline")).toContainText(/page pass|lượt xử lý/i);
+  await page.locator(".failure-card").getByRole("button", { name: /sao chép|copy/i }).click();
+  const diagnostics = JSON.parse(await page.evaluate(() => navigator.clipboard.readText()));
+  expect(Object.keys(diagnostics).sort()).toEqual(["code", "job_id", "page_index", "provider_profile_id", "timestamp"]);
+  const terminalReads = reads; await page.waitForTimeout(2_200); expect(reads).toBe(terminalReads);
+});
+
 test("Legacy+ routes deep-link and Code Catalog CRUD survives reload", async ({ page }) => {
   let catalog = { revision: 0, items: [] as any[] }; let eventsQuery = "";
   await page.route("**/api/**", async (route) => {
     const request = route.request(), apiPath = new URL(request.url()).pathname;
     if (apiPath === "/api/state") return route.fulfill({ json: state([]) });
-    if (apiPath === "/api/documents") return route.fulfill({ json: { items: [{ id: "smoke", job_id: id, job_status: "completed", file_name: "smoke.pdf", document_type: "Thông báo", status: "completed", review_status: "approved", page_count: 1, confidence_average: .91, warning_count: 0, updated_at: now, deep_link: `/jobs/${id}?document=smoke&view=review` }], pagination: { page: 1, page_size: 25, total: 1, pages: 1 } } });
+    if (apiPath === "/api/documents") return route.fulfill({ json: { items: [{ id: "smoke", job_id: id, job_status: "completed", file_name: "smoke.pdf", document_type: "Thông báo", status: "completed", review_status: "approved", page_count: 1, confidence_average: .91, warning_count: 1, needs_review: true, has_blocker: true, has_risk: false, low_confidence: false, has_suggestion: false, has_manual_crop: false, blocker_count: 1, risk_count: 0, low_confidence_count: 0, suggestion_count: 0, manual_crop_count: 0, target_page_index: 0, target_field: "so_van_ban", updated_at: now, deep_link: `/jobs/${id}?document=smoke&view=review&page=0&field=so_van_ban` }], pagination: { page: 1, page_size: 25, total: 1, pages: 1 }, triage_counts: { all: 1, needs_review: 1, blocker: 1, risk: 0, low_confidence: 0, suggestion: 0, manual_crop: 0 } } });
     if (apiPath === "/api/events") { eventsQuery = new URL(request.url()).search; return route.fulfill({ json: { items: [{ timestamp: now, severity: "info", category: "lifecycle", code: "job_created", job_id: id, provider_profile_id: "qwen", document_id: "smoke", page_index: 0, message: "job_created" }], pagination: { page: 1, page_size: 50, total: 1, pages: 1 } } }); }
     if (apiPath === "/api/reports") return route.fulfill({ json: { operations: { total_jobs: 1, active_jobs: 0, completed_jobs: 1, error_jobs: 0, documents: 1, pages: 1, duration_seconds_average: 60, pages_per_minute: 1, failure_codes: {} }, quality: { documents: 1, approved_documents: 1, corrected_fields: 0, confidence_average: .91, total_fields: 1, confidence_coverage: 1, evidence_coverage: .5, warning_documents: 0 }, benchmark_samples: [] } });
     if (apiPath === "/api/codes" && request.method() === "GET") return route.fulfill({ json: catalog });
@@ -294,7 +317,7 @@ test("Legacy+ routes deep-link and Code Catalog CRUD survives reload", async ({ 
 
   await page.goto("/"); const nav = page.locator("#primary-navigation");
   await nav.getByRole("link", { name: /tải pdf|upload pdf/i }).click(); await expect(page).toHaveURL(/\/upload$/);
-  await nav.getByRole("link", { name: /quản lý|manage/i }).click(); await expect(page).toHaveURL(/\/documents$/); await expect(page.getByRole("link", { name: /mở|open/i }).last()).toHaveAttribute("href", new RegExp(`document=smoke&view=review`));
+  await nav.getByRole("link", { name: /quản lý|manage/i }).click(); await expect(page).toHaveURL(/\/documents$/); await expect(page.getByLabel(/lọc rà soát|review filter/i)).toContainText(/1/); await expect(page.getByRole("link", { name: /mở|open/i }).last()).toHaveAttribute("href", new RegExp(`document=smoke&view=review&page=0&field=so_van_ban`));
   await nav.getByRole("link", { name: /nhật ký|logs/i }).click(); await expect(page).toHaveURL(/\/logs$/); await expect(page.locator(".data-table")).toContainText("job_created");
   await page.getByLabel("Provider").fill("qwen"); await page.getByLabel(/tài liệu|document/i).fill("smoke"); await page.getByLabel(/số trang|pages/i).fill("0"); await expect.poll(() => eventsQuery).toContain("provider_profile_id=qwen"); expect(eventsQuery).toContain("document_id=smoke"); expect(eventsQuery).toContain("page_index=0");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]); await page.getByRole("button", { name: /sao chép|copy/i }).click(); expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("job_created"); const safeDownload = page.waitForEvent("download"); await page.getByRole("button", { name: /tải xuống|download/i }).click(); expect((await safeDownload).suggestedFilename()).toBe("safe-events.json");

@@ -4,7 +4,8 @@ import json
 import re
 import uuid
 from datetime import datetime, timezone
-from urllib.parse import quote
+from pathlib import Path
+from urllib.parse import quote, unquote
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse
@@ -63,7 +64,7 @@ def public_job(job: dict) -> dict:
     review_status = None
     if documents:
         review_status = "approved" if approved == len(documents) else "partially_approved" if approved else "unreviewed"
-    return {**job, "review_status": review_status, "logs": safe_events([job])[-200:]}
+    return {**job, "review_status": review_status, "logs": safe_events([job])[:200]}
 
 
 def confidence_average(documents: list[dict]) -> float | None:
@@ -130,12 +131,21 @@ def safe_events(jobs: list[dict]) -> list[dict]:
                         "code": "manual_crop_created", "job_id": job_id, "document_id": document_id,
                         "page_index": evidence.get("page_index"), "message": "manual_crop_created",
                     })
+        allowed_events = {
+            "segmentation_proposed", "segmentation_confirmed", "extraction_dispatched",
+            "job_dispatched", "job_completed", "job_rerun_created", "job_rerun_from",
+            "page_pass_completed", "page_pass_failed", "document_corrected",
+        }
         for item in job.get("events", []):
-            if isinstance(item, dict) and item.get("code") in {"segmentation_proposed", "segmentation_confirmed", "extraction_dispatched"}:
+            if isinstance(item, dict) and item.get("code") in allowed_events:
+                severity = item.get("severity") if item.get("severity") in {"info", "warning", "error"} else "info"
+                category = item.get("category") if item.get("category") in {"lifecycle", "document", "review"} else "lifecycle"
                 events.append({
-                    "timestamp": str(item.get("timestamp", "")), "severity": "info", "category": "lifecycle",
+                    "timestamp": str(item.get("timestamp", "")), "severity": severity, "category": category,
                     "code": item["code"], "job_id": job_id, "message": item["code"],
                     "source_pdf_id": item.get("source_pdf_id"), "revision": item.get("revision"),
+                    "document_id": item.get("document_id"), "page_index": item.get("page_index"),
+                    "related_job_id": item.get("related_job_id"), "ocr_pass": item.get("ocr_pass"),
                 })
         profile_id = str(job.get("provider_profile_id") or job.get("provider") or job.get("ocr_method") or "") or None
         for event in events[first:]:
@@ -149,6 +159,37 @@ def paginated(items: list[dict], page: int, page_size: int) -> dict:
         "items": items[offset:offset + page_size],
         "pagination": {"page": page, "page_size": page_size, "total": len(items),
                        "pages": max(1, (len(items) + page_size - 1) // page_size)},
+    }
+
+
+def document_triage(document: dict) -> dict:
+    fields = document.get("fields", {}) if isinstance(document.get("fields"), dict) else {}
+    blockers = document.get("approval_blockers", []) if isinstance(document.get("approval_blockers"), list) else []
+    risks = document.get("review_risks", []) if isinstance(document.get("review_risks"), list) else []
+    low = [name for name, field in fields.items() if isinstance(field, dict) and field.get("review_reason") == "low_confidence"]
+    suggestions = [name for name, field in fields.items() if isinstance(field, dict) and field.get("suggested_value") not in (None, "")]
+    crops = [item for item in document.get("crop_evidence", []) if isinstance(item, dict)]
+    issue = next((item for item in blockers + risks if isinstance(item, dict)), {})
+    target_field = issue.get("field") or next(iter(low or suggestions), None) or (crops[0].get("field") if crops else None)
+    target_page = issue.get("page_index")
+    if target_page is None and target_field in fields and isinstance(fields[target_field], dict):
+        target_page = fields[target_field].get("page_index")
+    if target_page is None and crops:
+        target_page = crops[0].get("page_index")
+    return {
+        "needs_review": bool(blockers or risks or low or suggestions),
+        "has_blocker": bool(blockers),
+        "has_risk": bool(risks),
+        "low_confidence": bool(low),
+        "has_suggestion": bool(suggestions),
+        "has_manual_crop": bool(crops),
+        "blocker_count": len(blockers),
+        "risk_count": int(document.get("review_risk_count", len(risks))),
+        "low_confidence_count": len(low),
+        "suggestion_count": len(suggestions),
+        "manual_crop_count": len(crops),
+        "target_page_index": target_page,
+        "target_field": target_field,
     }
 
 
@@ -282,6 +323,7 @@ async def start(job_id: str):
         from ..workers.tasks import dispatch
 
         dispatch(job_id)
+        store.add_event(job_id, "job_dispatched")
     except Exception:
         store.interrupt(job_id)
         fail(503, "worker_unavailable")
@@ -376,6 +418,8 @@ async def rerun(job_id: str, payload: RerunRequest):
         for target, original in zip(rerun_sources, source["source_pdfs"], strict=True):
             target.update(proposal=original["confirmed_segments"], revision=1)
         store.update(new["id"], source_pdfs=rerun_sources, reuse_segmentation=True)
+    store.add_event(job_id, "job_rerun_created", related_job_id=new["id"])
+    store.add_event(new["id"], "job_rerun_from", related_job_id=job_id)
     return await start(new["id"])
 
 
@@ -395,6 +439,7 @@ async def get_documents(
     page_size: int = Query(25, ge=1, le=100),
     query: str = "",
     review_status: str = "all",
+    triage: str = Query("all", pattern=r"^(all|needs_review|blocker|risk|low_confidence|suggestion|manual_crop)$"),
     sort: str = Query("updated_desc", pattern=r"^(updated_desc|updated_asc|name_asc|name_desc)$"),
 ):
     # ponytail: O(n) filesystem projection; add an index only after measured scale requires one.
@@ -406,6 +451,10 @@ async def get_documents(
                 len(errors) if isinstance(errors, list) else int(bool(errors))
             ) + int(bool(document.get("error")))
             warning_count = int(document.get("review_risk_count", legacy_warnings))
+            triage_data = document_triage(document)
+            target = f"&page={triage_data['target_page_index']}" if triage_data["target_page_index"] is not None else ""
+            if triage_data["target_field"]:
+                target += f"&field={quote(str(triage_data['target_field']), safe='')}"
             item = {
                 "id": str(document.get("id", "")), "job_id": job["id"],
                 "job_status": str(job.get("status", "")), "file_name": str(document.get("file_name", "")),
@@ -413,16 +462,26 @@ async def get_documents(
                 "page_count": len(document.get("pages", [])), "confidence_average": confidence_average([document]),
                 "document_type": scalar_field(document, "document_type", "loai_van_ban"),
                 "warning_count": warning_count,
+                **triage_data,
                 "updated_at": str(job.get("updated_at", "")),
-                "deep_link": f"/jobs/{job['id']}?document={quote(str(document.get('id', '')), safe='')}&view=review",
+                "deep_link": f"/jobs/{job['id']}?document={quote(str(document.get('id', '')), safe='')}&view=review{target}",
             }
             searchable = f"{item['file_name']} {item['id']} {item['job_id']}".lower()
             review_matches = review_status == "all" or item["review_status"] == review_status or (review_status == "unreviewed" and item["review_status"] != "approved")
             if (not query or query.lower() in searchable) and review_matches:
                 items.append(item)
+    triage_counts = {"all": len(items)}
+    for key, field in {
+        "needs_review": "needs_review", "blocker": "has_blocker", "risk": "has_risk", "low_confidence": "low_confidence",
+        "suggestion": "has_suggestion", "manual_crop": "has_manual_crop",
+    }.items():
+        triage_counts[key] = sum(bool(item[field]) for item in items)
+    if triage != "all":
+        field = {"blocker": "has_blocker", "risk": "has_risk", "suggestion": "has_suggestion", "manual_crop": "has_manual_crop"}.get(triage, triage)
+        items = [item for item in items if item[field]]
     key = "file_name" if sort.startswith("name") else "updated_at"
     items.sort(key=lambda item: str(item[key]).lower(), reverse=sort.endswith("desc"))
-    return paginated(items, page, page_size)
+    return {**paginated(items, page, page_size), "triage_counts": triage_counts}
 
 
 @router.get("/events", response_model=EventsResponse)
@@ -656,9 +715,16 @@ async def bulk_delete(payload: JobIdsRequest):
 
 @router.get("/jobs/{job_id}/artifacts", response_model=ArtifactsResponse)
 async def artifacts(job_id: str):
-    job_or_404(job_id)
+    job = job_or_404(job_id)
     root = store.path(job_id) / "artifacts"
     items = []
+    seen = set()
+    evidence = {
+        (str(document.get("id", "")), Path(str(item.get("crop_image", ""))).name): item
+        for document in job.get("documents", [])
+        for item in document.get("crop_evidence", [])
+        if isinstance(item, dict) and item.get("crop_image")
+    }
     kinds = {".png": "image", ".jpg": "image", ".jpeg": "image", ".webp": "image", ".json": "json", ".txt": "text", ".md": "text"}
     for target in sorted(path for path in root.rglob("*") if path.is_file()):
         relative = target.relative_to(root)
@@ -668,6 +734,8 @@ async def artifacts(job_id: str):
             continue
         page = re.search(r"(?:page|crop)[-_](\d+)", target.stem, re.IGNORECASE)
         encoded = "/".join(quote(part, safe="") for part in relative.parts)
+        seen.add(relative.as_posix())
+        crop = evidence.get((relative.parts[0] if len(relative.parts) > 1 else "", target.name), {})
         items.append({
             "name": target.name,
             "kind": kinds.get(target.suffix.lower(), "other"),
@@ -675,8 +743,29 @@ async def artifacts(job_id: str):
             "size_bytes": stat.st_size,
             "updated_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
             "document_id": relative.parts[0] if len(relative.parts) > 1 else None,
-            "page_index": int(page.group(1)) - 1 if page else None,
+            "page_index": crop.get("page_index", int(page.group(1)) - 1 if page else None),
+            "field": crop.get("field"),
             "download_url": f"/api/jobs/{job_id}/artifacts/{encoded}",
+        })
+    references = []
+    for document in job.get("documents", []):
+        document_id = str(document.get("id", ""))
+        references += [(page.get("image_url"), document_id, page.get("page_index"), None) for page in document.get("pages", [])]
+        references += [
+            (item.get("crop_image"), document_id, item.get("page_index"), item.get("field"))
+            for item in document.get("crop_evidence", []) if isinstance(item, dict)
+        ]
+    for url, document_id, page_index, field in references:
+        if not isinstance(url, str) or "/artifacts/" not in url:
+            continue
+        relative = unquote(url.split("/artifacts/", 1)[1])
+        if relative in seen or ".." in Path(relative).parts:
+            continue
+        items.append({
+            "name": Path(relative).name, "kind": kinds.get(Path(relative).suffix.lower(), "other"),
+            "status": "missing", "size_bytes": 0, "updated_at": "",
+            "document_id": document_id, "page_index": page_index, "field": field,
+            "download_url": url,
         })
     return {"items": items}
 

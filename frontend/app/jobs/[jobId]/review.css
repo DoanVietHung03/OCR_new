@@ -71,7 +71,11 @@
 .logs-section { margin-top: 15px; padding: 18px; }
 .logs-section summary { cursor: pointer; font-weight: 800; }
 .logs-section .actions { justify-content: flex-end; margin: 12px 0; }
-.logs-section pre { max-height: 340px; overflow: auto; border-radius: 8px; padding: 13px; color: #d9e7f8; background: #10213a; white-space: pre-wrap; }
+.timeline { display: grid; gap: .5rem; max-height: 340px; overflow: auto; }
+.timeline p { display: grid; grid-template-columns: minmax(150px, auto) 1fr auto; gap: .75rem; margin: 0; padding: .65rem; border-bottom: 1px solid #dde4ec; }
+.job-progress { align-items: center; display: grid; grid-template-columns: auto 1fr auto; gap: .75rem; margin-top: 12px; padding: 12px 18px; }
+.job-progress progress, .job-row progress { width: 100%; }
+.failure-card { align-items: center; display: flex; flex-wrap: wrap; gap: .75rem; }
 .detail-tabs { display: flex; gap: 6px; margin: 18px 0; overflow-x: auto; border-bottom: 1px solid #d7e0ec; }
 .detail-tabs button { border: 0; border-bottom: 3px solid transparent; padding: 11px 14px; color: #60728a; background: transparent; font-weight: 750; white-space: nowrap; }
 .detail-tabs button.active { border-bottom-color: #1768d4; color: #1768d4; }
@@ -85,8 +89,11 @@
 .field-suggestion { justify-content: space-between; border-top: 1px dashed #dce3ed; }
 .artifact-section { padding: 21px; }
 .artifact-list { display: grid; gap: 8px; margin-top: 16px; }
-.artifact-list a { display: grid; gap: 4px; min-width: 0; border: 1px solid #dce3ed; border-radius: 9px; padding: 11px 13px; color: #315375; text-decoration: none; }
-.artifact-list a:hover { border-color: #7eabdf; background: #f5f9ff; }
+.artifact-group { display: grid; gap: 8px; }
+.artifact-group h3 { margin: 8px 0 0; color: #52657c; font-size: .8rem; }
+.artifact-item { display: grid; gap: 4px; min-width: 0; border: 1px solid #dce3ed; border-radius: 9px; padding: 11px 13px; color: #315375; text-align: left; text-decoration: none; background: white; }
+.artifact-item:not(.missing):hover { border-color: #7eabdf; background: #f5f9ff; }
+.artifact-item.missing { color: #8b5a31; background: #fff8ef; }
 .artifact-list small { overflow: hidden; color: #6a7b91; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (max-width: 1100px) {

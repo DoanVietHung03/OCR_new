@@ -30,7 +30,7 @@ def test_filesystem_boundary_and_invalid_upload_is_terminal(tmp_path, pdf_bytes)
     invalid = store.create({"file_count": 1, "provider": "qwen"})
     with pytest.raises(ValueError, match="invalid_path"):
         store.add_pdf(invalid["id"], "../escape.pdf", pdf_bytes)
-    assert store.read(invalid["id"])["status"] == "error"
+    assert store.read(invalid["id"])["failure"]["code"] == "invalid_path"
 
 
 def test_correction_approval_and_crop_survive_reload(tmp_path, pdf_bytes):
@@ -51,6 +51,7 @@ def test_correction_approval_and_crop_survive_reload(tmp_path, pdf_bytes):
     assert (field["ocr_value"], field["value"]) == ("OLD", "NEW")
     assert restored["documents"][0]["review_status"] == "approved"
     assert restored["documents"][0]["crop_evidence"] == [evidence]
+    assert restored["events"][0]["code"] == "document_corrected"
     assert len(list((store.path(job["id"]) / "corrections").glob("*.json"))) == 1
     assert document["approved_at"]
 

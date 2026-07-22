@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MouseEvent, useEffect, useRef, useState } from "react";
-import { ACTIVE_JOB_STATUSES, ApiError, Artifacts, bulkDelete, cancelJob, DELETABLE_JOB_STATUSES, deletePreview, Document, getArtifacts, getJob, Job, rerunJob, TERMINAL_JOB_STATUSES } from "../../../lib/api";
+import { ACTIVE_JOB_STATUSES, ApiError, Artifact, Artifacts, bulkDelete, cancelJob, DELETABLE_JOB_STATUSES, deletePreview, Document, getArtifacts, getJob, Job, rerunJob, TERMINAL_JOB_STATUSES } from "../../../lib/api";
 import { language, safeError, statusText, text, useLanguage } from "../../../lib/i18n";
 import LegacyShell from "../../legacy-shell";
 import ReviewWorkspace from "./review-workspace";
@@ -24,20 +24,22 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
   const router = useRouter();
   const [id, setId] = useState(""); const [job, setJob] = useState<Job | null>(null); const [error, setError] = useState("");
   const [documentId, setDocumentId] = useState(""); const [dirty, setDirty] = useState(false); const [busy, setBusy] = useState(false);
+  const [targetPage, setTargetPage] = useState<number>(); const [targetField, setTargetField] = useState("");
   const [view, setView] = useState<JobView>("review");
   const [artifactManifest, setArtifactManifest] = useState<Artifacts | null>(null); const [artifactError, setArtifactError] = useState("");
+  const [artifactPreview, setArtifactPreview] = useState<Artifact | null>(null);
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation>(null); const [action, setAction] = useState<LifecycleAction>(null);
   const [actionConsent, setActionConsent] = useState(false); const [deleteAllowed, setDeleteAllowed] = useState(false); const [deleteBlocked, setDeleteBlocked] = useState<{ id: string; name?: string | null }[]>([]);
   const [rerunMode, setRerunMode] = useState<"reuse_segmentation" | "resegment">("reuse_segmentation");
   const discardDialog = useRef<HTMLDialogElement>(null); const actionDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { params.then(({ jobId }) => setId(jobId)); }, [params]);
-  useEffect(() => { if (!id) return; const query = new URLSearchParams(location.search); const requested = query.get("view") as JobView | null; if (requested && ["overview", "review", "artifacts", "report", "logs"].includes(requested)) setView(requested); if (query.get("document")) setDocumentId(query.get("document")!); }, [id]);
+  useEffect(() => { if (!id) return; const query = new URLSearchParams(location.search); const requested = query.get("view") as JobView | null; if (requested && ["overview", "review", "artifacts", "report", "logs"].includes(requested)) setView(requested); if (query.get("document")) setDocumentId(query.get("document")!); if (query.has("page")) setTargetPage(Number(query.get("page"))); setTargetField(query.get("field") || ""); }, [id]);
   useEffect(() => {
     if (!id) return;
     let timer: ReturnType<typeof setInterval> | undefined;
     const load = () => getJob(id).then((next) => {
       setJob(next); setError("");
-      if (ACTIVE_JOB_STATUSES.has(next.status) && !timer) timer = setInterval(load, 2_000);
+      if (ACTIVE_JOB_STATUSES.has(next.status) && !timer) timer = setInterval(() => { if (!window.document.hidden) load(); }, 2_000);
       if (!ACTIVE_JOB_STATUSES.has(next.status) && timer) { clearInterval(timer); timer = undefined; }
     }).catch((reason) => setError(message(reason)));
     load(); return () => clearInterval(timer);
@@ -96,11 +98,11 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
       setAction(null); setActionConsent(false);
     } catch (reason) { setError(message(reason)); } finally { setBusy(false); }
   }
-  const logs = job?.logs || [];
-  const logText = logs.map((item) => typeof item === "string" ? item : JSON.stringify(item, null, 2)).join("\n");
-  function downloadLogs() { const url = URL.createObjectURL(new Blob([logText], { type: "text/plain;charset=utf-8" })); const link = window.document.createElement("a"); link.href = url; link.download = `${id}-logs.txt`; link.click(); URL.revokeObjectURL(url); }
-
   if (!job) return <LegacyShell detail onNew={() => router.push("/upload")}><Link className="button secondary" href="/">← {text("back")}</Link><p className="empty">{error || text("loading")}</p></LegacyShell>;
+  const logs = job.logs || [];
+  const logText = logs.map((item) => typeof item === "string" ? item : JSON.stringify(item, null, 2)).join("\n");
+  const diagnostics = job.failure ? JSON.stringify({ job_id: job.id, code: job.failure.code, timestamp: job.updated_at, provider_profile_id: job.provider_profile_id, page_index: job.failure.page_index }, null, 2) : "";
+  function downloadLogs() { const url = URL.createObjectURL(new Blob([logText], { type: "text/plain;charset=utf-8" })); const link = window.document.createElement("a"); link.href = url; link.download = `${id}-logs.txt`; link.click(); URL.revokeObjectURL(url); }
   const documents = job.documents || []; const document = (documents.find((item) => item.id === documentId) || documents[0] || null) as Document | null;
   const active = ACTIVE_JOB_STATUSES.has(job.status), terminal = TERMINAL_JOB_STATUSES.has(job.status);
   const failures = job.failed_pages + documents.filter((item) => item.error).length;
@@ -113,25 +115,36 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
   ]).filter(Boolean)));
   const listedArtifacts = artifactManifest?.items || [];
   const listedUrls = new Set(listedArtifacts.map((item) => item.download_url));
-  const artifactItems = [...listedArtifacts, ...knownArtifacts.filter((url) => !listedUrls.has(url)).map((url) => ({
+  const artifactItems: Artifact[] = [...listedArtifacts, ...knownArtifacts.filter((url) => !listedUrls.has(url)).map((url) => ({
     name: decodeURIComponent(url.split("/").pop() || url), kind: "other" as const,
     status: artifactManifest ? "missing" as const : "unknown" as const,
-    size_bytes: 0, updated_at: "", document_id: null, page_index: null, download_url: url,
+    size_bytes: 0, updated_at: "", document_id: null, page_index: null, field: null, download_url: url,
   }))];
+  const artifactGroups = Object.entries(artifactItems.reduce<Record<string, Artifact[]>>((groups, item) => {
+    const key = [item.document_id || text("job"), item.page_index == null ? "" : `${text("pages")} ${item.page_index + 1}`, item.field || "", item.kind].filter(Boolean).join(" · ");
+    (groups[key] ||= []).push(item as Artifact); return groups;
+  }, {}));
 
   return <LegacyShell detail onNew={goNew} onJobs={guardedLink}>
     <Link className="back-link" href="/" onClick={guardedLink}>← {text("back")}</Link>
     <header className="job-header"><div><p className="eyebrow">{job.id}</p><h1>{job.upload_name || text("job")}</h1><p>{text("jobSummary", { pages: job.page_count, corrections: job.correction_count })} · {scopeSummary}</p></div><span className={`status ${job.status}`}>{statusText(job.status)}</span></header>
     <section className="job-facts panel"><div><span>{text("provider")}</span><b>{job.provider_profile_id || job.provider || job.ocr_method || "—"}</b><small>{job.model || "—"} · prompt {job.prompt_version || "—"}</small></div><div><span>{text("documents")}</span><b>{documents.length}</b><small>{job.uploaded_files}/{job.expected_files} PDF</small></div><div><span>{text("pdfPages")}</span><b>{job.page_count}</b><small>{scopeSummary} · {job.failed_pages} failed</small></div><div><span>{text("updated")}</span><b>{new Date(job.updated_at).toLocaleDateString(language())}</b><small>{text("created")}: {new Date(job.created_at).toLocaleString(language())}<br />{job.started_at ? `${statusText("starting")}: ${new Date(job.started_at).toLocaleString(language())}` : ""}{job.completed_at ? <><br />{statusText("completed")}: {new Date(job.completed_at).toLocaleString(language())}</> : null}</small></div><div className="job-actions">{active && <button className="button danger" disabled={busy || job.status === "cancelling"} onClick={() => setAction("cancel")}>{text("cancel")}</button>}{terminal && <button className="button secondary" disabled={busy} onClick={() => setAction("rerun")}>{text("rerun")}</button>}{DELETABLE_JOB_STATUSES.has(job.status) && <button className="button danger ghost" disabled={busy} onClick={requestDelete}>{text("delete")}</button>}</div></section>
     <p className="lifecycle-note">{active ? text("activeHint") : terminal ? text("terminalHint") : statusText(job.status)}</p>
+    {job.total_pages > 0 && <section className="panel job-progress"><b>{job.progress_stage.replaceAll("_", " ")}</b><progress value={job.completed_pages} max={job.total_pages} /><span>{job.completed_pages}/{job.total_pages}{job.progress_detail ? ` · ${job.progress_detail}` : ""}</span></section>}
+    {job.failure && <section className="notice error failure-card"><b>{safeError(job.failure.code)}</b><span>{safeError(job.failure.operator_hint)}</span>{job.failure.page_index != null && <span>{text("pageOf", { page: job.failure.page_index + 1, pages: job.page_count })}</span>}{job.failure.retryable && <button className="button secondary" onClick={() => setAction("rerun")}>{text("rerun")}</button>}<button className="button secondary" onClick={() => navigator.clipboard.writeText(diagnostics)}>{text("copy")}</button><button className="button secondary" onClick={() => setView("logs")}>{text("logs")}</button></section>}
     {(error || job.error) && <p className="notice error" role="alert">{error || safeError(job.error!)}</p>}
     {job.processing_mode === "combined_dossier" && ["awaiting_segmentation_review", "segmentation_confirmed"].includes(job.status) && <SegmentationReview job={job} onJob={setJob} onError={setError} />}
     <nav className="detail-tabs" aria-label={text("job")}>{(["overview", "review", "artifacts", "report", "logs"] as JobView[]).map((item) => <button className={view === item ? "active" : ""} aria-current={view === item ? "page" : undefined} onClick={() => selectView(item)} key={item}>{text(item)}</button>)}</nav>
-    {view === "review" && <>{!!documents.length && <nav className="document-tabs" aria-label={text("documents")}>{documents.map((item, index) => <button className={item.id === document?.id ? "active" : ""} aria-current={item.id === document?.id ? "page" : undefined} key={item.id} onClick={() => selectDocument(item.id)}><span>{index + 1}</span><b>{item.file_name}</b><small>{item.error || item.errors?.length ? statusText("error") : item.review_status === "approved" ? text("approved") : statusText(item.status)}</small></button>)}</nav>}{document ? <ReviewWorkspace key={document.id} jobId={id} document={document} terminal={terminal} onJob={setJob} onDirty={setDirty} onError={setError} /> : <section className="panel empty">{text("noResult")}</section>}</>}
+    {view === "review" && <>{!!documents.length && <nav className="document-tabs" aria-label={text("documents")}>{documents.map((item, index) => <button className={item.id === document?.id ? "active" : ""} aria-current={item.id === document?.id ? "page" : undefined} key={item.id} onClick={() => selectDocument(item.id)}><span>{index + 1}</span><b>{item.file_name}</b><small>{item.error || item.errors?.length ? statusText("error") : item.review_status === "approved" ? text("approved") : statusText(item.status)}</small></button>)}</nav>}{document ? <ReviewWorkspace key={document.id} jobId={id} document={document} terminal={terminal} initialPage={targetPage} initialField={targetField} onJob={setJob} onDirty={setDirty} onError={setError} /> : <section className="panel empty">{text("noResult")}</section>}</>}
     {view === "overview" && <section className="panel report-section"><div className="section-head"><div><p className="eyebrow">{text("overview")}</p><h2>{text("reportSummary", { documents: documents.length, pages: job.page_count, corrections: job.correction_count, failures })}</h2><small>{scopeSummary}</small></div></div><div className="report-documents">{documents.map((item) => <div key={item.id}><b>{item.file_name}</b><span>{statusText(item.status)}</span><small>{item.pages?.length || 0} {text("pdfPages").toLocaleLowerCase(language())} · {text("processedPages", { count: processedPageCount(item.pages || []) })} · {item.review_status === "approved" ? text("approved") : "—"}</small></div>)}</div></section>}
-    {view === "artifacts" && <section className="panel artifact-section"><div className="section-head"><h2>{text("artifacts")}</h2><span>{artifactItems.length}</span></div>{artifactError && <p className="notice warning">{artifactError}</p>}<div className="artifact-list">{artifactItems.map((item) => <a href={item.download_url} target="_blank" rel="noreferrer" key={item.download_url}><b>{item.name}</b><small>{item.kind} · {item.status}{item.size_bytes ? ` · ${item.size_bytes.toLocaleString(language())} B` : ""}{item.updated_at ? ` · ${new Date(item.updated_at).toLocaleString(language())}` : ""}</small></a>)}</div>{!artifactItems.length && <p className="empty">{text("unavailable")}</p>}</section>}
+    {view === "artifacts" && <section className="panel artifact-section"><div className="section-head"><h2>{text("artifacts")}</h2><span>{artifactItems.length}</span></div>{artifactError && <p className="notice warning">{artifactError}</p>}<div className="artifact-list">{artifactGroups.map(([group, items]) => <section className="artifact-group" key={group}><h3>{group}</h3>{items.map((item) => item.status === "missing" ? <div className="artifact-item missing" key={item.download_url}><b>{item.name}</b><small>{item.status}</small></div> : item.kind === "image" ? <button className="artifact-item" onClick={() => setArtifactPreview(item)} key={item.download_url}><b>{item.name}</b><small>{item.status}{item.size_bytes ? ` · ${item.size_bytes.toLocaleString(language())} B` : ""}</small></button> : <a className="artifact-item" href={item.download_url} download key={item.download_url}><b>{item.name}</b><small>{item.status}{item.size_bytes ? ` · ${item.size_bytes.toLocaleString(language())} B` : ""}</small></a>)}</section>)}</div>{!artifactItems.length && <p className="empty">{text("unavailable")}</p>}</section>}
     {view === "report" && <section className="panel report-section"><div className="section-head"><div><p className="eyebrow">{text("report")}</p><h2>{text("reportSummary", { documents: documents.length, pages: job.page_count, corrections: job.correction_count, failures })}</h2><small>{scopeSummary}</small></div>{job.report_url && <a className="button secondary" href={job.report_url} target="_blank" rel="noreferrer">{text("openArtifact")}</a>}</div><div className="report-documents">{documents.map((item) => <div key={item.id}><b>{item.file_name}</b><span>{statusText(item.status)}</span><small>{item.pages?.length || 0} {text("pdfPages").toLocaleLowerCase(language())} · {text("processedPages", { count: processedPageCount(item.pages || []) })} · {item.review_status === "approved" ? text("approved") : "—"}</small></div>)}</div></section>}
-    {view === "logs" && <details className="panel logs-section" open><summary>{text("processingLogs")} ({logs.length})</summary><div className="actions"><button className="button secondary" onClick={() => navigator.clipboard.writeText(logText)}>{text("copy")}</button><button className="button secondary" onClick={downloadLogs}>{text("download")}</button></div><pre>{logText}</pre>{!logs.length && <p className="empty">{text("noEvents")}</p>}</details>}
+    {view === "logs" && <details className="panel logs-section" open><summary>{text("processingLogs")} ({logs.length})</summary><div className="actions"><button className="button secondary" onClick={() => navigator.clipboard.writeText(logText)}>{text("copy")}</button><button className="button secondary" onClick={downloadLogs}>{text("download")}</button></div><div className="timeline">{logs.map((item, index) => { if (typeof item === "string") return <p key={index}>{item}</p>; if (!item || typeof item !== "object") return null; const event = item as Record<string, unknown>, timestamp = String(event.timestamp || ""), code = String(event.code || ""); return <p key={`${timestamp}-${code}-${index}`}><time>{timestamp ? new Date(timestamp).toLocaleString(language()) : "—"}</time><b>{safeError(code)}</b><span>{typeof event.page_index === "number" ? ` · ${text("pageOf", { page: event.page_index + 1, pages: job.page_count })}` : ""}</span></p>; })}</div>{!logs.length && <p className="empty">{text("noEvents")}</p>}</details>}
+    <dialog open={Boolean(artifactPreview)} className="modal evidence-modal" onClose={() => setArtifactPreview(null)}>
+      <div className="modal-head"><h2>{artifactPreview?.name}</h2><button className="icon-button" aria-label={text("close")} onClick={() => setArtifactPreview(null)}>×</button></div>
+      {artifactPreview && <div className="evidence-preview fit"><img src={artifactPreview.download_url} alt={artifactPreview.name} /></div>}
+      <footer className="modal-actions"><a className="button secondary" href={artifactPreview?.download_url} download>{text("download")}</a><button className="button secondary" onClick={() => setArtifactPreview(null)}>{text("close")}</button></footer>
+    </dialog>
     <dialog ref={discardDialog} className="modal" onClose={() => setPendingNavigation(null)}>
       <div className="modal-head"><h2>{text("discardTitle")}</h2><button className="icon-button" aria-label={text("close")} onClick={() => setPendingNavigation(null)}>×</button></div>
       <p>{text("discardDraft")}</p><footer className="modal-actions"><button className="button secondary" onClick={() => setPendingNavigation(null)}>{text("close")}</button><button className="button danger" onClick={confirmDiscard}>{text("confirm")}</button></footer>

@@ -5,7 +5,7 @@ cutover và bằng chứng Milestone C. Kế hoạch frontend nằm trong
 [`legacy_browser_recreated.md`](legacy_browser_recreated.md).
 
 **Trạng thái 2026-07-22:** Repair Gate `BE-X1`–`BE-X3` và `FE-X1`–`FE-X3` đã pass
-local. `X8`–`X11` đã pass local; `X7` có contract/worker/UI local nhưng còn chờ
+local. `X8`–`X13` đã pass local; `X7` có contract/worker/UI local nhưng còn chờ
 bốn fixture và restart thật. `X16` vẫn IN PROGRESS. Milestone C là
 **internal production-like pilot**, không phải customer-production-ready; chỉ ký
 sau local contract gate và evidence strong-server. `src/ocr/` và `web/` vẫn là
@@ -360,8 +360,8 @@ Provider production-like thật vẫn thuộc ledger Milestone C, không phải 
 
 ### BE-X12
 
-**P1 — Progress, failure recovery và durable timeline — OPEN; X16 kéo một phần
-tối thiểu vào P0.** Counterpart:
+**P1 — Progress, failure recovery và durable timeline — PASS LOCAL 2026-07-22;
+X16 kéo một phần tối thiểu vào P0.** Counterpart:
 [`FE-X12`](legacy_browser_recreated.md#fe-x12).
 
 - P0 của `X16` chỉ persist `segmentation_completed_pages`,
@@ -371,9 +371,11 @@ tối thiểu vào P0.** Counterpart:
 - Worker persist `progress_stage`, `completed_pages`, `total_pages` và một detail
   allowlisted; failure có `code`, `retryable`, `operator_hint` và page index khi
   có. Không persist phần trăm hoặc hint do client đoán.
-- Append lifecycle/page-pass/retry/correction/approval/crop/rerun relation vào job
+- Append lifecycle/page-pass/correction/approval/crop/rerun relation vào job
   JSON hoặc JSONL trong chính job directory. Không tạo global log store/database;
   job bị xóa thì timeline của job được xóa cùng theo lifecycle hiện có.
+- Retry-specific timeline vẫn được hoãn theo `BE-X13` cho tới khi `BE-X7` persist
+  metadata retry thật; không suy diễn retry từ failure hoặc số lần polling.
 - Safe Events filter phải hỗ trợ code; diagnostics chỉ gồm job ID, safe code,
   timestamp, profile ID và page index.
 - Gate: progress tăng đơn điệu theo persisted work, terminal snapshot ổn định,
@@ -383,10 +385,10 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_jobs.py:66-232`.
 
 ### BE-X13
 
-**P1 — Document triage và evidence index — OPEN.** Counterpart:
+**P1 — Document triage và evidence index — PASS LOCAL 2026-07-22.** Counterpart:
 [`FE-X13`](legacy_browser_recreated.md#fe-x13).
 
-- `/documents` công bố aggregate typed `needs_review`, `has_blocker`,
+- `/documents` công bố aggregate typed `needs_review`, `has_blocker`, `has_risk`,
   `low_confidence`, `has_suggestion`, `has_manual_crop`, count tương ứng và target
   document/page/field đầu tiên; backend là nguồn chuẩn.
 - Artifact manifest giữ metadata document/page/field/kind đủ để group/preview;

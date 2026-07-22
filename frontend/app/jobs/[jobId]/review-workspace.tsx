@@ -29,11 +29,11 @@ const groupLabel = (group: string) => language() === "vi" ? group : ({ "VÄƒn báº
 type Draft = { old: unknown; value: string };
 type Rect = { x: number; y: number; width: number; height: number };
 
-export default function ReviewWorkspace({ jobId, document, terminal, onJob, onDirty, onError }: {
-  jobId: string; document: Document; terminal: boolean; onJob: (job: Job) => void; onDirty: (dirty: boolean) => void; onError: (error: string) => void;
+export default function ReviewWorkspace({ jobId, document, terminal, initialPage, initialField, onJob, onDirty, onError }: {
+  jobId: string; document: Document; terminal: boolean; initialPage?: number; initialField?: string; onJob: (job: Job) => void; onDirty: (dirty: boolean) => void; onError: (error: string) => void;
 }) {
   const pages = document.pages || [];
-  const [selectedPage, setSelectedPage] = useState(pages[0]?.page_index ?? 0); const [selectedField, setSelectedField] = useState("");
+  const [selectedPage, setSelectedPage] = useState(initialPage ?? pages[0]?.page_index ?? 0); const [selectedField, setSelectedField] = useState(initialField || "");
   const [zoom, setZoom] = useState<"fit" | "actual">("fit"); const [imageFailed, setImageFailed] = useState(false); const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [conflict, setConflict] = useState(false); const [cropOpen, setCropOpen] = useState(false); const [rect, setRect] = useState<Rect | null>(null);
   const [evidenceUrl, setEvidenceUrl] = useState(""); const [evidenceZoom, setEvidenceZoom] = useState<"fit" | "actual">("fit");

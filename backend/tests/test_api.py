@@ -486,11 +486,16 @@ def test_artifact_manifest_lists_only_safe_existing_job_files(tmp_path, monkeypa
     document.mkdir()
     (document / "page-1.png").write_bytes(b"png")
     (artifacts / "report.json").write_text("{}", encoding="utf-8")
+    store.update(job["id"], documents=[{
+        "id": "document-1", "file_name": "document.pdf", "status": "completed",
+        "pages": [{"page_index": 0, "image_url": f"/api/jobs/{job['id']}/artifacts/document-1/page-1.png"}],
+        "crop_evidence": [{"page_index": 0, "field": "so_van_ban", "crop_image": f"/api/jobs/{job['id']}/artifacts/document-1/missing-crop.png"}],
+    }])
 
     response = client.get(f"/api/jobs/{job['id']}/artifacts")
     assert response.status_code == 200
     payload = response.json()
-    assert [item["name"] for item in payload["items"]] == ["page-1.png", "report.json"]
+    assert [item["name"] for item in payload["items"]] == ["page-1.png", "report.json", "missing-crop.png"]
     assert payload["items"][0] == {
         "name": "page-1.png",
         "kind": "image",
@@ -499,8 +504,11 @@ def test_artifact_manifest_lists_only_safe_existing_job_files(tmp_path, monkeypa
         "updated_at": payload["items"][0]["updated_at"],
         "document_id": "document-1",
         "page_index": 0,
+        "field": None,
         "download_url": f"/api/jobs/{job['id']}/artifacts/document-1/page-1.png",
     }
+    assert payload["items"][-1]["status"] == "missing"
+    assert (payload["items"][-1]["document_id"], payload["items"][-1]["page_index"], payload["items"][-1]["field"]) == ("document-1", 0, "so_van_ban")
     assert str(tmp_path) not in response.text
     assert client.get("/api/jobs/not-a-uuid/artifacts").status_code == 404
 
@@ -518,3 +526,21 @@ def test_documents_support_sort_filter_pagination_and_deep_links(tmp_path, monke
     assert ([item["file_name"] for item in page["items"]], page["pagination"]["total"]) == (["z.pdf"], 2)
     pending = client.get("/api/documents?review_status=unreviewed").json()
     assert [item["id"] for item in pending["items"]] == ["z"]
+
+
+def test_document_triage_counts_filter_and_deep_target(tmp_path, monkeypatch):
+    store = use_store(tmp_path, monkeypatch)
+    job = store.create({"file_count": 1})
+    store.update(job["id"], status="completed", documents=[{
+        "id": "review", "file_name": "review.pdf", "status": "completed",
+        "approval_blockers": [{"field": "so_van_ban", "page_index": 1}],
+        "review_risks": [{"code": "low_confidence"}],
+        "fields": {"so_van_ban": {"value": "1", "review_reason": "low_confidence", "suggested_value": "2", "page_index": 1}},
+        "crop_evidence": [{"field": "so_van_ban", "page_index": 1, "crop_image": "/crop.png"}],
+    }, {"id": "clean", "file_name": "clean.pdf", "status": "completed"}])
+
+    payload = client.get("/api/documents?triage=blocker").json()
+    assert payload["triage_counts"] == {"all": 2, "needs_review": 1, "blocker": 1, "risk": 1, "low_confidence": 1, "suggestion": 1, "manual_crop": 1}
+    item = payload["items"][0]
+    assert (item["blocker_count"], item["low_confidence_count"], item["suggestion_count"], item["manual_crop_count"]) == (1, 1, 1, 1)
+    assert item["deep_link"].endswith("&page=1&field=so_van_ban")

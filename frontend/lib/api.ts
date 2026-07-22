@@ -16,6 +16,7 @@ export type CodeCatalog = Schemas["CodeCatalogResponse"];
 export type CodeEntry = Schemas["CodeEntry"];
 export type CodeInput = Schemas["CodeInput"];
 export type Artifacts = Schemas["ArtifactsResponse"];
+export type Artifact = Schemas["ArtifactEntry"];
 export type SourcePdf = Schemas["SourcePdfResponse"];
 export type Segment = Schemas["Segment"];
 
@@ -60,7 +61,7 @@ export const checkEngine = (id: string) =>
   request<Schemas["EngineCheckResponse"]>(`/api/engines/${encodeURIComponent(id)}/check`, { method: "POST" });
 export const getSystemMetrics = () => request<Schemas["SystemMetricsResponse"]>("/api/system-metrics");
 export const getProviderProfiles = () => request<Schemas["ProviderProfilesResponse"]>("/api/provider-profiles");
-export const getDocuments = (filters: { query?: string; review_status?: string; sort?: string; page?: number } = {}) =>
+export const getDocuments = (filters: { query?: string; review_status?: string; triage?: string; sort?: string; page?: number } = {}) =>
   request<Documents>(`/api/documents?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);
 export const getEvents = (filters: { job_id?: string; severity?: string; category?: string; code?: string; provider_profile_id?: string; document_id?: string; page_index?: number; page?: number } = {}) =>
   request<Events>(`/api/events?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);

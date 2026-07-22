@@ -5,7 +5,7 @@ parity và browser evidence. Backend contract, worker, cutover và Milestone C n
 trong [`implementation_plan.md`](implementation_plan.md).
 
 **Trạng thái 2026-07-22:** Repair Gate `FE-X1`–`FE-X3` và counterpart backend đã
-pass local. `FE-X8`–`FE-X11` đã pass local; `FE-X7` có UI/contract local nhưng
+pass local. `FE-X8`–`FE-X13` đã pass local; `FE-X7` có UI/contract local nhưng
 còn chờ bốn fixture và restart thật. `FE-X16` vẫn IN PROGRESS.
 Milestone C là internal production-like pilot; live evidence vẫn
 ghi duy nhất trong `BE-C-EVIDENCE`.
@@ -290,8 +290,8 @@ và capability điều khiển các lựa chọn; focused browser gate đã pass
 
 ### FE-X12
 
-**P1 — Dashboard progress, failure recovery và operation timeline — OPEN; X16
-kéo progress/audit tối thiểu vào P0.**
+**P1 — Dashboard progress, failure recovery và operation timeline — PASS LOCAL
+2026-07-22; X16 kéo progress/audit tối thiểu vào P0.**
 Counterpart: [`BE-X12`](implementation_plan.md#be-x12).
 
 - P0 chỉ hiển thị native progress từ persisted
@@ -312,7 +312,7 @@ Reference cũ: `OCR_paper/Web/src/app.js:1495-1532,2529-2587`.
 
 ### FE-X13
 
-**P1 — Manage triage, field context và artifact explorer — OPEN.** Counterpart:
+**P1 — Manage triage, field context và artifact explorer — PASS LOCAL 2026-07-22.** Counterpart:
 [`BE-X13`](implementation_plan.md#be-x13).
 
 - Manage có quick filter/count cho blocker/risk, low confidence, suggestion và
@@ -439,15 +439,15 @@ khó và review/approval độc lập trước khi đóng.
 | Generated API/compatibility | PASS LOCAL `X3` | OpenAPI check và legacy read pass |
 | Evidence/missing field/approval/rerun/readiness | `X8`–`X11` PASS LOCAL; `X7` IN PROGRESS | Nhóm P0 pass focused/local và fixture |
 | Segmentation/Bìa/logical documents | IN PROGRESS P0 `X16` | Bốn fixture, confirm/restart/review và legacy read pass |
-| Progress/timeline/triage | OPEN `X12`–`X13` | X16 counters/audit P0; phần P1 reload/deep-link pass |
+| Progress/timeline/triage | PASS LOCAL `X12`–`X13` | Persisted counters/failure/timeline, backend triage, deep-link và missing artifact pass |
 | Report/export/URL/polish | OPEN `X14`–`X15` | Không placeholder, native state và VI/EN pass |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 
 Không dùng lại con số `18/19` cho trạng thái hiện tại cho đến khi các mục OPEN đã
 pass. Repair Gate ngày 2026-07-22 là baseline hiện hành: backend `28 passed`;
-suite mở rộng hiện tại `37 passed`,
-legacy compatibility `10 passed`, focused browser coverage cho task/page retry
+suite mở rộng hiện tại `39 passed`,
+legacy compatibility `10 passed`, browser `17 passed`, `1 skipped`, gồm task/page retry
 và partial review, typecheck/build/OpenAPI/compile/diff đều pass.
 
 ## UI evidence hiện có

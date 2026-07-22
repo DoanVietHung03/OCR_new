@@ -25,6 +25,7 @@ TERMINAL = {"completed", "completed_with_warnings", "error", "cancelled", "inter
 ACTIVE = {"starting", "queued", "running", "cancelling", "segmenting", "extraction_starting"}
 DELETABLE = TERMINAL | {"uploading", "ready"}
 FIELDS = ADMIN_FIELDS + COVER_FIELDS + ("document_type",)
+RETRYABLE_ERRORS = {"provider_timeout", "provider_unavailable", "worker_interrupted"}
 
 
 class ApprovalBlocked(ValueError):
@@ -35,6 +36,11 @@ class ApprovalBlocked(ValueError):
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def failure(code: str, page_index: int | None = None) -> dict[str, Any]:
+    retryable = code in RETRYABLE_ERRORS
+    return {"code": code, "retryable": retryable, "operator_hint": "rerun_job" if retryable else "inspect_logs", "page_index": page_index}
 
 
 def safe_name(value: str) -> str:
@@ -194,6 +200,11 @@ class JobStore:
             "excluded_page_count": 0,
             "segmentation_completed_pages": 0,
             "segmentation_total_pages": 0,
+            "progress_stage": "",
+            "progress_detail": "",
+            "completed_pages": 0,
+            "total_pages": 0,
+            "failure": None,
             "events": [],
         }
         return self.write(job_id, job)
@@ -213,7 +224,8 @@ class JobStore:
                 if job["uploaded_files"] >= MAX_FILES or current_bytes + len(content) > MAX_BYTES:
                     raise ValueError("job_quota_exceeded")
             except ValueError as exc:
-                job.update(status="error", error=str(exc), updated_at=now())
+                code = str(exc)
+                job.update(status="error", error=code, failure=failure(code), progress_stage="failed", updated_at=now())
                 self.write(job_id, job)
                 raise
             target.write_bytes(content)
@@ -285,7 +297,10 @@ class JobStore:
             job = self.read(job_id)
             if job.get("status") in ACTIVE:
                 stamp = now()
-                job.update(status="interrupted", error="worker_interrupted", updated_at=stamp, completed_at=stamp)
+                job.update(
+                    status="interrupted", error="worker_interrupted", failure=failure("worker_interrupted"),
+                    progress_stage="failed", updated_at=stamp, completed_at=stamp,
+                )
                 self.write(job_id, job)
             return job
 
@@ -297,7 +312,7 @@ class JobStore:
             self.path(job_id).joinpath("cancel").touch()
             if job.get("status") in {"uploading", "ready", "awaiting_segmentation_review", "segmentation_confirmed"}:
                 stamp = now()
-                job.update(status="cancelled", updated_at=stamp, completed_at=stamp)
+                job.update(status="cancelled", progress_stage="cancelled", updated_at=stamp, completed_at=stamp)
                 return self.write(job_id, job)
             return {**job, "status": "cancelling"}
 
@@ -353,6 +368,11 @@ class JobStore:
             }
             audit_path = self.path(job_id) / "corrections" / f"{stamp.replace(':', '-')}-{uuid.uuid4().hex}.json"
             audit_path.write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            if corrections:
+                job.setdefault("events", []).append({
+                    "timestamp": stamp, "code": "document_corrected", "category": "review",
+                    "document_id": document_id,
+                })
             return self.write(job_id, job), document
 
     def add_crop_evidence(self, job_id: str, document_id: str, evidence: dict[str, Any]) -> dict[str, Any]:

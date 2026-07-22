@@ -134,6 +134,13 @@ class DocumentResponse(PublicModel):
     review_risk_count: int = 0
 
 
+class FailureResponse(BaseModel):
+    code: str
+    retryable: bool = False
+    operator_hint: str = ""
+    page_index: int | None = None
+
+
 class JobResponse(PublicModel):
     id: str
     status: str
@@ -170,6 +177,11 @@ class JobResponse(PublicModel):
     segmentation_completed_pages: int = 0
     segmentation_total_pages: int = 0
     review_status: Literal["unreviewed", "partially_approved", "approved"] | None = None
+    progress_stage: str = ""
+    progress_detail: str = ""
+    completed_pages: int = 0
+    total_pages: int = 0
+    failure: FailureResponse | None = None
 
 
 class ConfirmSegmentationRequest(BaseModel):
@@ -266,13 +278,37 @@ class DocumentIndexItem(BaseModel):
     confidence_average: float | None = None
     document_type: str | None = None
     warning_count: int = 0
+    needs_review: bool = False
+    has_blocker: bool = False
+    has_risk: bool = False
+    low_confidence: bool = False
+    has_suggestion: bool = False
+    has_manual_crop: bool = False
+    blocker_count: int = 0
+    risk_count: int = 0
+    low_confidence_count: int = 0
+    suggestion_count: int = 0
+    manual_crop_count: int = 0
+    target_page_index: int | None = None
+    target_field: str | None = None
     updated_at: str
     deep_link: str
+
+
+class DocumentTriageCounts(BaseModel):
+    all: int = 0
+    needs_review: int = 0
+    blocker: int = 0
+    risk: int = 0
+    low_confidence: int = 0
+    suggestion: int = 0
+    manual_crop: int = 0
 
 
 class DocumentsResponse(BaseModel):
     items: list[DocumentIndexItem]
     pagination: PaginationResponse
+    triage_counts: DocumentTriageCounts = Field(default_factory=DocumentTriageCounts)
 
 
 class SafeEvent(BaseModel):
@@ -286,6 +322,8 @@ class SafeEvent(BaseModel):
     page_index: int | None = None
     source_pdf_id: str | None = None
     revision: int | None = None
+    related_job_id: str | None = None
+    ocr_pass: str | None = None
     message: str
 
 
@@ -302,6 +340,7 @@ class ArtifactEntry(BaseModel):
     updated_at: str
     document_id: str | None = None
     page_index: int | None = None
+    field: str | None = None
     download_url: str
 
 

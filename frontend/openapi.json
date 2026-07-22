@@ -532,6 +532,17 @@
             }
           },
           {
+            "name": "triage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(all|needs_review|blocker|risk|low_confidence|suggestion|manual_crop)$",
+              "default": "all",
+              "title": "Triage"
+            }
+          },
+          {
             "name": "sort",
             "in": "query",
             "required": false,
@@ -1282,6 +1293,17 @@
               }
             ],
             "title": "Page Index"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
           },
           "download_url": {
             "type": "string",
@@ -2048,6 +2070,83 @@
             "title": "Warning Count",
             "default": 0
           },
+          "needs_review": {
+            "type": "boolean",
+            "title": "Needs Review",
+            "default": false
+          },
+          "has_blocker": {
+            "type": "boolean",
+            "title": "Has Blocker",
+            "default": false
+          },
+          "has_risk": {
+            "type": "boolean",
+            "title": "Has Risk",
+            "default": false
+          },
+          "low_confidence": {
+            "type": "boolean",
+            "title": "Low Confidence",
+            "default": false
+          },
+          "has_suggestion": {
+            "type": "boolean",
+            "title": "Has Suggestion",
+            "default": false
+          },
+          "has_manual_crop": {
+            "type": "boolean",
+            "title": "Has Manual Crop",
+            "default": false
+          },
+          "blocker_count": {
+            "type": "integer",
+            "title": "Blocker Count",
+            "default": 0
+          },
+          "risk_count": {
+            "type": "integer",
+            "title": "Risk Count",
+            "default": 0
+          },
+          "low_confidence_count": {
+            "type": "integer",
+            "title": "Low Confidence Count",
+            "default": 0
+          },
+          "suggestion_count": {
+            "type": "integer",
+            "title": "Suggestion Count",
+            "default": 0
+          },
+          "manual_crop_count": {
+            "type": "integer",
+            "title": "Manual Crop Count",
+            "default": 0
+          },
+          "target_page_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Page Index"
+          },
+          "target_field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Field"
+          },
           "updated_at": {
             "type": "string",
             "title": "Updated At"
@@ -2212,6 +2311,47 @@
         "type": "object",
         "title": "DocumentResponse"
       },
+      "DocumentTriageCounts": {
+        "properties": {
+          "all": {
+            "type": "integer",
+            "title": "All",
+            "default": 0
+          },
+          "needs_review": {
+            "type": "integer",
+            "title": "Needs Review",
+            "default": 0
+          },
+          "blocker": {
+            "type": "integer",
+            "title": "Blocker",
+            "default": 0
+          },
+          "risk": {
+            "type": "integer",
+            "title": "Risk",
+            "default": 0
+          },
+          "low_confidence": {
+            "type": "integer",
+            "title": "Low Confidence",
+            "default": 0
+          },
+          "suggestion": {
+            "type": "integer",
+            "title": "Suggestion",
+            "default": 0
+          },
+          "manual_crop": {
+            "type": "integer",
+            "title": "Manual Crop",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "DocumentTriageCounts"
+      },
       "DocumentsResponse": {
         "properties": {
           "items": {
@@ -2223,6 +2363,9 @@
           },
           "pagination": {
             "$ref": "#/components/schemas/PaginationResponse"
+          },
+          "triage_counts": {
+            "$ref": "#/components/schemas/DocumentTriageCounts"
           }
         },
         "type": "object",
@@ -2325,6 +2468,40 @@
           "pagination"
         ],
         "title": "EventsResponse"
+      },
+      "FailureResponse": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable",
+            "default": false
+          },
+          "operator_hint": {
+            "type": "string",
+            "title": "Operator Hint",
+            "default": ""
+          },
+          "page_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "FailureResponse"
       },
       "FieldResponse": {
         "properties": {
@@ -2885,6 +3062,36 @@
               }
             ],
             "title": "Review Status"
+          },
+          "progress_stage": {
+            "type": "string",
+            "title": "Progress Stage",
+            "default": ""
+          },
+          "progress_detail": {
+            "type": "string",
+            "title": "Progress Detail",
+            "default": ""
+          },
+          "completed_pages": {
+            "type": "integer",
+            "title": "Completed Pages",
+            "default": 0
+          },
+          "total_pages": {
+            "type": "integer",
+            "title": "Total Pages",
+            "default": 0
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": true,
@@ -3562,6 +3769,28 @@
               }
             ],
             "title": "Revision"
+          },
+          "related_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Related Job Id"
+          },
+          "ocr_pass": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Pass"
           },
           "message": {
             "type": "string",
