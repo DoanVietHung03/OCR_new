@@ -5,9 +5,10 @@ parity và browser evidence. Backend contract, worker, cutover và Milestone C n
 trong [`implementation_plan.md`](implementation_plan.md).
 
 **Trạng thái 2026-07-22:** Repair Gate `FE-X1`–`FE-X3` và counterpart backend đã
-pass local. Task/page payload đi đúng contract, form giữ nguyên khi retry và page
-warning không còn che viewer/field hợp lệ. Milestone C vẫn cần live repro
-`63-btc.pdf` cùng evidence strong-server trong `BE-C-EVIDENCE`.
+pass local. P0 hiện gồm `X7`–`X11` và `X16`: fixture thật đã xác nhận một PDF có
+Bìa và nhiều văn bản logic, nên segmentation/review hồ sơ gộp không còn
+conditional. Milestone C là internal production-like pilot; live evidence vẫn
+ghi duy nhất trong `BE-C-EVIDENCE`.
 
 ## Cách dùng hai kế hoạch
 
@@ -17,8 +18,8 @@ warning không còn che viewer/field hợp lệ. Milestone C vẫn cần live re
   pass hoặc một phía ghi rõ `N/A` cùng lý do.
 - Không chép lại backend contract dài trong file này. OpenAPI generated là nguồn
   chuẩn duy nhất cho public fields.
-- Ảnh trong `docs/ui-parity/` là local UI evidence, không phải provider hoặc
-  production evidence.
+- Ảnh trong `docs/ui-parity/` là local UI evidence, không phải provider hoặc live
+  runtime evidence.
 
 | Frontend | Backend counterpart | Joint gate |
 |---|---|---|
@@ -27,7 +28,17 @@ warning không còn che viewer/field hợp lệ. Milestone C vẫn cần live re
 | `FE-X3` | [`BE-X3`](implementation_plan.md#be-x3) | Generated schema không drift |
 | `FE-X4` | [`BE-X4`](implementation_plan.md#be-x4) | Review/report/artifact dùng durable data thật |
 | `FE-X5` | [`BE-X5`](implementation_plan.md#be-x5) | Browser pass qua production-like stack thật |
-| `FE-X6` | [`BE-X6`](implementation_plan.md#be-x6) | Folder picker vẫn PDF-only, nếu được duyệt |
+| `FE-X6` | [`BE-X6`](implementation_plan.md#be-x6) | Không port ZIP/ảnh/folder và kiến trúc cũ |
+| `FE-X7` | [`BE-X7`](implementation_plan.md#be-x7) | Job mới render evidence tối thiểu có provenance |
+| `FE-X8` | [`BE-X8`](implementation_plan.md#be-x8) | Expected field thiếu vẫn nhập/audit/reload được |
+| `FE-X9` | [`BE-X9`](implementation_plan.md#be-x9) | UI phản ánh blocker thật, không tự suy đoán risk |
+| `FE-X10` | [`BE-X10`](implementation_plan.md#be-x10) | Rerun không đổi ngầm profile/task/page scope |
+| `FE-X11` | [`BE-X11`](implementation_plan.md#be-x11) | Readiness phân biệt configured/reachable/ready |
+| `FE-X12` | [`BE-X12`](implementation_plan.md#be-x12) | Progress/failure/timeline chỉ dùng persisted data |
+| `FE-X13` | [`BE-X13`](implementation_plan.md#be-x13) | Manage triage và field evidence deep-link đúng |
+| `FE-X14` | [`BE-X14`](implementation_plan.md#be-x14) | Report/benchmark không placeholder, export tải được |
+| `FE-X15` | [`BE-X15`](implementation_plan.md#be-x15) | URL state, density và utility native hoàn chỉnh |
+| `FE-X16` | [`BE-X16`](implementation_plan.md#be-x16) | Hồ sơ gộp được phân đoạn, xác nhận và review bền vững |
 
 ## Phạm vi và nguồn chuẩn
 
@@ -49,15 +60,15 @@ Browser cũ dùng dữ liệu giả thì Legacy+ phải dùng dữ liệu thật
 “không có dữ liệu”. Cấm URL/key/header provider, raw response, stack trace,
 filesystem path, progress/quality/benchmark giả và unredacted payload.
 
-Upload vẫn PDF-only, tối đa 15 file/job, 200 MiB/job và 100 trang/PDF. ZIP và ảnh
-upload trực tiếp nằm ngoài phạm vi. Folder picker là đề xuất riêng tại `FE-X6`.
+Upload vẫn PDF-only, tối đa 15 file/job, 200 MiB/job và 100 trang/PDF. ZIP, ảnh,
+folder/directory tree và mutable local-only PDF nằm ngoài parity plan tại `FE-X6`.
 
 ## Information architecture
 
 | Mục | Route/state | Dữ liệu chính |
 |---|---|---|
 | Jobs | `/` | Dashboard, search/filter/sort/page và lifecycle action |
-| Upload | `/upload` | PDF selection, Provider Profile, task/page scope, consent |
+| Upload | `/upload` | PDF selection, Processing Mode, Provider Profile, task/page scope, consent |
 | Manage | `/documents` | Document index xuyên job |
 | Logs | `/logs` | Typed Safe Events |
 | Report | `/reports` | Operations/quality/benchmark thật hoặc unavailable |
@@ -81,6 +92,24 @@ terminal dừng polling và stale refresh giữ snapshot gần nhất kèm cản
 - Desktop anchors: `1440×900`, `1366×768`. Mobile `390×844` chỉ yêu cầu không
   overflow ngang, layout nguyên vẹn, navigation/modal đóng được.
 - Ảnh parity chỉ hợp lệ khi hai browser cùng viewport, language, data và UI state.
+
+## Baseline đã có — chỉ bảo vệ, không rebuild
+
+| Năng lực | Contract hiện tại cần giữ |
+|---|---|
+| Shell/routes | Jobs, Upload, Manage, Logs, Reports, Codes, job detail; Monitor là dialog |
+| Dashboard | Search, filter provider/status, sort, pagination, URL query và bulk delete |
+| Upload/lifecycle | Multi-PDF drag/drop, quota, task/page/profile/consent, start-once, cancel/rerun/delete |
+| Review/correction | Viewer Fit/100%, scalar edit, suggestion Apply, original diff, conflict/draft/audit |
+| Crop/partial result | Natural-pixel pointer/keyboard crop; page lỗi không che field/page tốt |
+| Artifacts/events | Manifest/download typed, Safe Events sanitized; missing cục bộ không crash |
+| Codes/Monitor | `_codes.json` revision-safe; allowlisted CPU/RAM/disk/runtime/GPU/operation metrics |
+| VI/EN/a11y/responsive | Vietnamese mặc định, language persistence, semantic/keyboard/reduced-motion, ba viewport |
+| Schema/data | Generated OpenAPI types, durable reload, two-way legacy readability và rollback |
+
+Legacy+ hiện tốt hơn browser cũ về durability, correction conflict, API typing,
+accessibility và data safety. Vì vậy ưu tiên dữ liệu worker/contract trước CSS;
+không gọi những baseline trên là gap hoặc dựng lại UI lần nữa.
 
 ## Kế hoạch đang mở
 
@@ -155,10 +184,11 @@ UI/task reference cũ: `OCR_paper/Web/src/app.js:1696-1720,3466-3479,4083-4092`.
 
 ### FE-X5
 
-**Browser strong-server acceptance — READY, evidence vẫn PENDING.** Counterpart:
+**Browser strong-server acceptance — BLOCKED bởi P0, evidence PENDING.** Counterpart:
 [`BE-X5`](implementation_plan.md#be-x5).
 
-Sau khi `X1`–`X3` pass local, dùng browser qua Nginx `:52409` để chạy ba fixture,
+Sau khi `X1`–`X4` vẫn pass và `X7`–`X11`/`X16` pass local, dùng browser qua Nginx
+`:52409` để chạy bốn fixture,
 kiểm tra upload trên 1 MiB, task/page results, partial warning, review/correction/
 approval/crop, artifacts/report, rerun/delete và reload sau restart. Ghi toàn bộ
 evidence vào [`BE-C-EVIDENCE`](implementation_plan.md#be-c-evidence); không tạo
@@ -166,15 +196,201 @@ evidence ledger thứ hai ở frontend.
 
 ### FE-X6
 
-**Folder picker PDF-only — PROPOSED, chưa được duyệt triển khai.** Counterpart:
+**Biên parity — OUT OF SCOPE, PROTECT.** Counterpart:
 [`BE-X6`](implementation_plan.md#be-x6).
 
-Nếu được duyệt, dùng native `<input webkitdirectory>` như một cách chọn nhiều file:
-lọc `.pdf`, áp dụng giới hạn hiện có, báo non-PDF/path/basename trùng trước khi tạo
-job rồi tái sử dụng create → upload → start. Không upload directory tree, ZIP, ảnh,
-relative path hoặc thêm API mới.
+Không thêm ZIP/ảnh/folder picker, directory tree, client-side mutable PDF,
+client-side quality aggregate, raw diagnostics, UI kit, state manager hoặc chức
+năng chỉ tồn tại trong state browser. Giữ PDF picker/drag-drop và API durable hiện
+có. Mọi thay đổi phạm vi cần yêu cầu riêng, không được lẫn vào parity work.
 
 Reference cũ: `OCR_paper/Web/src/app.js:1724-1747,3111-3133,3492-3503`.
+
+### FE-X7
+
+**P0 — Field evidence tối thiểu cho job mới — OPEN.** Counterpart:
+[`BE-X7`](implementation_plan.md#be-x7).
+
+- Field card render source/page/confidence, typed review reason, suggestion +
+  provenance và page-level `evidence_url`; thiếu dữ liệu hiển thị unavailable.
+- Chọn thumbnail mở native `<dialog>` Fit/100% và tải image; không dùng OCR `bbox`
+  làm crop seed hoặc tự dựng crop trên client.
+- Job mới từ fixture phải có cùng UX evidence như job legacy có data tương ứng;
+  artifact thiếu chỉ làm block cục bộ unavailable.
+- Chưa thêm debug timeline, retry variants, layout/result side-by-side hoặc
+  paper-like preview cho tới khi backend persist dữ liệu thật và fixture cần.
+
+Reference cũ: `OCR_paper/Web/src/app.js:1960-2255`.
+
+### FE-X8
+
+**P0 — Expected/missing field workflow — OPEN.** Counterpart:
+[`BE-X8`](implementation_plan.md#be-x8).
+
+- Render ordered `expected_fields`/`required_fields` từ public contract,
+  kể cả field provider bỏ sót; dùng “Chưa nhận dạng” và input scalar trống.
+- Hai schema là văn bản hành chính 11 field và Bìa 13 field. Browser không dùng
+  `fields.document_type` legacy để suy `logical_document_type` hoặc hard-code
+  field order; unknown/non-scalar legacy field vẫn visible read-only.
+- Gửi missing field với `old_value=null`; giữ draft/conflict/discard guard và copy
+  **Lưu và duyệt**. Unknown/non-scalar legacy field vẫn visible read-only.
+- Gate: reviewer thêm `ngay_ban_hanh`/`nguoi_ky` hoặc field bìa bị thiếu, reload
+  thấy audit/value; không cần sửa JSON thủ công.
+
+Reference cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
+
+### FE-X9
+
+**P0 — Approval blocker/risk UX — OPEN.** Counterpart:
+[`BE-X9`](implementation_plan.md#be-x9).
+
+- Hiển thị blocker/risk typed `{code, field?, page_index?}` cạnh action. **Lưu và duyệt** là atomic:
+  khi backend trả blocker, giữ draft và không hiển thị correction đã lưu/approved;
+  chỉ clear draft khi response xác nhận approved.
+- Warning mềm không vô hiệu hóa nút; page warning/partial result tiếp tục render
+  theo `FE-X2`. Client không suy ra blocker từ confidence/page đang mở.
+- Cho approve độc lập từng logical document; dossier chỉ approved khi Bìa và mọi
+  văn bản con approved, nếu chưa đủ hiển thị `partially_approved`.
+- Gate: blocker giải thích được vì sao chưa duyệt; sửa blocker rồi submit lại mới
+  approved; approve không correction vẫn được khi blocker rỗng.
+
+### FE-X10
+
+**P0 — Rerun snapshot minh bạch — OPEN.** Counterpart:
+[`BE-X10`](implementation_plan.md#be-x10).
+
+- Dialog rerun hiển thị read-only Processing Mode, Provider Profile, task, page
+  scope và max-pages sẽ được giữ; consent external vẫn explicit.
+- Hai action explicit cho combined job: reuse segmentation đã xác nhận rồi confirm
+  lại, hoặc tạo job mới và phân đoạn lại. Không cho đổi mode/engine/task; nếu
+  source profile unavailable, hiển thị safe conflict và giữ nguyên source job.
+- Gate: rerun `metadata/first,last` và `full_ocr/all` dẫn đến job mới hiển thị đúng
+  config nguồn, không đổi phạm vi/chi phí ngầm.
+
+### FE-X11
+
+**P0/P1 — Provider readiness trung thực — OPEN.** Counterpart:
+[`BE-X11`](implementation_plan.md#be-x11).
+
+- Với một profile, đổi copy/dropdown gây hiểu nhầm thành “Cấu hình OCR hiện tại”.
+  Chỉ render selector khi API thật sự trả nhiều profile.
+- Nút kiểm tra phân biệt configured, reachable, ready và safe failure; không hứa
+  engine hoạt động chỉ vì settings có giá trị, không hiện URL/model/key/raw reply.
+- Capability điều khiển Processing Mode/task/page input. Configured profile được
+  create/upload; readiness chỉ chặn Start/Continue và không làm mất job/draft.
+
+### FE-X12
+
+**P1 — Dashboard progress, failure recovery và operation timeline — OPEN; X16
+kéo progress/audit tối thiểu vào P0.**
+Counterpart: [`BE-X12`](implementation_plan.md#be-x12).
+
+- P0 chỉ hiển thị native progress từ persisted
+  `segmentation_completed_pages/segmentation_total_pages` và trạng thái hiện tại;
+  không ETA/fake percent hoặc timeline UI đầy đủ.
+
+- Running job hiển thị stage, completed/total và progress bar chỉ khi backend trả
+  counters; không nội suy từ polling hoặc fake percent.
+- Failure card hiển thị safe code/operator hint, action retry/rerun theo
+  `retryable`, mở Logs và copy diagnostics allowlisted: job ID, code, timestamp,
+  profile ID, page index.
+- Logs thêm filter `code`; job detail render timeline human-readable. JSON download
+  vẫn có cho diagnostics nhưng không dùng JSON `<pre>` làm UI chính.
+- Gate: timeline/progress còn đúng sau reload/restart, terminal dừng polling và
+  job detail cũng dừng interval khi tab hidden.
+
+Reference cũ: `OCR_paper/Web/src/app.js:1495-1532,2529-2587`.
+
+### FE-X13
+
+**P1 — Manage triage, field context và artifact explorer — OPEN.** Counterpart:
+[`BE-X13`](implementation_plan.md#be-x13).
+
+- Manage có quick filter/count cho blocker/risk, low confidence, suggestion và
+  manual crop; deep-link đúng job/document/page/field đầu tiên cần review.
+- Khi chọn field, đồng bộ page và evidence thumbnail; artifact group theo
+  document/page/field/kind, image có preview native dialog, non-image giữ download.
+- Không tính risk/count client-side từ page hiện tại. Debug timeline/retry variants
+  và paper-like overview là P2 có dữ liệu, không phải gate của mục này.
+- Gate: mọi quick filter dùng aggregate typed, refresh giữ target và artifact
+  missing không làm sập workspace.
+
+Reference cũ: `OCR_paper/Web/src/app.js:1893-2255`.
+
+### FE-X14
+
+**P1/P2 — Reports, benchmark và corrected export — OPEN.** Counterpart:
+[`BE-X14`](implementation_plan.md#be-x14).
+
+- Ẩn benchmark card khi không có compatible sample; thay JSON raw bằng bảng nhỏ
+  typed. Report group theo Provider Profile và chỉ hiển thị persisted timing,
+  success/failure, quality/evidence coverage thật.
+- Thêm download corrected JSON sau approval. Overview và Report không được là hai
+  tab trùng nhau; nếu chưa có report/export riêng thì bỏ tab Report và giữ
+  Overview + Artifacts.
+- Field-quality sâu, resource drilldown và HTML/PDF offline report là P2, chỉ mở
+  khi có workflow đo lường/bàn giao thật.
+- Gate: unavailable không hiện `0%`/empty benchmark giả, fingerprint khác nhau
+  không bị so sánh và export tải/reload được.
+
+Reference cũ: `OCR_paper/Web/src/app.js:1440-1475,2655-2837`.
+
+### FE-X15
+
+**P2 — URL state, visual density và utility native — OPEN sau X7–X14.**
+Counterpart: [`BE-X15`](implementation_plan.md#be-x15).
+
+- Persist `view`, document, selected page và selected field trong URL; refresh,
+  back/forward khôi phục đúng. System Monitor dùng deep-linkable query state.
+- Thêm previous/next/direct jump cho PDF dài; polling dừng khi tab hidden. Giữ
+  dirty guard khi URL navigation đổi review target.
+- Sau khi có dữ liệu thật: thu gọn bảy dashboard metric thành bốn metric vận hành
+  chính, giảm whitespace/H1 tại 1366×768, group artifact/report nhất quán. Không
+  copy CSS cũ hoặc lấy số dòng CSS làm mục tiêu.
+- Hoàn thiện VI/EN cho `pages/min`, `Runtime`, `physical`, `OCR operations`, Code
+  group IDs và `prompt`; giữ ID kỹ thuật khi cần kèm label dịch được.
+- Utility không dependency: Ctrl/Cmd+S và Enter chỉ lưu đúng ngữ cảnh, Esc cancel,
+  copy job ID, select-all terminal jobs trên page; log download/dashboard và
+  delete `total_bytes` chỉ thêm khi operator xác nhận cần. Không để Enter textarea
+  submit ngoài ý muốn.
+
+### FE-X16
+
+**P0 — Source PDF, Bìa và logical-document workflow — OPEN.** Counterpart:
+[`BE-X16`](implementation_plan.md#be-x16).
+
+- Upload có ba Processing Mode với `administrative_document` mặc định. Browser
+  không auto-detect; `combined_dossier` giải thích mọi trang sẽ được segmentation
+  trước extraction và vẫn cho chọn `metadata|full_ocr` theo capability.
+- Trong Job Detail, render cây source PDF → Bìa → văn bản, source-page viewer và
+  danh sách segment theo thứ tự. Dùng native action “Tách trước trang này”, “Gộp
+  với phần trước”, đổi type, Exclude/Restore; không drag-and-drop.
+- Reviewer xác nhận từng source PDF kèm revision. Inline validation chặn gap,
+  overlap, thiếu đúng một Bìa, thiếu văn bản, hoặc còn `unclassified`; conflict
+  `409 segmentation_conflict` giữ local draft và cho reload/discard.
+- Sau khi mọi source confirmed, happy path tiếp tục OCR; provider unavailable giữ
+  durable `segmentation_confirmed` và hiện action Continue. State chờ sống qua
+  reload/restart; Cancel chuyển terminal rồi mới cho Delete.
+- Mỗi page hiển thị `page_index` trong logical document và
+  `source_page_index` trong PDF khi khác nhau. Excluded page vẫn visible/audited;
+  evidence dùng page artifact, không tự crop từ OCR `bbox`.
+- P0 chỉ yêu cầu tree/segmentation/review trong Job Detail. Global Manage triage,
+  cross-job dossier filter và artifact explorer nâng cao vẫn thuộc `FE-X13` P1.
+- Gate: fixture rõ proposal khớp ground truth; fixture khó sửa được boundary bằng
+  pointer/keyboard-safe UI rồi extraction, missing-field correction và approval
+  độc lập sống qua reload.
+
+Reference cũ: `OCR_paper/Web/src/app.js:588-617,1987-1996,2489-2503`.
+
+## Thứ tự triển khai parity
+
+0. **Fixture-first:** khóa composition manifest/page ranges trước khi xây UI.
+1. **Tính đúng:** `FE-X16` → `FE-X8` → `FE-X7` → `FE-X9` → `FE-X10` →
+   `FE-X11`, mỗi mục đi cùng backend counterpart và generated contract.
+2. **Vận hành:** `FE-X12` → `FE-X13` sau khi backend persist dữ liệu.
+3. **Workspace:** phần evidence/artifact/URL/visual utility của `FE-X13`/`FE-X15`.
+4. **Đo lường có nhu cầu:** `FE-X14` P1/P2; corrected export không chặn
+   Milestone C.
 
 ## Public-data mapping cần bảo vệ
 
@@ -182,14 +398,16 @@ Reference cũ: `OCR_paper/Web/src/app.js:1724-1747,3111-3133,3492-3503`.
 |---|---|
 | Dashboard | `GET /api/state` |
 | Provider configuration | `GET /api/provider-profiles`, engine readiness endpoint |
-| Upload | limits và create/upload/start endpoints |
-| Lifecycle action | cancel, rerun, delete-preview và bulk-delete |
-| Review | `GET /api/jobs/{id}` và `/corrections` |
+| Upload | limits, `processing_mode` và create/upload/start endpoints |
+| Segmentation | `source_pdfs[]`, per-source confirm, `/continue` và revision conflict |
+| Lifecycle action | cancel, typed rerun mode, delete-preview và bulk-delete |
+| Review | `GET /api/jobs/{id}` và `/corrections`: expected fields, evidence, blocker/risk |
 | Crop | page artifact và `/manual-crop` |
-| Manage | `GET /api/documents` |
+| Manage | `GET /api/documents`: triage aggregate và deep-link target |
 | Artifacts | `GET /api/jobs/{id}/artifacts` |
-| Logs/timeline | `GET /api/events` |
-| Reports | `GET /api/reports` |
+| Progress/failure | persisted job snapshot từ `GET /api/state` và `GET /api/jobs/{id}` |
+| Logs/timeline | `GET /api/events`, durable safe events |
+| Reports/export | `GET /api/reports` và corrected artifact URL |
 | Codes | `/api/codes` CRUD |
 | System Monitor | `GET /api/system-metrics` |
 
@@ -205,13 +423,17 @@ Reference cũ: `OCR_paper/Web/src/app.js:1724-1747,3111-3133,3492-3503`.
 | Artifacts/timeline/logs | PASS LOCAL `X2` | Per-page safe diagnostics render đúng |
 | Reports/benchmark/Codes/Monitor | PROTECT | Nullable/unavailable và durable data vẫn đúng |
 | Generated API/compatibility | PASS LOCAL `X3` | OpenAPI check và legacy read pass |
-| Local closure | PASS | `X1`–`X4` cùng local gate pass |
-| Milestone C | READY `X5` | Strong-server evidence ledger được ký |
+| Evidence/missing field/approval/rerun/readiness | OPEN `X7`–`X11` | Nhóm P0 pass focused/local và fixture |
+| Segmentation/Bìa/logical documents | OPEN P0 `X16` | Bốn fixture, confirm/restart/review và legacy read pass |
+| Progress/timeline/triage | OPEN `X12`–`X13` | X16 counters/audit P0; phần P1 reload/deep-link pass |
+| Report/export/URL/polish | OPEN `X14`–`X15` | Không placeholder, native state và VI/EN pass |
+| Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
+| Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 
 Không dùng lại con số `18/19` cho trạng thái hiện tại cho đến khi các mục OPEN đã
-pass. Kết quả ngày 2026-07-21 chỉ là baseline lịch sử: backend `27 passed`, legacy
-compatibility `10 passed`, browser mặc định `11 passed, 1 capture-only skipped`,
-capture mode `12 passed`, typecheck/build/OpenAPI/compile/diff đều pass.
+pass. Repair Gate ngày 2026-07-22 là baseline hiện hành: backend `28 passed`,
+legacy compatibility `10 passed`, focused browser coverage cho task/page retry
+và partial review, typecheck/build/OpenAPI/compile/diff đều pass.
 
 ## UI evidence hiện có
 
@@ -246,6 +468,8 @@ python -m compileall -q src backend/app
 git diff --check
 ```
 
-Legacy+ chỉ production-ready khi `FE-X1`–`FE-X5` và counterpart backend tương ứng
-pass, `BE-C-EVIDENCE` được ký bằng runtime thật, và cửa sổ rollback một ngày kết
-thúc. Không xóa legacy runtime trong kế hoạch frontend.
+Legacy+ chỉ đạt Milestone C **internal production-like pilot** khi Repair Gate vẫn
+pass, nhóm P0 `FE-X7`–`FE-X11`/`FE-X16` và counterpart backend pass,
+`BE-C-EVIDENCE` được ký bằng runtime thật, và cửa sổ rollback một ngày kết thúc.
+Không gọi đây là customer-production-ready; phần P1/P2 chưa có gate vẫn OPEN và
+không xóa legacy runtime trong kế hoạch frontend.

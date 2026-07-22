@@ -8,11 +8,12 @@ durable job persistence, correction/approval/crop evidence, rerun, and the
 PDF-only VI/EN UI. Local coverage includes backend tests, legacy compatibility
 tests, mocked browser paths, and a real eager-task/fake-provider browser flow.
 
-Milestone C is not complete. Do not claim production readiness until the
-`BE-C-EVIDENCE` ledger in `implementation_plan.md` contains real
-Nginx/Redis/Celery/provider, fixture, restart, cross-version, and rollback
-evidence. Keep `src/ocr/` and `web/` as the rollback runtime until the one-day
-rollback window closes.
+Milestone C is not complete. It is an internal production-like pilot gate, not
+customer-production approval. Do not claim even that pilot until P0 `X7`–`X11`
+and `X16` pass locally and the `BE-C-EVIDENCE` ledger in
+`implementation_plan.md` contains real Nginx/Redis/Celery/provider, four-fixture,
+restart, cross-version, and rollback evidence. Keep `src/ocr/` and `web/` as the
+rollback runtime until the one-day rollback window closes.
 
 Legacy+ v2 was implemented and locally verified on 2026-07-21: visual/workflow
 parity with `OCR_paper` except ZIP/image/folder upload, safe Provider Profiles,
@@ -21,8 +22,8 @@ telemetry.
 
 The 2026-07-22 Repair Gate passed 28 backend tests, 10 legacy compatibility
 tests, focused browser coverage for task/page retry and partial review, typecheck,
-build, generated OpenAPI/types, and diff checks. Milestone C still requires the
-live `63-btc.pdf` repro and strong-server evidence; do not call this production-ready.
+build, generated OpenAPI/types, and diff checks. These are the protected baseline;
+the new P0 field/review/segmentation contracts remain OPEN.
 
 ## Repository map
 
@@ -50,10 +51,24 @@ live `63-btc.pdf` repro and strong-server evidence; do not call this production-
 - Preserve `/api/*`, artifact URLs, filesystem layout, safe error codes, and
   two-way legacy/new readability through rollback. Legacy extras remain
   readable and reading an old job must not rewrite it.
+- New jobs expose job-level `processing_mode`: `administrative_document`,
+  `dossier_cover`, or `combined_dossier`. It is independent from server-defined
+  Provider Profile capability; legacy jobs missing it stay legacy/null.
+- `source_pdfs[]` is the additive source/page layer. Confirmed Bìa and văn bản
+  remain the only entries in existing `documents[]`; do not add a second logical
+  document store. A logical document never spans source PDFs.
 - Pydantic v2/OpenAPI is canonical for public fields. `frontend/lib/api.ts`
   must consume generated types; do not add handwritten API DTOs.
 - `/start` atomically transitions `ready → starting` once. Publish uncertainty
   becomes `interrupted`; never auto-retry or resume a whole job.
+- `combined_dossier` segments every source page with the existing page retry
+  policy, then requires per-source revisioned confirmation before extraction.
+  Reuse the single `ocr.process_job` task with expected phase/revision; stale
+  dispatches no-op. `unclassified` requires manual assignment; every page must
+  belong to one contiguous document or be explicitly `excluded`.
+- Preserve states `segmenting`, `awaiting_segmentation_review`,
+  `segmentation_confirmed`, `extraction_starting`, and `running`. The two waiting
+  states survive restart; active states become `interrupted` and never auto-resume.
 - Retry a page once only for a pre-response connection failure or HTTP
   `429/502/503/504`; cap `Retry-After` at 10 seconds. Do not retry read timeout,
   invalid JSON, or validation errors.
@@ -65,14 +80,27 @@ live `63-btc.pdf` repro and strong-server evidence; do not call this production-
 - Legacy+ may expose server-defined Provider Profile IDs, labels, capabilities,
   and safe readiness. The browser must never receive or submit arbitrary provider
   URLs, keys, headers, or models.
+- Readiness distinguishes configured/reachable/ready using a sanitized synthetic
+  provider request. Create/upload may proceed when configured; readiness gates
+  `/start` and `/continue` without losing uploaded or confirmed state.
+- Backend owns ordered expected/required field policy, typed blockers/risks, and
+  prompt/write allowlists. New administrative documents use 11 fields; Bìa uses
+  the approved 13-field schema. Legacy `fields.document_type` stays read-only;
+  system metadata uses `logical_document_type`.
 - Persist corrections with original OCR value and immutable audit. Manual crop
-  is evidence only. Approval persists even with no correction.
-- Rerun copies only source PDFs into a clean job and leaves the old job intact.
+  is evidence only. `/corrections` saves and approves atomically only when typed
+  blockers are empty; dossier approval may be `partially_approved`.
+- Rerun copies source PDFs and the processing snapshot into a clean job. Default
+  `reuse_segmentation` requires confirmation again; explicit `resegment` discards
+  old boundaries. Neither mode changes Processing Mode or mutates the source job.
 - Delete only `uploading`, `ready`, or terminal jobs; never delete active jobs.
 - Persist only stable safe errors. Never persist secrets, raw provider
   responses, or unredacted request/response payloads.
 - Keep the frontend dependency-light: Next/React, CSS, and native browser APIs;
   no UI kit, state manager, BFF, database, or shared-types package.
+- Milestone C uses `actor="anonymous"` because this is an internal test product.
+  Do not add free-form spoofable identity or auth; verified approver/customer
+  production is a separate architecture request.
 - The primary UI persona is an operations reviewer completing upload → monitor
   → review/correct/approve. Legacy+ restores permanent Jobs, Upload, Manage,
   Logs, Report, and Codes navigation with real routes and data; System Monitor
@@ -161,17 +189,22 @@ git diff --check
 ```
 
 Local checks need no Redis, running worker, Docker, GPU, or real provider. They
-are contract evidence, not proof of OCR quality or production readiness.
+are mandatory contract evidence, not proof of OCR quality or live runtime.
 
 ## Milestone C rules
 
-- Use three sanitized fixed PDFs outside Git and `OCR_DATA_DIR`; record SHA-256.
-- Pause uploads, drain and stop legacy, then back up the real data directory
-  with a checksum before the new worker touches it.
+- Use the four approved fixtures and ground truth outside Git and `OCR_DATA_DIR`:
+  `63-btc.pdf`, one Bìa, one clear combined dossier with an explicit blank
+  separator, and one difficult combined dossier. Record PDF/manifest/ground-truth
+  SHA-256 without document text in the ledger.
+- The current `OCR_DATA_DIR` is non-production test data, but still pause uploads,
+  drain and stop legacy, then back it up with size/checksum before the new worker
+  touches it.
 - Never run both worker versions against the same directory.
 - Verify Nginx health, registered task, concurrency/prefetch, artifacts/report,
-  manual fields, restart/interrupted behavior, cross-version round-trip, and
-  rollback rehearsal.
+  field evidence, segmentation/confirmation, manual boundaries, blockers,
+  independent approval, restart/interrupted behavior, cross-version round-trip,
+  and rollback rehearsal.
 - Record sanitized evidence only in `implementation_plan.md#be-c-evidence`. Do
   not replace live evidence with mock/unit-test claims.
 - Delete `src/`, `web/`, legacy packaging, or tests only in a separate cleanup

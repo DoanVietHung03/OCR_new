@@ -6,8 +6,9 @@ máy chủ cấu hình.
 
 Milestone A, B, browser baseline v1 và **Legacy+ v2** đã có closure local ngày
 2026-07-21. Legacy+ phục hồi browser tham chiếu trong `OCR_paper`, chỉ loại trừ
-ZIP/ảnh/folder upload. Repair Gate đã pass local ngày 2026-07-22; Milestone C vẫn
-phải được nghiệm thu trên máy chủ mạnh. Cho đến khi Gate C đạt, `src/ocr/` và
+ZIP/ảnh/folder upload. Repair Gate đã pass local ngày 2026-07-22; nhóm P0 mới
+`X7`–`X11` và `X16` vẫn OPEN. Milestone C chỉ là internal production-like pilot,
+không phải customer-production approval. Cho đến khi Gate C đạt, `src/ocr/` và
 `web/` vẫn là runtime rollback.
 
 Giao diện Next.js Legacy+ có route Jobs, Upload, Manage/Documents, Logs, Reports,
@@ -20,14 +21,14 @@ report throughput/coverage và CPU load đều đi qua generated typed contract.
 
 Repair Gate ngày 2026-07-22 đạt 28 backend tests, 10 legacy compatibility tests,
 focused browser coverage cho task/page retry và partial-result UI, typecheck,
-build, OpenAPI/types và diff checks. Repro live `63-btc.pdf` vẫn thuộc evidence
-Milestone C, không được thay bằng kết quả local.
+build, OpenAPI/types và diff checks. Đây là baseline cần bảo vệ; field policy,
+segmentation hồ sơ gộp và bốn fixture thật vẫn phải qua local/live gate mới.
 
 ## Cấu trúc repository
 
 - `frontend/`: giao diện Next.js App Router và các kiểu API được sinh tự động.
 - `backend/`: FastAPI, kho job bền vững, Celery task và các bài kiểm tra.
-- `nginx/`: định tuyến production trên cùng một domain.
+- `nginx/`: định tuyến deployment trên cùng một domain.
 - `data/jobs/`: JSON, PDF và artifact bền vững của job; không lưu trong Redis.
 - `src/ocr/`, `web/`, `tests/`: runtime rollback legacy và các bài kiểm tra.
 - `implementation_plan.md`: nguồn chuẩn backend, Repair Gate, cutover và ledger
@@ -42,13 +43,23 @@ Milestone C, không được thay bằng kết quả local.
 - PDF được kiểm tra trước khi dispatch. PDF không hợp lệ, có mật khẩu hoặc vượt
   giới hạn sẽ làm toàn bộ job thất bại mà không gọi provider.
 - FastAPI chỉ xử lý request ngắn. Celery render trang ở 200 DPI và gọi provider.
+- Job mới chọn một `processing_mode`: `administrative_document`,
+  `dossier_cover` hoặc `combined_dossier`. Mode chọn schema/prompt; Provider
+  Profile chọn engine/model và capability, hai khái niệm không suy lẫn nhau.
+- Với `combined_dossier`, mỗi PDF là một bộ hồ sơ gồm đúng một Bìa, ít nhất một
+  văn bản logic và các trang `excluded` explicit. Worker segment toàn bộ trang,
+  reviewer xác nhận từng PDF bằng revision rồi mới dispatch extraction.
 - `/start` chỉ dispatch một lần. Worker production dùng concurrency `1` và
   prefetch `1`; job không tự động retry hoặc resume.
 - Provider, model, phiên bản prompt và trạng thái endpoint bên ngoài được chụp
   lại theo từng job. URL, khóa, header, phản hồi thô của provider và lỗi không
   an toàn không bao giờ được lưu.
+- Backend công bố ordered expected/required fields, typed blockers/risks và
+  `logical_document_type`. Văn bản mới dùng schema 11 field, Bìa dùng schema 13
+  field; dữ liệu legacy vẫn đọc được nhưng không bị áp policy mới hoặc rewrite.
 - Nội dung chỉnh sửa, phê duyệt, audit bất biến và bằng chứng crop thủ công được
-  lưu bền vững. Rerun tạo một job sạch từ các PDF gốc.
+  lưu bền vững. Approval độc lập từng logical document. Rerun tạo job sạch và
+  explicit reuse hoặc chạy lại segmentation; job nguồn luôn bất biến.
 - `data/jobs/` là nguồn dữ liệu bền vững duy nhất. Redis không có volume lưu trữ.
 - Code Catalog lưu atomic tại `OCR_DATA_DIR/_codes.json`, có revision conflict;
   không thêm database.
@@ -63,7 +74,7 @@ Milestone C, không được thay bằng kết quả local.
 
 - Python 3.12 và `uv`.
 - Node.js 22 và pnpm 10.
-- Docker Compose chỉ cần cho môi trường gần production và Milestone C.
+- Docker Compose chỉ cần cho môi trường live internal-pilot và Milestone C.
 
 ## Thiết lập cục bộ
 
@@ -101,8 +112,8 @@ uv run --env-file .env --project backend celery -A app.workers.tasks:celery_app 
 
 ## Kiểm tra
 
-Các kiểm tra cục bộ không cần Redis, worker đang chạy, Docker, GPU hoặc provider
-thật:
+Local contract gate không cần Redis, worker đang chạy, Docker, GPU hoặc provider
+thật và vẫn bắt buộc trước strong-server gate:
 
 ```powershell
 uv run --project backend pytest backend/tests -q
@@ -119,7 +130,7 @@ git diff --check
 Playwright kiểm tra workflow dùng mock, một luồng Next/FastAPI/eager-task thật
 với fake provider cục bộ, desktop `1440×900`, laptop `1366×768` và safety smoke
 mobile `390×844`. Các kiểm tra này không chứng minh hành vi của
-Redis/Celery/provider trong production.
+Redis/Celery/provider trên live internal-pilot stack.
 
 Khi schema FastAPI thay đổi, chạy `pnpm api:generate` và commit cả
 `frontend/openapi.json` lẫn `frontend/lib/api-schema.ts`.
@@ -129,7 +140,7 @@ Khi schema FastAPI thay đổi, chạy `pnpm api:generate` và commit cả
 Nginx publish cổng host `52409`; frontend đồng thời publish `54846` để địa chỉ
 Next.js ghi trong container log có thể truy cập trực tiếp. Cả hai đường đều dùng
 được đầy đủ `/api/*`; backend, Redis và worker vẫn chỉ hoạt động trong mạng nội
-bộ của Compose. Dùng `52409` cho luồng production/cutover và `54846` khi cần
+bộ của Compose. Dùng `52409` cho luồng internal-pilot/cutover và `54846` khi cần
 truy cập trực tiếp frontend.
 
 ```bash
@@ -155,8 +166,8 @@ $env:PYTHONPATH = "src"
 python -m ocr
 ```
 
-Giữ runtime này sẵn sàng cho đến khi Milestone C đạt và cửa sổ rollback một
-ngày kết thúc.
+Giữ runtime này sẵn sàng cho đến khi Milestone C internal pilot đạt và cửa sổ
+rollback một ngày kết thúc.
 
 ## Cổng và dữ liệu
 
@@ -173,4 +184,4 @@ hỗ trợ — backend luôn lắng nghe tại `50177`.
 Xem [implementation_plan.md](implementation_plan.md) cho backend, Repair Gate,
 cutover và evidence Milestone C; xem
 [legacy_browser_recreated.md](legacy_browser_recreated.md) cho frontend và các
-counterpart `FE-X1`–`FE-X6`.
+counterpart `FE-X1`–`FE-X16`.
