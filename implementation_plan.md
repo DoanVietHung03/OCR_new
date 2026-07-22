@@ -273,6 +273,10 @@ Tham chiếu cũ: `OCR_paper/Web/src/app.js:1724-1747,3111-3133,3492-3503`.
 Contract typed, worker persistence, provenance trang và coverage aggregate đã
 pass local; gate bốn fixture/reload/restart thật chưa có evidence.
 
+Focused local gate còn chứng minh confidence/reason của suggestion được normalizer
+giữ lại, provenance luôn do backend gán `provider`, và OpenAPI sinh scalar/
+review-reason/nested suggestion-evidence types thay vì `unknown` payload.
+
 - Chuẩn hóa contract nhỏ: `source_text`, `page_index`, confidence nullable,
   typed review reason, suggestion có provenance và `evidence_url` trỏ ảnh trang.
   Không tự sinh field crop hoặc gán contract pixel/normalized cho OCR `bbox`.
@@ -515,7 +519,9 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web.py:286-348`.
 `source_pdfs[]`, phân loại toàn trang trong cùng task, proposal/revision/confirm,
 validation coverage/Bìa/văn bản, materialize vào `documents[]`, Continue,
 counters/safe events, cancel/restart boundary và typed OpenAPI. Focused backend
-và browser mock đã pass. Mục này vẫn mở cho bốn fixture/ground truth, difficult
+và browser mock đã pass; create/rerun từ chối profile chưa cấu hình hoặc capability
+không tương thích, hai waiting state sống qua worker restart, và browser gate kiểm
+tra boundary bất kỳ, inline validation, revision conflict cùng Continue. Mục này vẫn mở cho bốn fixture/ground truth, difficult
 manual-boundary flow, live provider và cross-version/rollback evidence.
 
 ## Thứ tự triển khai parity

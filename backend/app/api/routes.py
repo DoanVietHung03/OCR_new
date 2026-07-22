@@ -231,6 +231,15 @@ def provider_profiles() -> list[dict]:
     }]
 
 
+def profile_supports(profile: dict, options: dict) -> bool:
+    return (
+        options.get("vlm_task", "full_ocr") in profile["tasks"]
+        and options.get("vlm_pages", "all") in profile["page_modes"]
+        and int(options.get("vlm_max_pages", 0) or 0) <= profile["max_pages"]
+        and options.get("processing_mode", "administrative_document") in profile["processing_modes"]
+    )
+
+
 async def provider_readiness() -> str:
     return await probe_provider(
         base_url=settings.ocr_base_url,
@@ -304,8 +313,13 @@ async def state(
 async def create_job(payload: CreateJobRequest):
     options = payload.model_dump()
     profile_id = payload.provider_profile_id or settings.ocr_provider
-    if profile_id not in {profile["id"] for profile in provider_profiles()}:
+    profile = next((item for item in provider_profiles() if item["id"] == profile_id), None)
+    if profile is None:
         fail(400, "invalid_provider_profile")
+    if profile["status"] != "configured":
+        fail(503, "ocr_not_configured")
+    if not profile_supports(profile, options):
+        fail(400, "unsupported_provider_capability")
     options.update(
         provider_profile_id=profile_id,
         provider=settings.ocr_provider,
@@ -416,7 +430,8 @@ async def rerun(job_id: str, payload: RerunRequest):
     pdfs = sorted((store.path(job_id) / "uploads").glob("*.pdf"))
     if len(pdfs) != source.get("expected_files"):
         fail(409, "source_files_incomplete")
-    if source.get("provider_profile_id") not in {profile["id"] for profile in provider_profiles()}:
+    profile = next((item for item in provider_profiles() if item["id"] == source.get("provider_profile_id")), None)
+    if profile is None or profile["status"] != "configured" or not profile_supports(profile, source):
         fail(409, "provider_profile_unavailable")
     reuse = source.get("processing_mode") == "combined_dossier" and payload.rerun_mode == "reuse_segmentation" and all(
         item.get("confirmed_segments") for item in source.get("source_pdfs", [])

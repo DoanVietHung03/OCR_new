@@ -9,6 +9,9 @@ theo dõi trong `implementation_plan.md` và `legacy_browser_recreated.md`.
 Chưa thể đóng vì repository không chứa bốn PDF chuẩn, ground truth và provider
 production-like. Điều kiện hoàn thành:
 
+Contract local typed/persistence đã được tái kiểm tra; phần dưới đây chỉ còn là
+evidence fixture/provider/restart production-like.
+
 Phần live repro của `BE-X1`/`FE-X1` cũng nằm trong gate external này. Nhãn
 `PASS LOCAL CONTRACT` của X1 chỉ bao phủ planner, worker persistence và browser
 eager-task/fake-provider; không thay thế lần chạy `63-btc.pdf` qua provider thật.
@@ -25,6 +28,10 @@ eager-task/fake-provider; không thay thế lần chạy `63-btc.pdf` qua provid
 
 Contract, worker và UI mock đã có; chưa có fixture/live evidence để xác nhận tính
 đúng. Điều kiện hoàn thành:
+
+Local gate đã bao phủ capability validation, paused-state restart, arbitrary
+boundary, inline validation, revision conflict và Continue; các điều kiện dưới
+đây vẫn cần dữ liệu/runtime bên ngoài repository.
 
 - fixture rõ phải auto-segment đúng ground truth;
 - fixture khó phải cho sửa boundary, loại/khôi phục trang và xác nhận từng source

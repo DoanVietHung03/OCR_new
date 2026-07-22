@@ -6,6 +6,19 @@ import { language } from "../../../lib/i18n";
 
 type Props = { job: Job; onJob: (job: Job) => void; onError: (message: string) => void };
 const label = (vi: string, en: string) => language() === "vi" ? vi : en;
+const segmentationError = (segments: Segment[], pageCount: number) => {
+  let next = 0;
+  for (const segment of segments) {
+    if (segment.start_page !== next || segment.end_page < segment.start_page) return label("Phân đoạn phải phủ liên tục mọi trang.", "Segments must cover every page without gaps or overlaps.");
+    next = segment.end_page + 1;
+  }
+  if (next !== pageCount) return label("Phân đoạn phải phủ liên tục mọi trang.", "Segments must cover every page without gaps or overlaps.");
+  const types = segments.map((segment) => segment.logical_document_type);
+  if (types.filter((type) => type === "dossier_cover").length !== 1) return label("Mỗi PDF cần đúng một Bìa.", "Each PDF requires exactly one cover.");
+  if (!types.includes("administrative_document")) return label("Mỗi PDF cần ít nhất một văn bản.", "Each PDF requires at least one document.");
+  if (types.includes("unclassified")) return label("Hãy phân loại hoặc loại trừ mọi trang.", "Classify or exclude every page.");
+  return "";
+};
 
 export default function SegmentationReview({ job, onJob, onError }: Props) {
   const [drafts, setDrafts] = useState<Record<string, Segment[]>>({});
@@ -66,10 +79,14 @@ export default function SegmentationReview({ job, onJob, onError }: Props) {
           <option value="dossier_cover">{label("Bìa", "Cover")}</option><option value="administrative_document">{label("Văn bản", "Document")}</option><option value="excluded">{label("Loại trừ", "Excluded")}</option><option value="unclassified">{label("Chưa phân loại", "Unclassified")}</option>
         </select>
         {segment.start_page > 0 && <button className="text-button" disabled={busy || source.confirmed} onClick={() => merge(source.id, index)}>{label("Gộp phần trước", "Merge previous")}</button>}
-        {segment.end_page > segment.start_page && <button className="text-button" disabled={busy || source.confirmed} onClick={() => split(source.id, index, segment.start_page + 1)}>{label("Tách sau trang đầu", "Split after first page")}</button>}
+        {segment.end_page > segment.start_page && <select aria-label={label("Tách trước trang", "Split before page")} value="" disabled={busy || source.confirmed} onChange={(event) => split(source.id, index, Number(event.target.value))}>
+          <option value="" disabled>{label("Tách trước trang…", "Split before page…")}</option>
+          {Array.from({ length: segment.end_page - segment.start_page }, (_, offset) => segment.start_page + offset + 1).map((page) => <option value={page} key={page}>{page + 1}</option>)}
+        </select>}
       </div>)}</div>
       {conflict === source.id && <div className="conflict" role="alert"><p>{label("PDF đã được cập nhật ở nơi khác.", "This PDF was updated elsewhere.")}</p><button className="button secondary" disabled={busy} onClick={() => resolveConflict(source.id, true)}>{label("Giữ bản nháp", "Keep draft")}</button><button className="button secondary" disabled={busy} onClick={() => resolveConflict(source.id, false)}>{label("Tải lại và bỏ bản nháp", "Reload and discard")}</button></div>}
-      {!source.confirmed && <button className="button primary" disabled={busy} onClick={() => confirm(source.id, revisions[source.id] ?? source.revision)}>{label("Xác nhận PDF này", "Confirm this PDF")}</button>}
+      {!source.confirmed && segmentationError(drafts[source.id] || [], source.page_count) && <small className="error" role="alert">{segmentationError(drafts[source.id] || [], source.page_count)}</small>}
+      {!source.confirmed && <button className="button primary" disabled={busy || Boolean(segmentationError(drafts[source.id] || [], source.page_count))} onClick={() => confirm(source.id, revisions[source.id] ?? source.revision)}>{label("Xác nhận PDF này", "Confirm this PDF")}</button>}
       {source.confirmed && <span className="status completed">{label("Đã xác nhận", "Confirmed")}</span>}
     </article>)}
     {job.status === "segmentation_confirmed" && <button className="button primary" disabled={busy} onClick={resume}>{label("Tiếp tục trích xuất", "Continue extraction")}</button>}

@@ -1,6 +1,6 @@
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 
 class PublicModel(BaseModel):
@@ -9,6 +9,17 @@ class PublicModel(BaseModel):
 
 class RequestModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+ScalarValue = str | int | float | bool | None
+ScalarSuggestion = Annotated[ScalarValue, BeforeValidator(lambda value: "" if isinstance(value, (dict, list)) else value)]
+ReviewReason = Annotated[
+    Literal["", "low_confidence", "missing_evidence", "validation_warning"],
+    BeforeValidator(lambda value: value if isinstance(value, str) and value in {"low_confidence", "missing_evidence", "validation_warning"} else ""),
+]
+SuggestionSource = Annotated[
+    Literal["", "provider"], BeforeValidator(lambda value: "provider" if value == "provider" else ""),
+]
 
 
 class CreateJobRequest(RequestModel):
@@ -28,6 +39,22 @@ class CreateJobRequest(RequestModel):
         return self
 
 
+class SuggestionResponse(PublicModel):
+    value: ScalarSuggestion = ""
+    confidence: float | None = None
+    reason: str = ""
+    source: SuggestionSource = ""
+
+
+class EvidenceCandidateResponse(PublicModel):
+    source_text: str = ""
+    page_index: int = Field(default=0, ge=0)
+    confidence: float | None = None
+    evidence_url: str = ""
+    evidence_source: str = ""
+    evidence_status: str = ""
+
+
 class FieldResponse(PublicModel):
     value: Any = ""
     raw_value: Any = ""
@@ -41,13 +68,13 @@ class FieldResponse(PublicModel):
     region_label: str = ""
     is_valid: bool | None = None
     needs_review: bool = False
-    review_reason: str = ""
+    review_reason: ReviewReason = ""
     review_context: str = ""
-    suggested_value: Any = ""
+    suggested_value: ScalarSuggestion = ""
     suggestion_confidence: float | None = None
     suggestion_reason: str = ""
-    suggestions: list[Any] = Field(default_factory=list)
-    evidence_candidates: list[Any] = Field(default_factory=list)
+    suggestions: list[SuggestionResponse | ScalarValue] = Field(default_factory=list)
+    evidence_candidates: list[EvidenceCandidateResponse | ScalarValue] = Field(default_factory=list)
     evidence_source: str = ""
     evidence_confidence: float | None = None
     evidence_status: str = ""
@@ -57,7 +84,7 @@ class FieldResponse(PublicModel):
     corrected_value: Any | None = None
     corrected_at: str | None = None
     evidence_url: str = ""
-    suggestion_source: str = ""
+    suggestion_source: SuggestionSource = ""
 
 
 class ReviewIssue(BaseModel):

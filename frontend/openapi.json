@@ -2582,6 +2582,50 @@
         ],
         "title": "EventsResponse"
       },
+      "EvidenceCandidateResponse": {
+        "properties": {
+          "source_text": {
+            "type": "string",
+            "title": "Source Text",
+            "default": ""
+          },
+          "page_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Page Index",
+            "default": 0
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "evidence_url": {
+            "type": "string",
+            "title": "Evidence Url",
+            "default": ""
+          },
+          "evidence_source": {
+            "type": "string",
+            "title": "Evidence Source",
+            "default": ""
+          },
+          "evidence_status": {
+            "type": "string",
+            "title": "Evidence Status",
+            "default": ""
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "EvidenceCandidateResponse"
+      },
       "FailureResponse": {
         "properties": {
           "code": {
@@ -2704,6 +2748,12 @@
           },
           "review_reason": {
             "type": "string",
+            "enum": [
+              "",
+              "low_confidence",
+              "missing_evidence",
+              "validation_warning"
+            ],
             "title": "Review Reason",
             "default": ""
           },
@@ -2713,6 +2763,23 @@
             "default": ""
           },
           "suggested_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Suggested Value",
             "default": ""
           },
@@ -2733,12 +2800,54 @@
             "default": ""
           },
           "suggestions": {
-            "items": {},
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SuggestionResponse"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "type": "array",
             "title": "Suggestions"
           },
           "evidence_candidates": {
-            "items": {},
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EvidenceCandidateResponse"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "type": "array",
             "title": "Evidence Candidates"
           },
@@ -2809,6 +2918,10 @@
           },
           "suggestion_source": {
             "type": "string",
+            "enum": [
+              "",
+              "provider"
+            ],
             "title": "Suggestion Source",
             "default": ""
           }
@@ -4212,6 +4325,59 @@
           "pagination"
         ],
         "title": "StateResponse"
+      },
+      "SuggestionResponse": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "default": ""
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": ""
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "",
+              "provider"
+            ],
+            "title": "Source",
+            "default": ""
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SuggestionResponse"
       },
       "SystemMetricsResponse": {
         "properties": {

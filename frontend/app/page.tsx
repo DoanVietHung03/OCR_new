@@ -13,6 +13,9 @@ const emptyState: State = {
   ocr_methods: [], limits: { max_files_per_job: 15, max_job_upload_bytes: 200 * 1024 * 1024 }, pagination: { page: 1, page_size: 25, pages: 1, total: 0 },
 };
 type Action = { type: "cancel" | "rerun" | "delete"; jobs: Job[]; blocked?: { id: string; name?: string | null }[] } | null;
+type Task = ProviderProfile["tasks"][number];
+type PageMode = ProviderProfile["page_modes"][number];
+type ProcessingMode = ProviderProfile["processing_modes"][number];
 
 const size = (value: number) => value >= 1024 ** 3 ? `${(value / 1024 ** 3).toFixed(1)} GB` : `${Math.ceil(value / 1024 ** 2)} MB`;
 const duration = (start?: string | null, end?: string | null) => { const seconds = start && end ? Math.max(0, Math.round((Date.parse(end) - Date.parse(start)) / 1000)) : NaN; return Number.isFinite(seconds) ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : ""; };
@@ -34,8 +37,8 @@ export default function Home() {
   const [rerunMode, setRerunMode] = useState<"reuse_segmentation" | "resegment">("reuse_segmentation");
   const [profiles, setProfiles] = useState<ProviderProfile[]>([]); const [profileId, setProfileId] = useState("");
   const [reports, setReports] = useState<Reports | null>(null);
-  const [task, setTask] = useState<"full_ocr" | "metadata">("full_ocr"); const [pages, setPages] = useState<"all" | "auto" | "first,last">("all"); const [maxPages, setMaxPages] = useState(0);
-  const [processingMode, setProcessingMode] = useState<"administrative_document" | "dossier_cover" | "combined_dossier">("administrative_document");
+  const [task, setTask] = useState<Task>("full_ocr"); const [pages, setPages] = useState<PageMode>("all"); const [maxPages, setMaxPages] = useState(0);
+  const [processingMode, setProcessingMode] = useState<ProcessingMode>("administrative_document");
   const availableProfiles: ProviderProfile[] = profiles.length ? profiles : state.ocr_methods.map((item) => ({ ...item, tasks: ["full_ocr", "metadata"], page_modes: ["all", "auto", "first,last"], max_pages: 100, processing_modes: ["administrative_document"] }));
   const engine = availableProfiles.find((item) => item.id === profileId) || availableProfiles[0]; const external = Boolean(engine?.external); const configured = engine?.status === "configured";
 
@@ -133,7 +136,7 @@ export default function Home() {
       <div className="upload-options">
         <label><span>{language() === "vi" ? "Chế độ xử lý" : "Processing mode"}</span><select value={processingMode} disabled={busy} onChange={(event) => setProcessingMode(event.target.value as typeof processingMode)}>{(engine?.processing_modes || ["administrative_document"]).map((mode) => <option value={mode} key={mode}>{{ administrative_document: language() === "vi" ? "Văn bản hành chính" : "Administrative document", dossier_cover: language() === "vi" ? "Bìa hồ sơ" : "Dossier cover", combined_dossier: language() === "vi" ? "Hồ sơ gộp" : "Combined dossier" }[mode]}</option>)}</select></label>
         {availableProfiles.length > 1 ? <label><span>{text("engine")}</span><select value={engine?.id || ""} disabled={busy} onChange={(event) => { setProfileId(event.target.value); setConsent(false); }}>{availableProfiles.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label> : <div className="option-value"><span>{language() === "vi" ? "Cấu hình OCR hiện tại" : "Current OCR configuration"}</span><strong>{engine?.label || "—"}</strong></div>}
-        <label><span>{text("task")}</span><select value={task} disabled={busy} onChange={(event) => { const value = event.target.value as "full_ocr" | "metadata"; setTask(value); if (value === "full_ocr") { setPages("all"); setMaxPages(0); } }}>{(engine?.tasks || ["full_ocr", "metadata"]).map((value) => <option value={value} key={value}>{text(value === "full_ocr" ? "fullOcr" : "metadata")}</option>)}</select></label>
+        <label><span>{text("task")}</span><select value={task} disabled={busy} onChange={(event) => { const value = event.target.value as Task; setTask(value); if (value === "full_ocr") { setPages("all"); setMaxPages(0); } }}>{(engine?.tasks || ["full_ocr", "metadata"]).map((value) => <option value={value} key={value}>{text(value === "full_ocr" ? "fullOcr" : "metadata")}</option>)}</select></label>
         <label><span>{text("pageScope")}</span><select value={pages} disabled={busy || task === "full_ocr"} onChange={(event) => setPages(event.target.value as typeof pages)}>{(engine?.page_modes || ["all", "auto", "first,last"]).map((value) => <option value={value} key={value}>{text(value === "all" ? "allPages" : value === "auto" ? "autoPages" : "edgePages")}</option>)}</select></label>
         <label><span>{text("maxPages")}</span><input type="number" min="0" max={engine?.max_pages || 100} value={maxPages} disabled={busy || task === "full_ocr"} onChange={(event) => setMaxPages(Math.max(0, Math.min(engine?.max_pages || 100, Number(event.target.value) || 0)))} /></label>
       </div>

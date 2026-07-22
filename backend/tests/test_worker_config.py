@@ -99,6 +99,10 @@ def test_cancel_and_restart_never_call_provider(tmp_path, monkeypatch, pdf_bytes
     interrupted = store.create({"file_count": 1, "provider": "qwen", "model": "test"})
     store.add_pdf(interrupted["id"], "interrupted.pdf", pdf_bytes)
     store.begin_start(interrupted["id"])
+    waiting = store.create({"file_count": 1, "provider": "qwen", "model": "test", "processing_mode": "combined_dossier"})
+    confirmed = store.create({"file_count": 1, "provider": "qwen", "model": "test", "processing_mode": "combined_dossier"})
+    store.update(waiting["id"], status="awaiting_segmentation_review")
+    store.update(confirmed["id"], status="segmentation_confirmed")
 
     async def should_not_run(*_args, **_kwargs):
         raise AssertionError("provider called")
@@ -108,6 +112,8 @@ def test_cancel_and_restart_never_call_provider(tmp_path, monkeypatch, pdf_bytes
     assert asyncio.run(tasks.process_job_async(cancelled["id"]))["status"] == "cancelled"
     tasks.reconcile_interrupted()
     assert store.read(interrupted["id"])["status"] == "interrupted"
+    assert JobStore(tmp_path).read(waiting["id"])["status"] == "awaiting_segmentation_review"
+    assert JobStore(tmp_path).read(confirmed["id"])["status"] == "segmentation_confirmed"
     assert asyncio.run(tasks.process_job_async(interrupted["id"]))["status"] == "interrupted"
 
 

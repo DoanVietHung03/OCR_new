@@ -993,6 +993,38 @@ export interface components {
             items: components["schemas"]["SafeEvent"][];
             pagination: components["schemas"]["PaginationResponse"];
         };
+        /** EvidenceCandidateResponse */
+        EvidenceCandidateResponse: {
+            /**
+             * Source Text
+             * @default
+             */
+            source_text: string;
+            /**
+             * Page Index
+             * @default 0
+             */
+            page_index: number;
+            /** Confidence */
+            confidence?: number | null;
+            /**
+             * Evidence Url
+             * @default
+             */
+            evidence_url: string;
+            /**
+             * Evidence Source
+             * @default
+             */
+            evidence_source: string;
+            /**
+             * Evidence Status
+             * @default
+             */
+            evidence_status: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** FailureResponse */
         FailureResponse: {
             /** Code */
@@ -1060,8 +1092,9 @@ export interface components {
             /**
              * Review Reason
              * @default
+             * @enum {string}
              */
-            review_reason: string;
+            review_reason: "" | "low_confidence" | "missing_evidence" | "validation_warning";
             /**
              * Review Context
              * @default
@@ -1071,7 +1104,7 @@ export interface components {
              * Suggested Value
              * @default
              */
-            suggested_value: unknown;
+            suggested_value: string | number | boolean | null;
             /** Suggestion Confidence */
             suggestion_confidence?: number | null;
             /**
@@ -1080,9 +1113,9 @@ export interface components {
              */
             suggestion_reason: string;
             /** Suggestions */
-            suggestions?: unknown[];
+            suggestions?: (components["schemas"]["SuggestionResponse"] | string | number | boolean | null)[];
             /** Evidence Candidates */
-            evidence_candidates?: unknown[];
+            evidence_candidates?: (components["schemas"]["EvidenceCandidateResponse"] | string | number | boolean | null)[];
             /**
              * Evidence Source
              * @default
@@ -1119,8 +1152,9 @@ export interface components {
             /**
              * Suggestion Source
              * @default
+             * @enum {string}
              */
-            suggestion_source: string;
+            suggestion_source: "" | "provider";
         } & {
             [key: string]: unknown;
         };
@@ -1725,6 +1759,29 @@ export interface components {
             ocr_methods: components["schemas"]["EngineResponse"][];
             limits: components["schemas"]["LimitsResponse"];
             pagination: components["schemas"]["PaginationResponse"];
+        } & {
+            [key: string]: unknown;
+        };
+        /** SuggestionResponse */
+        SuggestionResponse: {
+            /**
+             * Value
+             * @default
+             */
+            value: string | number | boolean | null;
+            /** Confidence */
+            confidence?: number | null;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /**
+             * Source
+             * @default
+             * @enum {string}
+             */
+            source: "" | "provider";
         } & {
             [key: string]: unknown;
         };

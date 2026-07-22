@@ -29,7 +29,7 @@ segmentation hồ sơ gộp và bốn fixture thật vẫn phải qua local/live
 Contract local hiện có field policy dùng chung, strict write DTO, missing-field
 atomic approval, typed blocker/risk/error/Safe Events, field evidence, Processing
 Mode, review segmentation theo revision, Continue, rerun reuse/resegment,
-readiness probe, durable progress/failure/timeline và triage. Bộ backend đạt 45 tests; browser
+readiness probe, durable progress/failure/timeline và triage. Bộ backend đạt 47 tests; browser
 `17 passed`, `1 skipped` và eager Celery/fake-provider pass. Đây chưa phải bằng chứng bốn fixture
 hoặc provider production-like thật.
 

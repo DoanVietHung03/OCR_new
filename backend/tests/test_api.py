@@ -304,6 +304,10 @@ def test_error_envelope_and_openapi(monkeypatch):
     assert {"documents", "provider", "endpoint_external", "correction_count", "started_at", "completed_at"} <= set(job_schema["properties"])
     field_schema = client.get("/openapi.json").json()["components"]["schemas"]["FieldResponse"]
     assert {"raw_value", "source_text", "needs_review", "suggested_value", "evidence_candidates"} <= set(field_schema["properties"])
+    assert "low_confidence" in str(field_schema["properties"]["review_reason"])
+    assert field_schema["properties"]["suggested_value"].get("title") == "Suggested Value"
+    assert "$ref" in str(field_schema["properties"]["suggestions"]["items"])
+    assert "$ref" in str(field_schema["properties"]["evidence_candidates"]["items"])
     page_schema = client.get("/openapi.json").json()["components"]["schemas"]["PageResponse"]
     assert {"text", "ocr_line_count", "avg_score", "images", "quality"} <= set(page_schema["properties"])
     schemas = client.get("/openapi.json").json()["components"]["schemas"]
@@ -461,6 +465,53 @@ def test_provider_profiles_are_allowlisted_and_safe(tmp_path, monkeypatch):
     invalid = client.post("/api/jobs", json={"file_count": 1, "provider_profile_id": "attacker"})
     assert invalid.status_code == 400
     assert invalid.json()["detail"]["code"] == "invalid_provider_profile"
+
+
+def test_create_rejects_unconfigured_or_unsupported_profile_capabilities(tmp_path, monkeypatch):
+    use_store(tmp_path, monkeypatch)
+    import app.api.routes as routes
+
+    profile = {
+        "id": "qwen", "label": "Qwen", "external": False, "status": "configured",
+        "tasks": ["metadata"], "page_modes": ["all"], "max_pages": 2,
+        "processing_modes": ["administrative_document"],
+    }
+    monkeypatch.setattr(routes, "provider_profiles", lambda: [profile])
+    for payload in (
+        {"file_count": 1, "vlm_task": "full_ocr"},
+        {"file_count": 1, "vlm_task": "metadata", "vlm_pages": "first,last"},
+        {"file_count": 1, "vlm_task": "metadata", "vlm_max_pages": 3},
+        {"file_count": 1, "processing_mode": "combined_dossier", "vlm_task": "metadata"},
+    ):
+        response = client.post("/api/jobs", json=payload)
+        assert (response.status_code, response.json()["detail"]["code"]) == (400, "unsupported_provider_capability")
+
+    profile["status"] = "not_configured"
+    unavailable = client.post("/api/jobs", json={"file_count": 1, "vlm_task": "metadata"})
+    assert (unavailable.status_code, unavailable.json()["detail"]["code"]) == (503, "ocr_not_configured")
+
+
+def test_typed_evidence_projection_keeps_legacy_job_readable_without_rewrite(tmp_path, monkeypatch):
+    store = use_store(tmp_path, monkeypatch)
+    job = store.create({"file_count": 1})
+    store.update(job["id"], status="completed", documents=[{
+        "id": "legacy", "fields": {"so_van_ban": {
+            "value": {"legacy": True}, "confidence": 42, "review_reason": "old_reason",
+            "suggested_value": {"old": True}, "suggestion_source": "old_source",
+            "suggestions": ["old"], "evidence_candidates": [{"old": True}],
+        }}, "pages": [],
+    }])
+    path = store.path(job["id"]) / "job.json"
+    before = path.read_bytes()
+
+    response = client.get(f"/api/jobs/{job['id']}")
+    assert response.status_code == 200
+    field = response.json()["documents"][0]["fields"]["so_van_ban"]
+    assert field["value"] == {"legacy": True}
+    assert (field["review_reason"], field["suggested_value"], field["suggestion_source"]) == ("", "", "")
+    assert field["suggestions"] == ["old"]
+    assert field["evidence_candidates"][0]["old"] is True
+    assert path.read_bytes() == before
 
 
 def test_documents_events_and_reports_are_real_safe_projections(tmp_path, monkeypatch, pdf_bytes):

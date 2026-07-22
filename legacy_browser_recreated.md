@@ -225,6 +225,9 @@ Reference cũ: `OCR_paper/Web/src/app.js:1724-1747,3111-3133,3492-3503`.
 Provenance, trạng thái unavailable và native evidence dialog đã pass local;
 fixture/provider/restart thật vẫn thuộc gate còn mở của `BE-X7`.
 
+Generated field contract không còn `unknown` cho scalar suggestion hoặc hai danh
+sách suggestion/evidence; workspace hiển thị source, confidence và reason đã persist.
+
 - Field card render source/page/confidence, typed review reason, suggestion +
   provenance và page-level `evidence_url`; thiếu dữ liệu hiển thị unavailable.
 - Chọn thumbnail mở native `<dialog>` Fit/100% và tải image; không dùng OCR `bbox`
@@ -423,8 +426,9 @@ và Review page; URL thiếu page/field reset về default, còn dirty confirmat
 Reference cũ: `OCR_paper/Web/src/app.js:588-617,1987-1996,2489-2503`.
 
 Upload đã có ba mode; Job Detail đã có source thumbnails, segment list, đổi type,
-tách/gộp native, confirm theo revision và Continue. Focused mocked-browser flow
-đã pass. Conflict reload/discard đã có UX giữ draft hoặc tải bản server mới.
+tách/gộp native tại boundary bất kỳ, inline validation, confirm theo revision và
+Continue. Focused mocked-browser flow đã pass cả invalid draft, conflict giữ draft,
+revision mới và Continue. Conflict reload/discard đã có UX giữ draft hoặc tải bản server mới.
 Vẫn cần fixture thật, evidence cho boundary khó và review/approval độc lập trước
 khi đóng.
 
@@ -478,7 +482,7 @@ khi đóng.
 
 Không dùng lại con số `18/19` cho trạng thái hiện tại cho đến khi các gate còn lại
 đã pass. Repair Gate ngày 2026-07-22 là baseline hiện hành: backend `28 passed`;
-suite mở rộng hiện tại `39 passed`,
+suite mở rộng hiện tại `47 passed`,
 legacy compatibility `10 passed`, browser `17 passed`, `1 skipped`, gồm task/page retry
 và partial review, typecheck/build/OpenAPI/compile/diff đều pass.
 

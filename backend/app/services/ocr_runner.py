@@ -104,7 +104,14 @@ def validate_result(payload: object, *, page_index: int = 0, task: str = "metada
                 field["review_reason"] = item["review_reason"]
             suggestion = item.get("suggested_value")
             if not isinstance(suggestion, (dict, list)) and suggestion is not None:
-                field.update(suggested_value=suggestion, suggestion_source=str(item.get("suggestion_source") or "provider"))
+                field.update(suggested_value=suggestion, suggestion_source="provider")
+                raw_suggestion_confidence = item.get("suggestion_confidence")
+                if isinstance(raw_suggestion_confidence, (int, float)) and not isinstance(raw_suggestion_confidence, bool) and 0 <= raw_suggestion_confidence <= 1:
+                    field["suggestion_confidence"] = float(raw_suggestion_confidence)
+                elif "suggestion_confidence" in item:
+                    warnings.append("invalid_field_value")
+                if isinstance(item.get("suggestion_reason"), str):
+                    field["suggestion_reason"] = item["suggestion_reason"]
         if name not in fields or (confidence or -1) > (fields[name]["confidence"] or -1):
             fields[name] = field
     return {"fields": fields, "warnings": list(dict.fromkeys(warnings))}

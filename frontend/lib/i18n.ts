@@ -170,6 +170,7 @@ const errorLabels: Record<string, [string, string]> = {
   source_files_incomplete: ["PDF nguồn không đầy đủ", "Source PDFs are incomplete"],
   invalid_crop_rectangle: ["Vùng crop không hợp lệ", "Invalid crop rectangle"],
   invalid_provider_profile: ["Provider Profile không hợp lệ", "Invalid Provider Profile"],
+  unsupported_provider_capability: ["Cấu hình OCR không hỗ trợ lựa chọn này", "The OCR configuration does not support this selection"],
   provider_profile_unavailable: ["Cấu hình OCR nguồn không còn khả dụng", "Source OCR configuration is unavailable"],
   rerun_job: ["Chạy lại công việc từ dữ liệu nguồn", "Rerun the job from source data"],
   inspect_logs: ["Kiểm tra nhật ký an toàn", "Inspect safe logs"],

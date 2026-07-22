@@ -101,8 +101,14 @@ def test_legacy_and_new_store_preserve_unknown_fields(tmp_path, pdf_bytes):
 def test_runner_accepts_partial_metadata_and_markdown_json():
     result = validate_result({"fields": {"so_hieu": {
         "value": "1", "confidence": 0.9, "bbox": [0, 0, 1, 1], "page_index": 0,
+        "suggested_value": "2", "suggestion_confidence": 0.8,
+        "suggestion_reason": "normalized", "suggestion_source": "spoofed",
     }, "trich_yeu": "Tóm tắt", "unknown": {"value": "ignored"}}}, page_index=2)
-    assert "so_van_ban" in result["fields"]
+    assert result["fields"]["so_van_ban"] == {
+        "value": "1", "confidence": 0.9, "bbox": [0.0, 0.0, 1.0, 1.0], "page_index": 2,
+        "needs_review": False, "suggested_value": "2", "suggestion_confidence": 0.8,
+        "suggestion_reason": "normalized", "suggestion_source": "provider",
+    }
     assert result["fields"]["trich_yeu"] == {
         "value": "Tóm tắt", "confidence": None, "bbox": [], "page_index": 2, "needs_review": True,
     }
