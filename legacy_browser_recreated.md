@@ -116,7 +116,7 @@ không gọi những baseline trên là gap hoặc dựng lại UI lần nữa.
 
 ### FE-X1
 
-**Task/page input — PASS LOCAL 2026-07-22.** Counterpart: [`BE-X1`](implementation_plan.md#be-x1).
+**Task/page input — PASS LOCAL CONTRACT 2026-07-22; LIVE REPRO PENDING.** Counterpart: [`BE-X1`](implementation_plan.md#be-x1).
 
 - Giữ control Provider Profile, `metadata|full_ocr`, page scope và max pages hiện
   có; `full_ocr` khóa `all`/max `0`, metadata cho các scope server công bố.
@@ -129,6 +129,10 @@ không gọi những baseline trên là gap hoặc dựng lại UI lần nữa.
 - E2E phải chứng minh payload đúng và kết quả live hiển thị selected pages/status
   do backend trả, không chỉ kiểm tra dropdown đã đổi state.
 - Giữ selection khi create/upload/start thất bại để người dùng retry.
+
+Browser eager-task/fake-provider là local contract evidence. Kết quả từ
+`63-btc.pdf`/provider production-like vẫn là external evidence, không được gộp
+vào nhãn `PASS LOCAL CONTRACT`.
 
 UI/task reference cũ: `OCR_paper/Web/src/app.js:1696-1720,3466-3479,4083-4092`.
 
@@ -147,6 +151,7 @@ UI/task reference cũ: `OCR_paper/Web/src/app.js:1696-1720,3466-3479,4083-4092`.
   backend công bố thay vì suy đoán từ mọi warning.
 - Browser test bắt buộc: một document có fields tốt và một page warning; viewer,
   fields, banner và failed-page marker cùng xuất hiện.
+- Banner tổng hợp `page.warnings[]` typed, không chỉ hiển thị `page.error` đầu tiên.
 
 ### FE-X3
 
@@ -155,6 +160,9 @@ UI/task reference cũ: `OCR_paper/Web/src/app.js:1696-1720,3466-3479,4083-4092`.
 
 - `frontend/lib/api.ts` chỉ dùng generated types từ
   `frontend/lib/api-schema.ts`; không thêm DTO viết tay.
+- Query filters lấy từ generated `operations`; request bodies và typed 409 detail
+  lấy từ generated `components.schemas`. Client chỉ serialize allowlisted segment
+  fields thay vì gửi ngược mọi legacy extra từ response.
 - Page/pass/error fields mới phải có render fallback cho job cũ và unknown legacy
   extras. Unknown/non-scalar field vẫn visible read-only.
 - Chạy `pnpm api:check`, typecheck, build và browser smoke sau mỗi OpenAPI change.
@@ -166,6 +174,8 @@ UI/task reference cũ: `OCR_paper/Web/src/app.js:1696-1720,3466-3479,4083-4092`.
 
 - Dashboard dùng persisted counters/timing; progress không nội suy. Search/filter/
   sort/page nằm trong URL; lifecycle action tuân theo state matrix.
+- Dashboard, Manage và Review lắng nghe `popstate`; back/forward khôi phục filter,
+  view/document/page/field thay vì chỉ hoạt động sau refresh.
 - Documents index có pagination/filter/sort/deep-link và hiển thị review/quality/
   warning an toàn.
 - Job detail có document/page navigation số, previous/next, direct jump,
@@ -251,6 +261,8 @@ Reference cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
 - Hiển thị blocker/risk typed `{code, field?, page_index?}` cạnh action. **Lưu và duyệt** là atomic:
   khi backend trả blocker, giữ draft và không hiển thị correction đã lưu/approved;
   chỉ clear draft khi response xác nhận approved.
+- Khi 409 trả blocker mới hơn snapshot đang render, UI dùng `detail.blockers[]`
+  typed từ chính response, giữ draft và thay blocker server cũ cho tới lần edit.
 - Warning mềm không vô hiệu hóa nút; page warning/partial result tiếp tục render
   theo `FE-X2`. Client không suy ra blocker từ confidence/page đang mở.
 - Cho approve độc lập từng logical document; dossier chỉ approved khi Bìa và mọi
@@ -306,6 +318,8 @@ Counterpart: [`BE-X12`](implementation_plan.md#be-x12).
   profile ID, page index.
 - Logs thêm filter `code`; job detail render timeline human-readable. JSON download
   vẫn có cho diagnostics nhưng không dùng JSON `<pre>` làm UI chính.
+- Job detail chỉ nhận `SafeEvent[]`; render status, safe message và toàn bộ
+  `warning_codes[]`, không còn nhánh xử lý log string/`Any`.
 - Gate: timeline/progress còn đúng sau reload/restart, terminal dừng polling và
   job detail cũng dừng interval khi tab hidden.
 
@@ -320,6 +334,8 @@ Reference cũ: `OCR_paper/Web/src/app.js:1495-1532,2529-2587`.
   manual crop; deep-link đúng job/document/page/field đầu tiên cần review.
 - Khi chọn field, đồng bộ page và evidence thumbnail; artifact group theo
   document/page/field/kind, image có preview native dialog, non-image giữ download.
+- Combined dossier dùng manifest mapping từ backend nên page source, manual crop
+  và corrected export vẫn group dưới đúng logical document.
 - Không tính risk/count client-side từ page hiện tại. Debug timeline/retry variants
   và paper-like overview là P2 có dữ liệu, không phải gate của mục này.
 - Gate: mọi quick filter dùng aggregate typed, refresh giữ target và artifact
@@ -373,6 +389,10 @@ Counterpart: [`BE-X15`](implementation_plan.md#be-x15).
 field, monitor deep-link, previous/next/direct jump, dirty guard, Ctrl/Cmd+S,
 copy ID, select-all terminal và VI/EN kỹ thuật. Density/data-driven polish và
 utility cần operator xác nhận được liệt kê trong [`incomlpeted.md`](incomlpeted.md).
+
+Regression browser hiện kiểm tra back/forward cho Dashboard status, Manage triage
+và Review page; URL thiếu page/field reset về default, còn dirty confirmation áp
+đúng toàn bộ target URL thay vì chỉ đổi tab.
 
 ### FE-X16
 

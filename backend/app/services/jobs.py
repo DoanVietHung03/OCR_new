@@ -152,7 +152,21 @@ class JobStore:
             raise FileNotFoundError(job_id) from exc
 
     def write(self, job_id: str, data: dict[str, Any]) -> dict[str, Any]:
-        atomic_json(self.path(job_id) / "job.json", data)
+        target = self.path(job_id) / "job.json"
+        previous_status = None
+        if target.exists():
+            try:
+                previous_status = json.loads(target.read_text(encoding="utf-8")).get("status")
+            except (OSError, json.JSONDecodeError):
+                pass
+        current_status = data.get("status")
+        if previous_status and current_status and previous_status != current_status:
+            severity = "error" if current_status in {"error", "interrupted"} else "warning" if current_status in {"cancelled", "cancelling", "completed_with_warnings"} else "info"
+            data.setdefault("events", []).append({
+                "timestamp": now(), "code": "job_status_changed", "category": "lifecycle",
+                "severity": severity, "status": current_status,
+            })
+        atomic_json(target, data)
         return data
 
     def update(self, job_id: str, **changes: Any) -> dict[str, Any]:
@@ -317,7 +331,8 @@ class JobStore:
                 stamp = now()
                 job.update(status="cancelled", progress_stage="cancelled", updated_at=stamp, completed_at=stamp)
                 return self.write(job_id, job)
-            return {**job, "status": "cancelling"}
+            job.update(status="cancelling", updated_at=now())
+            return self.write(job_id, job)
 
     def apply_review(
         self, job_id: str, document_id: str, corrections: list[dict[str, Any]]
@@ -329,16 +344,14 @@ class JobStore:
             document = next((item for item in job.get("documents", []) if item.get("id") == document_id), None)
             if document is None:
                 raise ValueError("not_found")
-            if job.get("processing_mode") == "combined_dossier" and not all(
-                source.get("confirmed") for source in job.get("source_pdfs", [])
-            ):
-                raise ApprovalBlocked([{"code": "segmentation_unconfirmed"}])
             projected = copy.deepcopy(document)
             allowed = set(projected.get("expected_fields") or FIELDS)
             for correction in corrections:
                 name = correction.get("field")
                 field = projected.get("fields", {}).get(name)
                 if name not in allowed or (field is None and not projected.get("expected_fields")):
+                    raise ValueError("invalid_field")
+                if isinstance(field.get("value") if field else None, (dict, list)):
                     raise ValueError("invalid_field")
                 if (field.get("value") if field else None) != correction.get("old_value"):
                     raise ValueError("correction_conflict")
@@ -352,7 +365,12 @@ class JobStore:
                 field["corrected_value"] = field["value"]
                 field["corrected_at"] = stamp
                 field.update(method="manual", needs_review=False)
-            annotate(projected)
+            annotate(
+                projected,
+                segmentation_confirmed=job.get("processing_mode") != "combined_dossier" or all(
+                    source.get("confirmed") for source in job.get("source_pdfs", [])
+                ),
+            )
             if projected.get("approval_blockers"):
                 raise ApprovalBlocked(projected["approval_blockers"])
             projected["review_status"] = "approved"
@@ -389,6 +407,10 @@ class JobStore:
                     "timestamp": stamp, "code": "document_corrected", "category": "review",
                     "document_id": document_id,
                 })
+            job.setdefault("events", []).append({
+                "timestamp": stamp, "code": "document_approved", "category": "review",
+                "document_id": document_id,
+            })
             return self.write(job_id, job), document
 
     def add_crop_evidence(self, job_id: str, document_id: str, evidence: dict[str, Any]) -> dict[str, Any]:
@@ -400,6 +422,10 @@ class JobStore:
             if document is None:
                 raise ValueError("not_found")
             document.setdefault("crop_evidence", []).append(evidence)
+            job.setdefault("events", []).append({
+                "timestamp": evidence["created_at"], "code": "manual_crop_created", "category": "review",
+                "document_id": document_id, "page_index": evidence.get("page_index"),
+            })
             job["updated_at"] = now()
             self.write(job_id, job)
             return evidence

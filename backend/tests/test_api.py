@@ -39,6 +39,55 @@ def test_create_upload_start_is_one_shot(tmp_path, monkeypatch, pdf_bytes):
     assert first.json()["status"] == second.json()["status"] == "starting"
     assert calls == [job["id"]]
     assert store.read(job["id"])["provider"] == "qwen"
+    assert [
+        event.get("status") for event in store.read(job["id"])["events"]
+        if event.get("code") == "job_status_changed"
+    ] == ["ready", "starting"]
+
+
+def test_write_requests_reject_unknown_fields(tmp_path, monkeypatch, pdf_bytes):
+    store = use_store(tmp_path, monkeypatch)
+    rejected = client.post("/api/jobs", json={"file_count": 1, "api_key": "must-not-persist"})
+    assert rejected.status_code == 422
+    assert rejected.json() == {"detail": {"code": "invalid_request", "message": "invalid_request"}}
+    assert "must-not-persist" not in rejected.text
+    assert store.list() == []
+
+    job = create_and_upload(pdf_bytes)
+    store.update(job["id"], status="completed", documents=[{
+        "id": "a", "file_name": "a.pdf", "status": "completed",
+        "logical_document_type": "administrative_document", "pages": [],
+        "fields": {
+            "co_quan_ban_hanh": {"value": "A"}, "so_van_ban": {"value": "1"},
+            "ngay_ban_hanh": {"value": "2026-07-22"}, "trich_yeu": {"value": "T"},
+        },
+    }])
+    rejected = client.post(f"/api/jobs/{job['id']}/corrections", json={
+        "document_id": "a", "corrections": [{
+            "field": "nguoi_ky", "old_value": None, "new_value": "B", "secret": "must-not-persist",
+        }],
+    })
+    assert rejected.status_code == 422
+    assert not list((store.path(job["id"]) / "corrections").iterdir())
+
+
+def test_segmentation_request_rejects_nested_unknown_fields(tmp_path, monkeypatch, pdf_bytes):
+    store = use_store(tmp_path, monkeypatch)
+    job = store.create({"file_count": 1, "processing_mode": "combined_dossier"})
+    store.add_pdf(job["id"], "dossier.pdf", pdf_bytes)
+    store.update(job["id"], status="awaiting_segmentation_review", source_pdfs=[{
+        "id": "dossier", "revision": 0, "confirmed": False, "page_count": 1,
+    }])
+    response = client.post(f"/api/jobs/{job['id']}/source-pdfs/dossier/segmentation/confirm", json={
+        "revision": 0,
+        "segments": [{
+            "logical_document_type": "administrative_document", "start_page": 0, "end_page": 0,
+            "provider_url": "must-not-persist",
+        }],
+    })
+    assert response.status_code == 422
+    assert response.json() == {"detail": {"code": "invalid_request", "message": "invalid_request"}}
+    assert "must-not-persist" not in response.text
 
 
 def test_readiness_gates_start_without_losing_durable_state(tmp_path, monkeypatch, pdf_bytes):
@@ -439,7 +488,8 @@ def test_documents_events_and_reports_are_real_safe_projections(tmp_path, monkey
     assert (documents["items"][0]["document_type"], documents["items"][0]["warning_count"]) == ("Thông báo", 2)
 
     events = client.get(f"/api/events?job_id={job['id']}").json()
-    assert {event["code"] for event in events["items"]} == {"job_created", "job_completed", "document_approved"}
+    assert {event["code"] for event in events["items"]} == {"job_created", "job_status_changed", "document_approved"}
+    assert next(event for event in events["items"] if event["code"] == "job_status_changed")["status"] == "completed"
     assert "must-not-leak" not in client.get(f"/api/events?job_id={job['id']}").text
     review_events = client.get(f"/api/events?job_id={job['id']}&category=review&code=document_approved").json()
     assert [(event["category"], event["document_id"]) for event in review_events["items"]] == [("review", "report & 1")]
@@ -513,6 +563,35 @@ def test_artifact_manifest_lists_only_safe_existing_job_files(tmp_path, monkeypa
     assert (payload["items"][-1]["document_id"], payload["items"][-1]["page_index"], payload["items"][-1]["field"]) == ("document-1", 0, "so_van_ban")
     assert str(tmp_path) not in response.text
     assert client.get("/api/jobs/not-a-uuid/artifacts").status_code == 404
+
+
+def test_combined_crop_and_manifest_use_logical_document_mapping(tmp_path, monkeypatch, pdf_bytes):
+    from app.workers.tasks import render_pdf
+
+    store = use_store(tmp_path, monkeypatch)
+    job = client.post("/api/jobs", json={"file_count": 1, "processing_mode": "combined_dossier"}).json()
+    client.put(f"/api/jobs/{job['id']}/files?path=dossier.pdf", content=pdf_bytes)
+    render_pdf(store.path(job["id"]) / "uploads" / "dossier.pdf", store.path(job["id"]) / "artifacts" / "source-1")
+    document_id = "source-1-document-1"
+    store.update(job["id"], status="completed", source_pdfs=[{"id": "source-1", "confirmed": True}], documents=[{
+        "id": document_id, "file_name": "dossier.pdf", "status": "completed",
+        "logical_document_type": "administrative_document", "source_pdf_id": "source-1",
+        "fields": {"so_van_ban": {"value": "1"}},
+        "pages": [{
+            "page_index": 0, "source_page_index": 0, "source_pdf_id": "source-1",
+            "image_url": f"/api/jobs/{job['id']}/artifacts/source-1/page-1.png",
+        }],
+    }])
+
+    crop = client.post(f"/api/jobs/{job['id']}/manual-crop", json={
+        "document_id": document_id, "page_index": 0, "field": "so_van_ban",
+        "rect": {"x": 0, "y": 0, "width": 10, "height": 10},
+    })
+    assert crop.status_code == 200, crop.text
+    manifest = client.get(f"/api/jobs/{job['id']}/artifacts").json()["items"]
+    page = next(item for item in manifest if item["name"] == "page-1.png")
+    assert (page["document_id"], page["page_index"]) == (document_id, 0)
+    assert next(item for item in manifest if item["name"].startswith("crop-"))["document_id"] == document_id
 
 
 def test_documents_support_sort_filter_pagination_and_deep_links(tmp_path, monkeypatch):

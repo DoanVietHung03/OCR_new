@@ -9,6 +9,10 @@ theo dõi trong `implementation_plan.md` và `legacy_browser_recreated.md`.
 Chưa thể đóng vì repository không chứa bốn PDF chuẩn, ground truth và provider
 production-like. Điều kiện hoàn thành:
 
+Phần live repro của `BE-X1`/`FE-X1` cũng nằm trong gate external này. Nhãn
+`PASS LOCAL CONTRACT` của X1 chỉ bao phủ planner, worker persistence và browser
+eager-task/fake-provider; không thay thế lần chạy `63-btc.pdf` qua provider thật.
+
 - cung cấp ngoài Git và ngoài `OCR_DATA_DIR`: `63-btc.pdf`, một Bìa, một hồ sơ
   gộp rõ có trang trắng phân cách và một hồ sơ gộp khó;
 - khóa manifest, SHA-256 và ground truth page/field mà không chép nội dung tài

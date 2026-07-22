@@ -26,9 +26,10 @@ Repair Gate ngày 2026-07-22 đạt 28 backend tests, 10 legacy compatibility te
 focused browser coverage cho task/page retry và partial-result UI, typecheck,
 build, OpenAPI/types và diff checks. Đây là baseline cần bảo vệ; field policy,
 segmentation hồ sơ gộp và bốn fixture thật vẫn phải qua local/live gate mới.
-Contract local hiện có field policy dùng chung, missing-field atomic approval,
-typed blocker/risk, field evidence, Processing Mode, review segmentation theo
-revision, Continue, rerun reuse/resegment, readiness thật, progress/failure/timeline và triage. Bộ backend đạt 39 tests; browser
+Contract local hiện có field policy dùng chung, strict write DTO, missing-field
+atomic approval, typed blocker/risk/error/Safe Events, field evidence, Processing
+Mode, review segmentation theo revision, Continue, rerun reuse/resegment,
+readiness probe, durable progress/failure/timeline và triage. Bộ backend đạt 45 tests; browser
 `17 passed`, `1 skipped` và eager Celery/fake-provider pass. Đây chưa phải bằng chứng bốn fixture
 hoặc provider production-like thật.
 

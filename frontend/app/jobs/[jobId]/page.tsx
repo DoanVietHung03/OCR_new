@@ -34,7 +34,7 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
   const discardDialog = useRef<HTMLDialogElement>(null); const actionDialog = useRef<HTMLDialogElement>(null); const dirtyRef = useRef(false);
   useEffect(() => { params.then(({ jobId }) => setId(jobId)); }, [params]);
   useEffect(() => { dirtyRef.current = dirty; }, [dirty]);
-  useEffect(() => { if (!id) return; const sync = () => { if (dirtyRef.current) return; const query = new URLSearchParams(location.search), requested = query.get("view") as JobView | null; if (requested && ["overview", "review", "artifacts", "logs"].includes(requested)) setView(requested); if (query.get("document")) setDocumentId(query.get("document")!); if (query.has("page")) setTargetPage(Number(query.get("page"))); setTargetField(query.get("field") || ""); }; sync(); window.addEventListener("popstate", sync); return () => window.removeEventListener("popstate", sync); }, [id]);
+  useEffect(() => { if (!id) return; const sync = () => { if (dirtyRef.current) return; const query = new URLSearchParams(location.search), requested = query.get("view") as JobView | null; setView(requested && ["overview", "review", "artifacts", "logs"].includes(requested) ? requested : "review"); setDocumentId(query.get("document") || ""); setTargetPage(query.has("page") ? Number(query.get("page")) : undefined); setTargetField(query.get("field") || ""); }; sync(); window.addEventListener("popstate", sync); return () => window.removeEventListener("popstate", sync); }, [id]);
   useEffect(() => {
     if (!id) return;
     let timer: ReturnType<typeof setInterval> | undefined;
@@ -70,14 +70,25 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
 
   function guardedLink(event: MouseEvent<HTMLAnchorElement>) { if (dirty) { event.preventDefault(); setPendingNavigation({ href: event.currentTarget.href }); } }
   function goNew() { if (dirty) setPendingNavigation({ href: `${location.origin}/upload` }); else router.push("/upload"); }
-  function selectDocument(next: string) { if (next === documentId) return; if (dirty) setPendingNavigation({ documentId: next }); else setDocumentId(next); }
-  function selectView(next: JobView) { if (next === view) return; if (dirty) return setPendingNavigation({ href: `${location.pathname}?view=${next}&document=${documentId}` }); setView(next); }
+  function selectDocument(next: string) { if (next === documentId) return; if (dirty) return setPendingNavigation({ documentId: next }); const query = new URLSearchParams(location.search); query.set("document", next); query.delete("page"); query.delete("field"); history.pushState(null, "", `${location.pathname}?${query}`); setDocumentId(next); }
+  function selectView(next: JobView) { if (next === view) return; if (dirty) return setPendingNavigation({ href: `${location.pathname}?view=${next}&document=${documentId}` }); const query = new URLSearchParams(location.search); query.set("view", next); history.pushState(null, "", `${location.pathname}?${query}`); setView(next); }
   function confirmDiscard() {
     const next = pendingNavigation; setPendingNavigation(null);
     if (!next) return;
     setDirty(false);
-    if ("documentId" in next) setDocumentId(next.documentId);
-    else { const target = new URL(next.href, location.href); const nextView = target.searchParams.get("view") as JobView | null; if (target.pathname === location.pathname && nextView) setView(nextView); else router.push(`${target.pathname}${target.search}${target.hash}`); }
+    if ("documentId" in next) {
+      const query = new URLSearchParams(location.search); query.set("document", next.documentId); query.delete("page"); query.delete("field");
+      history.pushState(null, "", `${location.pathname}?${query}`); setDocumentId(next.documentId); setTargetPage(undefined); setTargetField("");
+    } else {
+      const target = new URL(next.href, location.href);
+      if (target.pathname !== location.pathname) return router.push(`${target.pathname}${target.search}${target.hash}`);
+      const requested = target.searchParams.get("view") as JobView | null;
+      history.replaceState(null, "", `${target.pathname}${target.search}${target.hash}`);
+      setView(requested && ["overview", "review", "artifacts", "logs"].includes(requested) ? requested : "review");
+      setDocumentId(target.searchParams.get("document") || "");
+      setTargetPage(target.searchParams.has("page") ? Number(target.searchParams.get("page")) : undefined);
+      setTargetField(target.searchParams.get("field") || "");
+    }
   }
   async function requestDelete() {
     setBusy(true); setError("");
@@ -101,7 +112,7 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
   }
   if (!job) return <LegacyShell detail onNew={() => router.push("/upload")}><Link className="button secondary" href="/">← {text("back")}</Link><p className="empty">{error || text("loading")}</p></LegacyShell>;
   const logs = job.logs || [];
-  const logText = logs.map((item) => typeof item === "string" ? item : JSON.stringify(item, null, 2)).join("\n");
+  const logText = logs.map((item) => JSON.stringify(item, null, 2)).join("\n");
   const diagnostics = job.failure ? JSON.stringify({ job_id: job.id, code: job.failure.code, timestamp: job.updated_at, provider_profile_id: job.provider_profile_id, page_index: job.failure.page_index }, null, 2) : "";
   function downloadLogs() { const url = URL.createObjectURL(new Blob([logText], { type: "text/plain;charset=utf-8" })); const link = window.document.createElement("a"); link.href = url; link.download = `${id}-logs.txt`; link.click(); URL.revokeObjectURL(url); }
   const documents = job.documents || []; const document = (documents.find((item) => item.id === documentId) || documents[0] || null) as Document | null;
@@ -139,7 +150,7 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
     {view === "review" && <>{!!documents.length && <nav className="document-tabs" aria-label={text("documents")}>{documents.map((item, index) => <button className={item.id === document?.id ? "active" : ""} aria-current={item.id === document?.id ? "page" : undefined} key={item.id} onClick={() => selectDocument(item.id)}><span>{index + 1}</span><b>{item.file_name}</b><small>{item.error || item.errors?.length ? statusText("error") : item.review_status === "approved" ? text("approved") : statusText(item.status)}</small></button>)}</nav>}{document ? <ReviewWorkspace key={document.id} jobId={id} document={document} terminal={terminal} initialPage={targetPage} initialField={targetField} onJob={setJob} onDirty={setDirty} onError={setError} /> : <section className="panel empty">{text("noResult")}</section>}</>}
     {view === "overview" && <section className="panel report-section"><div className="section-head"><div><p className="eyebrow">{text("overview")}</p><h2>{text("reportSummary", { documents: documents.length, pages: job.page_count, corrections: job.correction_count, failures })}</h2><small>{scopeSummary}</small></div></div><div className="report-documents">{documents.map((item) => <div key={item.id}><b>{item.file_name}</b><span>{statusText(item.status)}</span><small>{item.pages?.length || 0} {text("pdfPages").toLocaleLowerCase(language())} · {text("processedPages", { count: processedPageCount(item.pages || []) })} · {item.review_status === "approved" ? text("approved") : "—"}</small></div>)}</div></section>}
     {view === "artifacts" && <section className="panel artifact-section"><div className="section-head"><h2>{text("artifacts")}</h2><span>{artifactItems.length}</span></div>{artifactError && <p className="notice warning">{artifactError}</p>}<div className="artifact-list">{artifactGroups.map(([group, items]) => <section className="artifact-group" key={group}><h3>{group}</h3>{items.map((item) => item.status === "missing" ? <div className="artifact-item missing" key={item.download_url}><b>{item.name}</b><small>{item.status}</small></div> : item.kind === "image" ? <button className="artifact-item" onClick={() => setArtifactPreview(item)} key={item.download_url}><b>{item.name}</b><small>{item.status}{item.size_bytes ? ` · ${item.size_bytes.toLocaleString(language())} B` : ""}</small></button> : <a className="artifact-item" href={item.download_url} download key={item.download_url}><b>{item.name}</b><small>{item.status}{item.size_bytes ? ` · ${item.size_bytes.toLocaleString(language())} B` : ""}</small></a>)}</section>)}</div>{!artifactItems.length && <p className="empty">{text("unavailable")}</p>}</section>}
-    {view === "logs" && <details className="panel logs-section" open><summary>{text("processingLogs")} ({logs.length})</summary><div className="actions"><button className="button secondary" onClick={() => navigator.clipboard.writeText(logText)}>{text("copy")}</button><button className="button secondary" onClick={downloadLogs}>{text("download")}</button></div><div className="timeline">{logs.map((item, index) => { if (typeof item === "string") return <p key={index}>{item}</p>; if (!item || typeof item !== "object") return null; const event = item as Record<string, unknown>, timestamp = String(event.timestamp || ""), code = String(event.code || ""); return <p key={`${timestamp}-${code}-${index}`}><time>{timestamp ? new Date(timestamp).toLocaleString(language()) : "—"}</time><b>{safeError(code)}</b><span>{typeof event.page_index === "number" ? ` · ${text("pageOf", { page: event.page_index + 1, pages: job.page_count })}` : ""}</span></p>; })}</div>{!logs.length && <p className="empty">{text("noEvents")}</p>}</details>}
+    {view === "logs" && <details className="panel logs-section" open><summary>{text("processingLogs")} ({logs.length})</summary><div className="actions"><button className="button secondary" onClick={() => navigator.clipboard.writeText(logText)}>{text("copy")}</button><button className="button secondary" onClick={downloadLogs}>{text("download")}</button></div><div className="timeline">{logs.map((event, index) => <p key={`${event.timestamp}-${event.code}-${index}`}><time>{event.timestamp ? new Date(event.timestamp).toLocaleString(language()) : "—"}</time><b>{event.status ? statusText(event.status) : safeError(event.code)}</b><span>{event.message !== event.code ? event.message : ""}{event.page_index != null ? ` · ${text("pageOf", { page: event.page_index + 1, pages: job.page_count })}` : ""}{event.warning_codes?.length ? ` · ${event.warning_codes.map(safeError).join(", ")}` : ""}</span></p>)}</div>{!logs.length && <p className="empty">{text("noEvents")}</p>}</details>}
     <dialog open={Boolean(artifactPreview)} className="modal evidence-modal" onClose={() => setArtifactPreview(null)}>
       <div className="modal-head"><h2>{artifactPreview?.name}</h2><button className="icon-button" aria-label={text("close")} onClick={() => setArtifactPreview(null)}>×</button></div>
       {artifactPreview && <div className="evidence-preview fit"><img src={artifactPreview.download_url} alt={artifactPreview.name} /></div>}

@@ -23,7 +23,7 @@ telemetry.
 The 2026-07-22 Repair Gate passed 28 backend tests, 10 legacy compatibility
 tests, focused browser coverage for task/page retry and partial review, typecheck,
 build, generated OpenAPI/types, and diff checks. These are the protected baseline.
-The current suite has 39 backend tests and 17 passing browser checks (plus one
+The current suite has 45 backend tests and 17 passing browser checks (plus one
 sanitized-capture skip); `X8`–`X13` and the locally actionable `X15` scope pass,
 while `X14` still needs real benchmark fingerprints and `X7`/`X16` remain IN
 PROGRESS pending fixture/live gates. `incomlpeted.md` lists every external

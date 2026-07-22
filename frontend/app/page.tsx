@@ -25,6 +25,8 @@ export default function Home() {
   const [state, setState] = useState<State>(emptyState);
   const [files, setFiles] = useState<File[]>([]); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [loadError, setLoadError] = useState("");
   const [loaded, setLoaded] = useState(false); const [stale, setStale] = useState(false); const [uploadOpen, setUploadOpen] = useState(false);
+  const [urlReady, setUrlReady] = useState(false);
+  const syncingUrl = useRef<string | null>(null);
   const [search, setSearch] = useState(""); const [query, setQuery] = useState(""); const [status, setStatus] = useState("all"); const [method, setMethod] = useState("all"); const [sort, setSort] = useState("created_desc");
   const [page, setPage] = useState(1); const [selected, setSelected] = useState<string[]>([]); const [engineMessage, setEngineMessage] = useState("");
   const [consent, setConsent] = useState(false); const [progress, setProgress] = useState(""); const [action, setAction] = useState<Action>(null);
@@ -38,18 +40,25 @@ export default function Home() {
   const engine = availableProfiles.find((item) => item.id === profileId) || availableProfiles[0]; const external = Boolean(engine?.external); const configured = engine?.status === "configured";
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const initialQuery = params.get("q") || ""; setSearch(initialQuery); setQuery(initialQuery);
-    setStatus(params.get("status") || "all"); setMethod(params.get("engine") || "all"); setSort(params.get("sort") || "created_desc"); setPage(Math.max(1, Number(params.get("page")) || 1));
-    if (params.get("upload") === "1") requestAnimationFrame(() => uploadPanel.current?.scrollIntoView({ behavior: "smooth" }));
+    const sync = () => {
+      const params = new URLSearchParams(location.search);
+      const initialQuery = params.get("q") || ""; syncingUrl.current = initialQuery; setSearch(initialQuery); setQuery(initialQuery);
+      setStatus(params.get("status") || "all"); setMethod(params.get("engine") || "all"); setSort(params.get("sort") || "created_desc"); setPage(Math.max(1, Number(params.get("page")) || 1));
+      if (params.get("upload") === "1") requestAnimationFrame(() => uploadPanel.current?.scrollIntoView({ behavior: "smooth" }));
+      setUrlReady(true);
+    };
+    sync(); window.addEventListener("popstate", sync); return () => window.removeEventListener("popstate", sync);
   }, []);
   useEffect(() => { setUploadOpen(uploadOnly); }, [uploadOnly]);
-  useEffect(() => { const timer = setTimeout(() => { setQuery(search); setPage(1); }, 300); return () => clearTimeout(timer); }, [search]);
+  useEffect(() => { if (syncingUrl.current !== null) { if (search === syncingUrl.current) syncingUrl.current = null; return; } const timer = setTimeout(() => { setQuery(search); setPage(1); }, 300); return () => clearTimeout(timer); }, [search]);
   useEffect(() => {
+    if (!urlReady) return;
     const params = new URLSearchParams(location.search); ["q", "status", "engine", "sort", "page"].forEach((key) => params.delete(key));
     if (query) params.set("q", query); if (status !== "all") params.set("status", status); if (method !== "all") params.set("engine", method); if (sort !== "created_desc") params.set("sort", sort); if (page > 1) params.set("page", String(page));
-    history.replaceState(null, "", `${location.pathname}${params.size ? `?${params}` : ""}`); setSelected([]);
-  }, [query, status, method, sort, page]);
+    const next = `${location.pathname}${params.size ? `?${params}` : ""}`;
+    if (`${location.pathname}${location.search}` !== next) history.pushState(null, "", next);
+    setSelected([]);
+  }, [query, status, method, sort, page, urlReady]);
 
   const refresh = useCallback(async () => {
     try {
@@ -59,9 +68,10 @@ export default function Home() {
     } catch (reason) { if (loaded) setStale(true); else setLoadError(message(reason)); }
   }, [query, status, method, sort, page, loaded]);
   useEffect(() => {
+    if (!urlReady) return;
     refresh(); const tick = () => { if (!document.hidden) refresh(); }; const timer = setInterval(tick, 10_000);
     document.addEventListener("visibilitychange", tick); return () => { clearInterval(timer); document.removeEventListener("visibilitychange", tick); };
-  }, [refresh]);
+  }, [refresh, urlReady]);
   useEffect(() => { if (action) actionDialog.current?.showModal(); else actionDialog.current?.close(); }, [action]);
   useEffect(() => { getProviderProfiles().then(({ profiles }) => { setProfiles(profiles); setProfileId((value) => value || profiles[0]?.id || ""); }).catch(() => { /* old backend: state.ocr_methods remains the compatibility fallback */ }); }, []);
   useEffect(() => { if (!uploadOnly) getReports().then(setReports).catch(() => setReports(null)); }, [uploadOnly]);

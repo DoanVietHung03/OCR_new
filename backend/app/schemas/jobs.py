@@ -7,7 +7,11 @@ class PublicModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class CreateJobRequest(PublicModel):
+class RequestModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class CreateJobRequest(RequestModel):
     file_count: int = Field(ge=1, le=15)
     upload_name: str = ""
     cloud_data_confirmed: bool = False
@@ -75,6 +79,7 @@ class PageResponse(PublicModel):
     links: dict[str, str] = Field(default_factory=dict)
     quality: dict[str, Any] = Field(default_factory=dict)
     error: str = ""
+    warnings: list[str] = Field(default_factory=list)
     source_pdf_id: str | None = None
     source_page_index: int | None = None
 
@@ -87,6 +92,13 @@ class SegmentationPage(PublicModel):
 
 
 class Segment(PublicModel):
+    id: str = ""
+    logical_document_type: Literal["dossier_cover", "administrative_document", "excluded", "unclassified"]
+    start_page: int = Field(ge=0)
+    end_page: int = Field(ge=0)
+
+
+class SegmentationSegmentRequest(RequestModel):
     id: str = ""
     logical_document_type: Literal["dossier_cover", "administrative_document", "excluded", "unclassified"]
     start_page: int = Field(ge=0)
@@ -142,6 +154,35 @@ class FailureResponse(BaseModel):
     page_index: int | None = None
 
 
+class SafeEvent(BaseModel):
+    timestamp: str
+    severity: Literal["info", "warning", "error"]
+    category: Literal["lifecycle", "document", "review"]
+    code: str
+    job_id: str
+    provider_profile_id: str | None = None
+    document_id: str | None = None
+    page_index: int | None = None
+    source_pdf_id: str | None = None
+    revision: int | None = None
+    related_job_id: str | None = None
+    ocr_pass: str | None = None
+    duration_seconds: float | None = None
+    status: str | None = None
+    warning_codes: list[str] = Field(default_factory=list)
+    message: str
+
+
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+    blockers: list[ReviewIssue] = Field(default_factory=list)
+
+
+class ErrorResponse(BaseModel):
+    detail: ErrorDetail
+
+
 class JobResponse(PublicModel):
     id: str
     status: str
@@ -160,7 +201,7 @@ class JobResponse(PublicModel):
     uploaded_files: int = 0
     upload_name: str = ""
     documents: list[DocumentResponse] = Field(default_factory=list)
-    logs: list[Any] = Field(default_factory=list)
+    logs: list[SafeEvent] = Field(default_factory=list)
     correction_count: int = 0
     page_count: int = 0
     failed_pages: int = 0
@@ -185,42 +226,42 @@ class JobResponse(PublicModel):
     failure: FailureResponse | None = None
 
 
-class ConfirmSegmentationRequest(BaseModel):
+class ConfirmSegmentationRequest(RequestModel):
     revision: int = Field(ge=0)
-    segments: list[Segment]
+    segments: list[SegmentationSegmentRequest]
 
 
-class RerunRequest(BaseModel):
+class RerunRequest(RequestModel):
     cloud_data_confirmed: bool = False
     rerun_mode: Literal["reuse_segmentation", "resegment"] = "reuse_segmentation"
 
 
-class CorrectionItem(PublicModel):
+class CorrectionItem(RequestModel):
     field: str
     old_value: Any = ""
     new_value: Any = ""
 
 
-class CorrectionRequest(PublicModel):
+class CorrectionRequest(RequestModel):
     document_id: str
     corrections: list[CorrectionItem] = Field(default_factory=list)
 
 
-class CropRectangle(BaseModel):
+class CropRectangle(RequestModel):
     x: float = Field(ge=0)
     y: float = Field(ge=0)
     width: float = Field(ge=2)
     height: float = Field(ge=2)
 
 
-class ManualCropRequest(PublicModel):
+class ManualCropRequest(RequestModel):
     document_id: str
     page_index: int = Field(ge=0)
     field: str
     rect: CropRectangle
 
 
-class JobIdsRequest(PublicModel):
+class JobIdsRequest(RequestModel):
     job_ids: list[str] = Field(default_factory=list)
 
 
@@ -312,23 +353,6 @@ class DocumentsResponse(BaseModel):
     triage_counts: DocumentTriageCounts = Field(default_factory=DocumentTriageCounts)
 
 
-class SafeEvent(BaseModel):
-    timestamp: str
-    severity: Literal["info", "warning", "error"]
-    category: Literal["lifecycle", "document", "review"]
-    code: str
-    job_id: str
-    provider_profile_id: str | None = None
-    document_id: str | None = None
-    page_index: int | None = None
-    source_pdf_id: str | None = None
-    revision: int | None = None
-    related_job_id: str | None = None
-    ocr_pass: str | None = None
-    duration_seconds: float | None = None
-    message: str
-
-
 class EventsResponse(BaseModel):
     items: list[SafeEvent]
     pagination: PaginationResponse
@@ -402,8 +426,8 @@ class ReportsResponse(BaseModel):
 class StateResponse(PublicModel):
     server_mode: bool
     jobs: list[JobResponse]
-    documents: list[Any]
-    logs: list[Any]
+    documents: list[DocumentResponse]
+    logs: list[SafeEvent]
     metrics: MetricsResponse
     ocr_methods: list[EngineResponse]
     limits: LimitsResponse
@@ -426,7 +450,7 @@ CodeGroup = Literal[
 ]
 
 
-class CodeInput(BaseModel):
+class CodeInput(RequestModel):
     group: CodeGroup
     code: str = Field(pattern=r"^[A-Za-z0-9._-]{1,32}$")
     label: str = Field(min_length=1, max_length=200)
@@ -435,7 +459,7 @@ class CodeInput(BaseModel):
     active: bool = True
 
 
-class CodeUpdate(BaseModel):
+class CodeUpdate(RequestModel):
     revision: int = Field(ge=0)
     label: str = Field(min_length=1, max_length=200)
     keywords: str = Field(default="", max_length=500)

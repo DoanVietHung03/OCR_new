@@ -1,4 +1,4 @@
-import type { components } from "./api-schema";
+import type { components, operations } from "./api-schema";
 
 type Schemas = components["schemas"];
 
@@ -25,17 +25,20 @@ export const TERMINAL_JOB_STATUSES = new Set(["completed", "completed_with_warni
 export const DELETABLE_JOB_STATUSES = new Set(["uploading", "ready", ...TERMINAL_JOB_STATUSES]);
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number, public code?: string) { super(message); }
+  constructor(message: string, public status: number, public code?: string, public detail?: Schemas["ErrorDetail"]) { super(message); }
 }
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ApiError(payload?.detail?.message || payload?.detail || `Request failed (${response.status})`, response.status, payload?.detail?.code);
+  if (!response.ok) {
+    const detail = typeof payload?.detail === "object" ? payload.detail as Schemas["ErrorDetail"] : undefined;
+    throw new ApiError(detail?.message || String(payload?.detail || `Request failed (${response.status})`), response.status, detail?.code, detail);
+  }
   return payload;
 }
 
-export const getState = (filters: { query?: string; status?: string; method?: string; sort?: string; page?: number } = {}) =>
+export const getState = (filters: NonNullable<operations["state_api_state_get"]["parameters"]["query"]> = {}) =>
   request<State>(`/api/state?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);
 export const getJob = (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}`);
 export const createJob = (payload: Schemas["CreateJobRequest"]) =>
@@ -43,27 +46,29 @@ export const createJob = (payload: Schemas["CreateJobRequest"]) =>
 export const uploadFile = (id: string, file: File) =>
   request<Schemas["UploadResponse"]>(`/api/jobs/${encodeURIComponent(id)}/files?path=${encodeURIComponent(file.name)}`, { method: "PUT", body: file });
 export const startJob = (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}/start`, { method: "POST" });
-export const confirmSegmentation = (id: string, sourceId: string, revision: number, segments: Segment[]) =>
-  request<Job>(`/api/jobs/${encodeURIComponent(id)}/source-pdfs/${encodeURIComponent(sourceId)}/segmentation/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision, segments }) });
+export const confirmSegmentation = (id: string, sourceId: string, revision: number, segments: Segment[]) => {
+  const body: Schemas["ConfirmSegmentationRequest"] = { revision, segments: segments.map(({ id, logical_document_type, start_page, end_page }) => ({ id, logical_document_type, start_page, end_page })) };
+  return request<Job>(`/api/jobs/${encodeURIComponent(id)}/source-pdfs/${encodeURIComponent(sourceId)}/segmentation/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+};
 export const continueJob = (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}/continue`, { method: "POST" });
 export const cancelJob = (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}/cancel`, { method: "POST" });
-export const rerunJob = (id: string, cloudDataConfirmed = false, rerunMode: "reuse_segmentation" | "resegment" = "reuse_segmentation") =>
-  request<Job>(`/api/jobs/${encodeURIComponent(id)}/rerun`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cloud_data_confirmed: cloudDataConfirmed, rerun_mode: rerunMode }) });
+export const rerunJob = (id: string, cloudDataConfirmed = false, rerunMode: Schemas["RerunRequest"]["rerun_mode"] = "reuse_segmentation") =>
+  request<Job>(`/api/jobs/${encodeURIComponent(id)}/rerun`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cloud_data_confirmed: cloudDataConfirmed, rerun_mode: rerunMode } satisfies Schemas["RerunRequest"]) });
 export const deletePreview = (ids: string[]) =>
-  request<Schemas["DeletePreviewResponse"]>("/api/jobs/delete-preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_ids: ids }) });
+  request<Schemas["DeletePreviewResponse"]>("/api/jobs/delete-preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_ids: ids } satisfies Schemas["JobIdsRequest"]) });
 export const bulkDelete = (ids: string[]) =>
-  request<Schemas["DeleteResponse"]>("/api/jobs/bulk-delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_ids: ids }) });
+  request<Schemas["DeleteResponse"]>("/api/jobs/bulk-delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_ids: ids } satisfies Schemas["JobIdsRequest"]) });
 export const saveCorrections = (id: string, documentId: string, corrections: Schemas["CorrectionItem"][]) =>
-  request<Schemas["CorrectionResponse"]>(`/api/jobs/${encodeURIComponent(id)}/corrections`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ document_id: documentId, corrections }) });
+  request<Schemas["CorrectionResponse"]>(`/api/jobs/${encodeURIComponent(id)}/corrections`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ document_id: documentId, corrections } satisfies Schemas["CorrectionRequest"]) });
 export const crop = (id: string, documentId: string, pageIndex: number, field: string, rect: Schemas["CropRectangle"]) =>
-  request<Schemas["CropEvidence"]>(`/api/jobs/${encodeURIComponent(id)}/manual-crop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ document_id: documentId, page_index: pageIndex, field, rect }) });
+  request<Schemas["CropEvidence"]>(`/api/jobs/${encodeURIComponent(id)}/manual-crop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ document_id: documentId, page_index: pageIndex, field, rect } satisfies Schemas["ManualCropRequest"]) });
 export const checkEngine = (id: string) =>
   request<Schemas["EngineCheckResponse"]>(`/api/engines/${encodeURIComponent(id)}/check`, { method: "POST" });
 export const getSystemMetrics = () => request<Schemas["SystemMetricsResponse"]>("/api/system-metrics");
 export const getProviderProfiles = () => request<Schemas["ProviderProfilesResponse"]>("/api/provider-profiles");
-export const getDocuments = (filters: { query?: string; review_status?: string; triage?: string; sort?: string; page?: number } = {}) =>
+export const getDocuments = (filters: NonNullable<operations["get_documents_api_documents_get"]["parameters"]["query"]> = {}) =>
   request<Documents>(`/api/documents?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);
-export const getEvents = (filters: { job_id?: string; severity?: string; category?: string; code?: string; provider_profile_id?: string; document_id?: string; page_index?: number; page?: number } = {}) =>
+export const getEvents = (filters: NonNullable<operations["get_events_api_events_get"]["parameters"]["query"]> = {}) =>
   request<Events>(`/api/events?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);
 export const getReports = () => request<Reports>("/api/reports");
 export const getArtifacts = (id: string) => request<Artifacts>(`/api/jobs/${encodeURIComponent(id)}/artifacts`);

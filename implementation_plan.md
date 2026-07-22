@@ -158,7 +158,7 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
 
 ### BE-X1
 
-**Task và page planner — PASS LOCAL 2026-07-22.** Counterpart: [`FE-X1`](legacy_browser_recreated.md#fe-x1).
+**Task và page planner — PASS LOCAL CONTRACT 2026-07-22; LIVE REPRO PENDING.** Counterpart: [`FE-X1`](legacy_browser_recreated.md#fe-x1).
 
 - `vlm_task`, `vlm_pages`, `vlm_max_pages` được validate/persist và worker thực thi
   bằng một planner trung tâm.
@@ -174,6 +174,11 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
   `5C1C6F9D0E2448832BE88D2CFCF1EF61B4FC77DE1AF7449C37367619E00261BE`, chạy cả
   `metadata` và `full_ocr`, ghi selected pages/status/fields/report nhưng không
   ghi nội dung tài liệu vào log.
+
+`PASS LOCAL CONTRACT` chỉ xác nhận planner/worker/persistence bằng unit và eager
+fake-provider. Repro `63-btc.pdf` ở trên là evidence external, được theo dõi tại
+`incomlpeted.md#1-x7--field-evidence-trên-bốn-fixture-thật`; chưa có evidence này
+thì không được diễn giải `BE-X1` là provider/runtime production-like đã pass.
 
 Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/vlm_pages.py:24-151`,
 `vlm_runner.py:37-95`, `Qwen/run_api.py:1046-1064,1126-1160`. Chỉ port semantics;
@@ -194,6 +199,9 @@ không copy subprocess runner hoặc kiến trúc store cũ.
   `incomplete_field`, `invalid_field_value`; public job chỉ nhận stable safe code.
 - Persist từng page ít nhất `page_index`, `ocr_scope`, `status`, `error` và OCR
   text khi task yêu cầu. `failed_pages` phải tổng hợp từ page state.
+- Persist toàn bộ warning code allowlisted trong `page.warnings[]` và event
+  `warning_codes[]`; `page.error` chỉ giữ code đầu tiên cho compatibility, không
+  được làm mất các warning còn lại.
 - Một page fail không được xóa fields/page tốt. Approval chỉ bị chặn bởi blocker
   thật, không phải mọi warning.
 - Test content blocks, fenced JSON, alias, field lạ xen field tốt, thiếu evidence
@@ -212,6 +220,11 @@ Nguồn đối chiếu cũ: `OCR_paper/Qwen/run_api.py:244-370,839-872`,
 - Regenerate `frontend/openapi.json` và `frontend/lib/api-schema.ts`; chạy
   `pnpm api:check`. Không thêm handwritten DTO hoặc shared-types package.
 - Contract test phải chứng minh legacy extras vẫn đọc được và read không rewrite.
+- Read models tiếp tục migration-tolerant, nhưng mọi write DTO kể cả segment lồng
+  nhau dùng `extra="forbid"`. Error blocker, page warnings và Safe Events là schema
+  typed; `frontend/openapi.json`/`api-schema.ts` được sinh lại từ các model này.
+- Validation 422 trả duy nhất safe `invalid_request`, không echo input value hoặc
+  chi tiết Pydantic có thể chứa URL/key/header do client ngoài contract gửi lên.
 
 ### BE-X4
 
@@ -221,6 +234,9 @@ Nguồn đối chiếu cũ: `OCR_paper/Qwen/run_api.py:244-370,839-872`,
 - Giữ corrections/approval/crop, Documents index, artifact manifest, Safe Events,
   reports, Code Catalog và safe telemetry đã pass local.
 - Artifact thiếu/hỏng là trạng thái cục bộ, không làm sập document/job response.
+- Với combined dossier, page image được đọc từ thư mục `source_pdf_id`, còn crop/
+  corrected artifact thuộc logical document; manifest phải map lại đúng
+  document/page/field thay vì suy document ID từ tên thư mục vật lý.
 - Report chỉ dùng persisted timing/counts/coverage; thiếu sample phải nullable hoặc
   unavailable, không dựng benchmark hay quality.
 - Telemetry chỉ trả CPU/RAM, disk chứa `OCR_DATA_DIR`, runtime và GPU best-effort;
@@ -287,6 +303,9 @@ Nguồn đối chiếu cũ: `src/ocr_poc/extraction/`, `field_normalizers.py`,
   value và provenance `manual`; field lạ/non-scalar vẫn bị từ chối hoặc read-only.
 - Audit internal-pilot ghi original null, corrected value,
   `actor="anonymous"`/timestamp/version; conflict và legacy readability giữ nguyên.
+- Backend từ chối extra field ở create/segmentation/correction/crop/bulk/code
+  payload và từ chối sửa field legacy đang mang object/list, kể cả khi client bị
+  bypass; chỉ read model được phép giữ legacy extras.
 - Gate: fixture bỏ sót ít nhất một field vẫn hiển thị expected field, nhập/sửa,
   Lưu và duyệt, reload và đọc từ legacy/new được; OpenAPI/types được regenerate.
 
@@ -309,6 +328,9 @@ Nguồn đối chiếu cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
   `needs_review`/suggestion/validation warning và page warning; không coi
   `confidence=null` tự thân là risk hoặc đếm lại blocker. Document index/report
   tái sử dụng cùng aggregate, không tính lại bằng rule khác.
+- `segmentation_unconfirmed` đi qua cùng service policy với field/page blocker;
+  `validation_warning` luôn tạo risk mềm. Response 409 của `/corrections` công bố
+  `ErrorDetail.blockers[]` trong OpenAPI để client không phải đoán từ message.
 - Gate: missing required field/page blocker ngăn approve với lý do an toàn; warning
   mềm approve; approve không correction vẫn hoạt động khi blocker rỗng.
 
@@ -376,6 +398,10 @@ X16 kéo một phần tối thiểu vào P0.** Counterpart:
 - Append lifecycle/page-pass/correction/approval/crop/rerun relation vào job
   JSON hoặc JSONL trong chính job directory. Không tạo global log store/database;
   job bị xóa thì timeline của job được xóa cùng theo lifecycle hiện có.
+- Mọi chuyển trạng thái, kể cả `cancelling`, được persist thành
+  `job_status_changed`; correction, approval và manual crop có event riêng. Public
+  timeline là `SafeEvent[]`, không còn `Any[]` hoặc synthetic current-state thay
+  cho lịch sử đã persist.
 - Retry-specific timeline vẫn được hoãn theo `BE-X13` cho tới khi `BE-X7` persist
   metadata retry thật; không suy diễn retry từ failure hoặc số lần polling.
 - Safe Events filter phải hỗ trợ code; diagnostics chỉ gồm job ID, safe code,
@@ -395,6 +421,8 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_jobs.py:66-232`.
   document/page/field đầu tiên; backend là nguồn chuẩn.
 - Artifact manifest giữ metadata document/page/field/kind đủ để group/preview;
   decision crop/evidence image có download URL an toàn và trạng thái missing.
+- Gate combined-dossier phải chứng minh crop dùng đúng source page nhưng được lưu/
+  index dưới đúng logical document, kể cả khi `source_pdf_id != document.id`.
 - Không đưa retry timeline/layout crop/paper-like preview vào contract cho tới khi
   `BE-X7` persist dữ liệu thật và fixture chứng minh cần.
 - Gate: quick-filter count khớp index, deep-link target còn đúng sau reload và

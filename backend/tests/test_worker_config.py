@@ -51,15 +51,20 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     assert result["documents"][0]["pages"][0] == {
         "page_index": 0, "image_url": f"/api/jobs/{job['id']}/artifacts/document/page-1.png",
         "ocr_scope": "full_ocr+metadata", "status": "completed", "error": "",
-        "text": "OCR text", "ocr_line_count": 1,
+        "text": "OCR text", "ocr_line_count": 1, "warnings": [],
         "source_pdf_id": "document", "source_page_index": 0,
     }
     assert result["documents"][0]["fields"]["so_van_ban"]["evidence_url"].endswith("/artifacts/document/page-1.png")
     assert result["documents"][0]["fields"]["so_van_ban"]["source_text"] == "1"
     assert result["documents"][0]["approval_blockers"]
     assert (result["progress_stage"], result["completed_pages"], result["total_pages"]) == ("completed", 2, 2)
-    assert [event["code"] for event in result["events"]] == ["page_pass_completed", "page_pass_completed", "job_completed"]
-    assert all(event.get("duration_seconds", -1) >= 0 for event in result["events"][:2])
+    assert [event["code"] for event in result["events"]].count("page_pass_completed") == 2
+    assert "job_completed" in [event["code"] for event in result["events"]]
+    assert [event["status"] for event in result["events"] if event["code"] == "job_status_changed"] == [
+        "ready", "starting", "queued", "running", "completed",
+    ]
+    page_events = [event for event in result["events"] if event["code"] == "page_pass_completed"]
+    assert all(event.get("duration_seconds", -1) >= 0 for event in page_events)
     assert result["report_url"] is None
     assert JobStore(tmp_path).read(job["id"])["completed_pages"] == 2
     assert (store.path(job["id"]) / "artifacts" / "document" / "page-1.png").is_file()
@@ -90,6 +95,7 @@ def test_cancel_and_restart_never_call_provider(tmp_path, monkeypatch, pdf_bytes
     store.add_pdf(cancelled["id"], "cancelled.pdf", pdf_bytes)
     store.begin_start(cancelled["id"])
     store.cancel(cancelled["id"])
+    assert store.read(cancelled["id"])["status"] == "cancelling"
     interrupted = store.create({"file_count": 1, "provider": "qwen", "model": "test"})
     store.add_pdf(interrupted["id"], "interrupted.pdf", pdf_bytes)
     store.begin_start(interrupted["id"])
@@ -191,6 +197,24 @@ def test_page_planner_and_metadata_scope(tmp_path, monkeypatch, pdf_bytes):
     result = asyncio.run(tasks.process_job_async(job["id"]))
     assert calls == [("metadata", 0)]
     assert result["documents"][0]["pages"][0]["ocr_scope"] == "metadata"
+
+
+def test_worker_persists_all_safe_warning_codes(tmp_path, monkeypatch, pdf_bytes):
+    import app.workers.tasks as tasks
+
+    store = JobStore(tmp_path)
+    job = store.create({"file_count": 1, "provider": "qwen", "model": "test", "vlm_task": "metadata"})
+    store.add_pdf(job["id"], "document.pdf", pdf_bytes); store.begin_start(job["id"])
+
+    async def fake_request(_: bytes, **_options):
+        return {"fields": {}, "warnings": ["unknown_field", "invalid_field_value"]}
+
+    monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path)); monkeypatch.setattr(tasks, "request_page", fake_request)
+    result = asyncio.run(tasks.process_job_async(job["id"]))
+    page = result["documents"][0]["pages"][0]
+    assert page["warnings"] == ["unknown_field", "invalid_field_value"]
+    event = next(item for item in result["events"] if item["code"] == "page_pass_failed")
+    assert event["warning_codes"] == page["warnings"]
 
 
 def test_combined_dossier_segments_every_page_and_waits_for_confirmation(tmp_path, monkeypatch):

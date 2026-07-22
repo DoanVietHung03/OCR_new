@@ -149,6 +149,8 @@ async def segment_job(store: JobStore, job: dict) -> dict:
 async def process_job_async(job_id: str) -> dict:
     store = JobStore(os.getenv("OCR_DATA_DIR", "data/jobs"))
     job = store.read(job_id)
+    if job.get("status") == "cancelling" and cancelled(store, job_id):
+        return store.read(job_id)
     if job.get("status") not in {"starting", "extraction_starting"}:
         return job
     if job.get("processing_mode") == "combined_dossier" and job.get("status") == "starting":
@@ -206,6 +208,7 @@ async def process_job_async(job_id: str) -> dict:
                     "ocr_scope": "none",
                     "status": "pending",
                     "error": "",
+                    "warnings": [],
                 }
                 for index in range(len(pages))
                 ]
@@ -220,8 +223,10 @@ async def process_job_async(job_id: str) -> dict:
                 if cancelled(store, job_id):
                     return store.update(job_id, documents=documents)
                 state = document["pages"][index]
+                state.setdefault("warnings", [])
                 state["ocr_scope"] = pass_task if state["ocr_scope"] == "none" else f'{state["ocr_scope"]}+{pass_task}'
                 pass_error = ""
+                warning_codes: list[str] = []
                 pass_started = time.monotonic()
                 try:
                     result = await request_page(
@@ -246,12 +251,17 @@ async def process_job_async(job_id: str) -> dict:
                             current = document["fields"].get(name)
                             if current is None or (field.get("confidence") or -1) > (current.get("confidence") or -1):
                                 document["fields"][name] = field
-                    warning = next(iter(result.get("warnings", [])), "")
-                    pass_error = warning
-                    state["error"] = state["error"] or warning
+                    warning_codes = list(dict.fromkeys(
+                        warning for warning in result.get("warnings", [])
+                        if warning in {"unknown_field", "incomplete_field", "invalid_field_value"}
+                    ))
+                    state["warnings"] = list(dict.fromkeys([*state["warnings"], *warning_codes]))
+                    pass_error = next(iter(warning_codes), "")
+                    state["error"] = state["error"] or pass_error
                     state["status"] = "completed_with_warnings" if state["error"] else "completed"
                 except Exception as exc:
                     pass_error = safe_error(exc)
+                    warning_codes = [pass_error]
                     state["error"] = pass_error
                     state["status"] = "completed_with_warnings" if state.get("text") else "error"
                 completed += 1
@@ -264,6 +274,7 @@ async def process_job_async(job_id: str) -> dict:
                     page_index=index,
                     ocr_pass=pass_task,
                     duration_seconds=round(time.monotonic() - pass_started, 3),
+                    warning_codes=warning_codes,
                 )
                 store.update(job_id, completed_pages=completed, progress_detail=pass_task)
                 persist()

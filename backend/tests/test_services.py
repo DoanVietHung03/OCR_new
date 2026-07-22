@@ -52,7 +52,9 @@ def test_correction_approval_and_crop_survive_reload(tmp_path, pdf_bytes):
     assert (field["ocr_value"], field["value"]) == ("OLD", "NEW")
     assert restored["documents"][0]["review_status"] == "approved"
     assert restored["documents"][0]["crop_evidence"] == [evidence]
-    assert restored["events"][0]["code"] == "document_corrected"
+    assert {event["code"] for event in restored["events"]} >= {
+        "document_corrected", "document_approved", "manual_crop_created",
+    }
     export_url = restored["documents"][0]["corrected_artifact"]
     exported = json.loads((store.path(job["id"]) / "artifacts" / "document" / "corrected.json").read_text(encoding="utf-8"))
     assert export_url.endswith("/artifacts/document/corrected.json")
@@ -156,7 +158,10 @@ def test_dossier_approval_requires_confirmed_segmentation(tmp_path, pdf_bytes):
     }])
     with pytest.raises(ApprovalBlocked) as blocked:
         store.apply_review(job["id"], "document", [])
-    assert blocked.value.blockers == [{"code": "segmentation_unconfirmed"}]
+    assert blocked.value.blockers[0] == {"code": "segmentation_unconfirmed"}
+    assert {item.get("field") for item in blocked.value.blockers[1:]} == {
+        "co_quan_ban_hanh", "so_van_ban", "ngay_ban_hanh", "trich_yeu",
+    }
 
 
 def test_cover_prompt_and_parser_share_the_policy_allowlist():
@@ -173,3 +178,29 @@ def test_cover_prompt_and_parser_share_the_policy_allowlist():
     }})
     assert {issue["field"] for issue in cover["approval_blockers"] if issue["code"] == "invalid_required_value"} == {"ket_thuc"}
     assert {issue["field"] for issue in cover["review_risks"] if issue["code"] == "invalid_optional_value"} == {"so_tai_lieu"}
+
+
+def test_review_policy_includes_validation_warning_and_segmentation_blocker():
+    document = annotate({
+        "logical_document_type": "administrative_document",
+        "fields": {
+            "co_quan_ban_hanh": {"value": "A"}, "so_van_ban": {"value": "1"},
+            "ngay_ban_hanh": {"value": "2026-07-22"}, "trich_yeu": {"value": "T"},
+            "nguoi_ky": {"value": "B", "review_reason": "validation_warning", "needs_review": False},
+        },
+        "pages": [],
+    }, segmentation_confirmed=False)
+    assert {issue["code"] for issue in document["approval_blockers"]} == {"segmentation_unconfirmed"}
+    assert {issue["field"] for issue in document["review_risks"] if issue["code"] == "field_needs_review"} == {"nguoi_ky"}
+
+
+def test_non_scalar_legacy_field_is_read_only(tmp_path):
+    store = JobStore(tmp_path)
+    job = store.create({"file_count": 1})
+    store.update(job["id"], status="completed", documents=[{
+        "id": "document", "fields": {"so_van_ban": {"value": {"raw": "01"}}}, "pages": [],
+    }])
+    with pytest.raises(ValueError, match="invalid_field"):
+        store.apply_review(job["id"], "document", [{
+            "field": "so_van_ban", "old_value": {"raw": "01"}, "new_value": "01",
+        }])

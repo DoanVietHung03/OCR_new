@@ -25,6 +25,7 @@ from ..schemas.jobs import (
     DocumentsResponse,
     EngineCheckResponse,
     EnginesResponse,
+    ErrorResponse,
     EventsResponse,
     JobIdsRequest,
     JobResponse,
@@ -42,7 +43,7 @@ from ..services.ocr_runner import PROMPT_VERSION, configured, probe_provider
 from ..services.system_metrics import system_metrics as read_system_metrics
 from ..settings import settings
 
-router = APIRouter()
+router = APIRouter(responses={422: {"model": ErrorResponse}})
 store = JobStore(settings.ocr_data_dir)
 codes = CodeCatalog(settings.ocr_data_dir)
 
@@ -106,7 +107,11 @@ def safe_events(jobs: list[dict]) -> list[dict]:
                 "code": "job_created", "job_id": job_id, "message": "job_created",
             })
         current = str(job.get("status", ""))
-        if current and current != "uploading" and job.get("updated_at"):
+        has_status_history = any(
+            isinstance(item, dict) and item.get("code") == "job_status_changed"
+            for item in job.get("events", [])
+        )
+        if current and current != "uploading" and job.get("updated_at") and not has_status_history:
             severity = "error" if current in {"error", "interrupted"} else "warning" if current == "completed_with_warnings" else "info"
             raw_code = str(job.get("error", ""))
             code = raw_code if severity == "error" and re.fullmatch(r"[a-z][a-z0-9_]{1,63}", raw_code) else f"job_{current}"
@@ -135,6 +140,7 @@ def safe_events(jobs: list[dict]) -> list[dict]:
             "segmentation_proposed", "segmentation_confirmed", "extraction_dispatched",
             "job_dispatched", "job_completed", "job_rerun_created", "job_rerun_from",
             "page_pass_completed", "page_pass_failed", "document_corrected",
+            "document_approved", "manual_crop_created", "job_status_changed",
         }
         for item in job.get("events", []):
             if isinstance(item, dict) and item.get("code") in allowed_events:
@@ -147,11 +153,29 @@ def safe_events(jobs: list[dict]) -> list[dict]:
                     "document_id": item.get("document_id"), "page_index": item.get("page_index"),
                     "related_job_id": item.get("related_job_id"), "ocr_pass": item.get("ocr_pass"),
                     "duration_seconds": item.get("duration_seconds"),
+                    "status": item.get("status") if item.get("status") in {
+                        "uploading", "ready", "starting", "queued", "running", "cancelling",
+                        "segmenting", "awaiting_segmentation_review", "segmentation_confirmed",
+                        "extraction_starting", "completed", "completed_with_warnings", "error",
+                        "cancelled", "interrupted",
+                    } else None,
+                    "warning_codes": [
+                        code for code in item.get("warning_codes", [])
+                        if isinstance(code, str) and re.fullmatch(r"[a-z][a-z0-9_]{1,63}", code)
+                    ],
                 })
         profile_id = str(job.get("provider_profile_id") or job.get("provider") or job.get("ocr_method") or "") or None
         for event in events[first:]:
             event["provider_profile_id"] = profile_id
-    return sorted(events, key=lambda event: event["timestamp"], reverse=True)
+    unique = {
+        (
+            event["timestamp"], event["code"], event["job_id"], event.get("document_id"),
+            event.get("page_index"), event.get("status"), event.get("ocr_pass"),
+            event.get("source_pdf_id"), event.get("revision"),
+        ): event
+        for event in events
+    }
+    return sorted(unique.values(), key=lambda event: event["timestamp"], reverse=True)
 
 
 def paginated(items: list[dict], page: int, page_size: int) -> dict:
@@ -639,7 +663,8 @@ async def manual_crop(job_id: str, payload: ManualCropRequest):
     if job.get("status") not in TERMINAL:
         fail(409, "job_not_terminal")
     document = next((item for item in job.get("documents", []) if item.get("id") == payload.document_id), None)
-    if document is None or payload.page_index >= len(document.get("pages", [])):
+    page = next((item for item in document.get("pages", []) if item.get("page_index") == payload.page_index), None) if document else None
+    if document is None or page is None:
         fail(404, "not_found")
     if payload.field not in document.get("fields", {}):
         fail(400, "invalid_field")
@@ -647,11 +672,15 @@ async def manual_crop(job_id: str, payload: ManualCropRequest):
     try:
         import fitz
 
-        source = store.path(job_id) / "artifacts" / document["id"] / f"page-{payload.page_index + 1}.png"
+        source_owner = page.get("source_pdf_id") or document.get("source_pdf_id") or document["id"]
+        source_page = page.get("source_page_index") if page.get("source_page_index") is not None else payload.page_index
+        source = store.path(job_id) / "artifacts" / source_owner / f"page-{source_page + 1}.png"
         image = fitz.Pixmap(str(source))
         if rect["x"] + rect["width"] > image.width or rect["y"] + rect["height"] > image.height:
             fail(400, "invalid_crop_rectangle")
-        target = source.parent / f"crop-{payload.field}-{payload.page_index + 1}-{uuid.uuid4().hex[:8]}.png"
+        target_dir = store.path(job_id) / "artifacts" / document["id"]
+        target_dir.mkdir(exist_ok=True)
+        target = target_dir / f"crop-{payload.field}-{payload.page_index + 1}-{uuid.uuid4().hex[:8]}.png"
         fitz.Pixmap(
             image,
             image.width,
@@ -674,7 +703,7 @@ async def manual_crop(job_id: str, payload: ManualCropRequest):
     return store.add_crop_evidence(job_id, payload.document_id, evidence)
 
 
-@router.post("/jobs/{job_id}/corrections", response_model=CorrectionResponse)
+@router.post("/jobs/{job_id}/corrections", response_model=CorrectionResponse, responses={409: {"model": ErrorResponse}})
 async def corrections(job_id: str, payload: CorrectionRequest):
     job_or_404(job_id)
     try:
@@ -735,16 +764,19 @@ async def artifacts(job_id: str):
     root = store.path(job_id) / "artifacts"
     items = []
     seen = set()
-    evidence = {
-        (str(document.get("id", "")), Path(str(item.get("crop_image", ""))).name): item
-        for document in job.get("documents", [])
-        for item in document.get("crop_evidence", [])
-        if isinstance(item, dict) and item.get("crop_image")
-    }
-    export_documents = {
-        unquote(str(document["corrected_artifact"]).split("/artifacts/", 1)[1]): str(document.get("id", ""))
-        for document in job.get("documents", [])
-        if isinstance(document.get("corrected_artifact"), str) and "/artifacts/" in document["corrected_artifact"]
+    references = []
+    for document in job.get("documents", []):
+        document_id = str(document.get("id", ""))
+        references += [(page.get("image_url"), document_id, page.get("page_index"), None) for page in document.get("pages", [])]
+        references += [
+            (item.get("crop_image"), document_id, item.get("page_index"), item.get("field"))
+            for item in document.get("crop_evidence", []) if isinstance(item, dict)
+        ]
+        references.append((document.get("corrected_artifact"), document_id, None, None))
+    metadata = {
+        unquote(url.split("/artifacts/", 1)[1]): (document_id, page_index, field, url)
+        for url, document_id, page_index, field in references
+        if isinstance(url, str) and "/artifacts/" in url and ".." not in Path(unquote(url.split("/artifacts/", 1)[1])).parts
     }
     kinds = {".png": "image", ".jpg": "image", ".jpeg": "image", ".webp": "image", ".json": "json", ".txt": "text", ".md": "text"}
     for target in sorted(path for path in root.rglob("*") if path.is_file()):
@@ -756,32 +788,20 @@ async def artifacts(job_id: str):
         page = re.search(r"(?:page|crop)[-_](\d+)", target.stem, re.IGNORECASE)
         encoded = "/".join(quote(part, safe="") for part in relative.parts)
         seen.add(relative.as_posix())
-        crop = evidence.get((relative.parts[0] if len(relative.parts) > 1 else "", target.name), {})
+        document_id, page_index, field, _ = metadata.get(relative.as_posix(), (relative.parts[0] if len(relative.parts) > 1 else None, None, None, None))
         items.append({
             "name": target.name,
             "kind": kinds.get(target.suffix.lower(), "other"),
             "status": "available",
             "size_bytes": stat.st_size,
             "updated_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
-            "document_id": export_documents.get(relative.as_posix(), relative.parts[0] if len(relative.parts) > 1 else None),
-            "page_index": crop.get("page_index", int(page.group(1)) - 1 if page else None),
-            "field": crop.get("field"),
+            "document_id": document_id,
+            "page_index": page_index if page_index is not None else int(page.group(1)) - 1 if page else None,
+            "field": field,
             "download_url": f"/api/jobs/{job_id}/artifacts/{encoded}",
         })
-    references = []
-    for document in job.get("documents", []):
-        document_id = str(document.get("id", ""))
-        references += [(page.get("image_url"), document_id, page.get("page_index"), None) for page in document.get("pages", [])]
-        references += [
-            (item.get("crop_image"), document_id, item.get("page_index"), item.get("field"))
-            for item in document.get("crop_evidence", []) if isinstance(item, dict)
-        ]
-        references.append((document.get("corrected_artifact"), document_id, None, None))
-    for url, document_id, page_index, field in references:
-        if not isinstance(url, str) or "/artifacts/" not in url:
-            continue
-        relative = unquote(url.split("/artifacts/", 1)[1])
-        if relative in seen or ".." in Path(relative).parts:
+    for relative, (document_id, page_index, field, url) in metadata.items():
+        if relative in seen:
             continue
         items.append({
             "name": Path(relative).name, "kind": kinds.get(Path(relative).suffix.lower(), "other"),

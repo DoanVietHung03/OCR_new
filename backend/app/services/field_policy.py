@@ -44,14 +44,14 @@ def comparable_date(value: Any) -> tuple[str, int] | None:
         return None
 
 
-def annotate(document: dict[str, Any]) -> dict[str, Any]:
+def annotate(document: dict[str, Any], *, segmentation_confirmed: bool = True) -> dict[str, Any]:
     if not document.get("logical_document_type"):
         return document
     expected = list(fields_for(document["logical_document_type"]))
     required = list(required_for(document["logical_document_type"]))
     document.update(expected_fields=expected, required_fields=required)
     fields = document.get("fields", {})
-    blockers = []
+    blockers = [] if segmentation_confirmed else [{"code": "segmentation_unconfirmed"}]
     for name in required:
         value = fields.get(name, {}).get("value")
         if name not in fields or value is None or (isinstance(value, str) and not value.strip()):
@@ -74,7 +74,10 @@ def annotate(document: dict[str, Any]) -> dict[str, Any]:
     ]
     risks += [
         {"code": "field_needs_review", "field": name}
-        for name, field in fields.items() if field.get("needs_review")
+        for name, field in fields.items()
+        if field.get("needs_review") or field.get("review_reason") in {
+            "low_confidence", "missing_evidence", "validation_warning",
+        }
     ]
     risks += [
         {"code": "field_suggestion", "field": name}

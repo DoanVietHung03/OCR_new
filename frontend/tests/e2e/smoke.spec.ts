@@ -10,7 +10,7 @@ const now = "2026-07-21T10:00:00Z";
 const cleanCapture = async (page: Page) => page.locator("nextjs-portal").evaluateAll((nodes) => nodes.forEach((node) => node.remove())).catch(() => {});
 
 function fixtureJob(status = "completed", document: Record<string, unknown> = fixtureDocument()) {
-  return { id, status, created_at: now, updated_at: now, started_at: now, completed_at: now, ocr_method: "qwen", provider: "qwen", provider_profile_id: "qwen", model: "test-model", prompt_version: "3", endpoint_external: false, cloud_data_confirmed: false, expected_files: 1, uploaded_files: 1, upload_name: "smoke.pdf", documents: [document], logs: ["sanitized legacy log"], page_count: 1, failed_pages: 0, correction_count: 0, vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0, report_url: `/api/jobs/${id}/artifacts/report.json` };
+  return { id, status, created_at: now, updated_at: now, started_at: now, completed_at: now, ocr_method: "qwen", provider: "qwen", provider_profile_id: "qwen", model: "test-model", prompt_version: "3", endpoint_external: false, cloud_data_confirmed: false, expected_files: 1, uploaded_files: 1, upload_name: "smoke.pdf", documents: [document], logs: [{ timestamp: now, severity: "info", category: "lifecycle", code: "job_created", job_id: id, message: "sanitized legacy log", warning_codes: [] }], page_count: 1, failed_pages: 0, correction_count: 0, vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0, report_url: `/api/jobs/${id}/artifacts/report.json` };
 }
 function fixtureDocument() {
   return { id: "smoke", file_name: "smoke.pdf", status: "completed", review_status: null as string | null, fields: { so_van_ban: { value: "OLD", ocr_value: "OLD", confidence: .91, bbox: [0, 0, 10, 10], page_index: 0, evidence_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` } }, pages: [{ page_index: 0, image_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }], crop_evidence: [] as Record<string, unknown>[] };
@@ -126,6 +126,9 @@ test("desktop lifecycle modals and URL filters preserve backend semantics", asyn
   });
   await page.goto("/"); await expect(page.locator(".job-row").filter({ hasText: "smoke.pdf" })).toBeVisible(); await page.getByPlaceholder(/tìm kiếm|search/i).fill("smoke"); await expect(page).toHaveURL(/q=smoke/);
   await page.getByLabel(/sắp xếp|sort/i).selectOption("updated_desc"); await expect(page).toHaveURL(/sort=updated_desc/);
+  await page.getByLabel(/trạng thái|status/i).selectOption("running"); await expect(page).toHaveURL(/status=running/);
+  await page.goBack(); await expect(page.getByLabel(/trạng thái|status/i)).toHaveValue("all");
+  await page.goForward(); await expect(page.getByLabel(/trạng thái|status/i)).toHaveValue("running");
   await page.locator(".job-row").filter({ hasText: "smoke.pdf" }).getByRole("button", { name: /hủy|cancel/i }).click();
   await page.getByRole("button", { name: /xác nhận|confirm/i }).click(); await expect(page.locator(".job-row").filter({ hasText: "smoke.pdf" })).toContainText(/đang hủy|cancelling/i);
   status = "interrupted"; await page.getByRole("button", { name: /làm mới|refresh/i }).click();
@@ -264,6 +267,8 @@ test("metadata page plan distinguishes processed pages from PDF pages", async ({
   await expect(page.locator(".page-numbers button[data-page-index]")).toHaveCount(5);
   await expect(page.locator(".page-numbers .page-skipped")).toHaveCount(3);
   await page.getByLabel(/đi đến trang|jump to page/i).fill("5"); await expect(page).toHaveURL(/page=4/);
+  await page.getByLabel(/đi đến trang|jump to page/i).fill("1"); await expect(page).toHaveURL(/page=0/);
+  await page.goBack(); await expect(page.getByLabel(/đi đến trang|jump to page/i)).toHaveValue("5");
   await page.reload(); await expect(page.getByLabel(/đi đến trang|jump to page/i)).toHaveValue("5");
 });
 
@@ -323,6 +328,8 @@ test("Legacy+ routes deep-link and Code Catalog CRUD survives reload", async ({ 
   await page.goto("/"); const nav = page.locator("#primary-navigation");
   await nav.getByRole("link", { name: /tải pdf|upload pdf/i }).click(); await expect(page).toHaveURL(/\/upload$/);
   await nav.getByRole("link", { name: /quản lý|manage/i }).click(); await expect(page).toHaveURL(/\/documents$/); await expect(page.getByLabel(/lọc rà soát|review filter/i)).toContainText(/1/); await expect(page.getByRole("link", { name: /mở|open/i }).last()).toHaveAttribute("href", new RegExp(`document=smoke&view=review&page=0&field=so_van_ban`));
+  await page.getByLabel(/lọc rà soát|review filter/i).selectOption("blocker"); await expect(page).toHaveURL(/triage=blocker/);
+  await page.getByLabel(/lọc rà soát|review filter/i).selectOption("all"); await page.goBack(); await expect(page.getByLabel(/lọc rà soát|review filter/i)).toHaveValue("blocker"); await page.goForward();
   await nav.getByRole("link", { name: /nhật ký|logs/i }).click(); await expect(page).toHaveURL(/\/logs$/); await expect(page.locator(".data-table")).toContainText("job_created");
   await page.getByLabel("Provider").fill("qwen"); await page.getByLabel(/tài liệu|document/i).fill("smoke"); await page.getByLabel(/số trang|pages/i).fill("0"); await expect.poll(() => eventsQuery).toContain("provider_profile_id=qwen"); expect(eventsQuery).toContain("document_id=smoke"); expect(eventsQuery).toContain("page_index=0");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]); await page.getByRole("button", { name: /sao chép|copy/i }).click(); expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("job_created"); const safeDownload = page.waitForEvent("download"); await page.getByRole("button", { name: /tải xuống|download/i }).click(); expect((await safeDownload).suggestedFilename()).toBe("safe-events.json");
@@ -413,7 +420,7 @@ test("missing canonical fields keep drafts until atomic approval succeeds", asyn
     if (apiPath === `/api/jobs/${id}` && request.method() === "GET") return route.fulfill({ json: fixtureJob("completed", document) });
     if (apiPath.endsWith("/corrections")) {
       body = request.postDataJSON(); calls += 1;
-      if (calls === 1) return route.fulfill({ status: 409, json: { detail: { code: "approval_blocked", message: "approval_blocked", blockers: document.approval_blockers } } });
+      if (calls === 1) return route.fulfill({ status: 409, json: { detail: { code: "approval_blocked", message: "approval_blocked", blockers: [{ code: "missing_required_field", field: "trich_yeu" }] } } });
       document.fields.ngay_ban_hanh = { value: "2026-07-22", method: "manual" }; document.fields.nguoi_ky = { value: "B", method: "manual" }; document.approval_blockers = []; document.review_status = "approved";
       return route.fulfill({ json: { saved_count: 2, job: fixtureJob("completed", document), document_status: { approved: true } } });
     }
@@ -423,6 +430,7 @@ test("missing canonical fields keep drafts until atomic approval succeeds", asyn
   await expect(page.locator(".field-card").filter({ hasText: "Loại tài liệu" }).locator("input, textarea")).toHaveCount(0);
   await page.getByLabel(/người ký|signatory/i).fill("B"); await page.getByRole("button", { name: /lưu và duyệt|save and approve/i }).click();
   await expect(page.getByLabel(/người ký|signatory/i)).toHaveValue("B");
+  await expect(page.locator(".editor-panel .notice.error")).toContainText(/trích yếu|summary/i);
   await page.getByLabel(/ngày ban hành|issue date/i).fill("2026-07-22"); await page.keyboard.press("Control+s");
   expect(body.corrections).toEqual(expect.arrayContaining([{ field: "ngay_ban_hanh", old_value: null, new_value: "2026-07-22" }, { field: "nguoi_ky", old_value: null, new_value: "B" }]));
 });

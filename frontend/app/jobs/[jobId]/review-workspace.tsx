@@ -35,10 +35,12 @@ export default function ReviewWorkspace({ jobId, document, terminal, initialPage
   const pages = document.pages || [];
   const [selectedPage, setSelectedPage] = useState(initialPage ?? pages[0]?.page_index ?? 0); const [selectedField, setSelectedField] = useState(initialField || "");
   const [zoom, setZoom] = useState<"fit" | "actual">("fit"); const [imageFailed, setImageFailed] = useState(false); const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [serverBlockers, setServerBlockers] = useState<NonNullable<Document["approval_blockers"]>>([]);
   const [conflict, setConflict] = useState(false); const [cropOpen, setCropOpen] = useState(false); const [rect, setRect] = useState<Rect | null>(null);
   const [evidenceUrl, setEvidenceUrl] = useState(""); const [evidenceZoom, setEvidenceZoom] = useState<"fit" | "actual">("fit");
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null); const [saving, setSaving] = useState(false);
   const cropDialog = useRef<HTMLDialogElement>(null); const evidenceDialog = useRef<HTMLDialogElement>(null); const cropImage = useRef<HTMLImageElement>(null);
+  const urlReady = useRef(false);
   const page = pages.find((item) => item.page_index === selectedPage); const fields = Object.entries(document.fields || {}); const expected = document.expected_fields || [];
   const orderedFields = expected.length ? [
     ...expected.map((name) => [name, document.fields?.[name] || { value: null, page_index: pages[0]?.page_index || 0 }] as [string, Field]),
@@ -52,7 +54,16 @@ export default function ReviewWorkspace({ jobId, document, terminal, initialPage
   }, {});
 
   useEffect(() => onDirty(Boolean(Object.keys(drafts).length)), [drafts, onDirty]);
-  useEffect(() => { const query = new URLSearchParams(location.search); query.set("page", String(selectedPage)); if (selectedField) query.set("field", selectedField); else query.delete("field"); history.replaceState(null, "", `${location.pathname}?${query}`); }, [selectedPage, selectedField]);
+  useEffect(() => {
+    setSelectedPage(initialPage != null && pages.some((item) => item.page_index === initialPage) ? initialPage : pages[0]?.page_index ?? 0);
+    setSelectedField(initialField || "");
+  }, [initialPage, initialField, document.id]);
+  useEffect(() => {
+    const query = new URLSearchParams(location.search); query.set("page", String(selectedPage)); if (selectedField) query.set("field", selectedField); else query.delete("field");
+    const next = `${location.pathname}?${query}`;
+    if (`${location.pathname}${location.search}` !== next) history[urlReady.current ? "pushState" : "replaceState"](null, "", next);
+    urlReady.current = true;
+  }, [selectedPage, selectedField]);
   useEffect(() => { const shortcut = (event: KeyboardEvent) => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && terminal && !saving) { event.preventDefault(); void save(); } }; window.addEventListener("keydown", shortcut); return () => window.removeEventListener("keydown", shortcut); }, [drafts, saving, terminal]);
   useEffect(() => { setImageFailed(false); }, [selectedPage]);
   useEffect(() => { if (cropOpen) cropDialog.current?.showModal(); else cropDialog.current?.close(); }, [cropOpen]);
@@ -71,15 +82,19 @@ export default function ReviewWorkspace({ jobId, document, terminal, initialPage
       return next;
     });
     setConflict(false);
+    setServerBlockers([]);
   }
   async function save() {
     setSaving(true); onError("");
     try {
       const corrections = Object.entries(drafts).map(([field, draft]) => ({ field, old_value: draft.old, new_value: draft.value }));
-      const result = await saveCorrections(jobId, document.id, corrections); setDrafts({}); setConflict(false); onJob(result.job);
+      const result = await saveCorrections(jobId, document.id, corrections); setDrafts({}); setConflict(false); setServerBlockers([]); onJob(result.job);
     } catch (reason) {
       if (reason instanceof ApiError && reason.code === "correction_conflict") {
         setConflict(true); try { onJob(await getJob(jobId)); } catch { /* retain the draft */ }
+      } else if (reason instanceof ApiError && reason.code === "approval_blocked") {
+        setServerBlockers(reason.detail?.blockers || []);
+        onError(safeError(reason.code));
       } else onError(safeError(reason instanceof ApiError ? reason.code || reason.message : reason instanceof Error ? reason.message : String(reason)));
     } finally { setSaving(false); }
   }
@@ -111,8 +126,12 @@ export default function ReviewWorkspace({ jobId, document, terminal, initialPage
     catch (reason) { onError(safeError(reason instanceof ApiError ? reason.code || reason.message : reason instanceof Error ? reason.message : String(reason))); } finally { setSaving(false); }
   }
   const evidence = [...(document.crop_evidence || [])].filter((item) => !selectedField || item.field === selectedField).reverse();
+  const blockers = serverBlockers.length ? serverBlockers : document.approval_blockers || [];
   const failedPages = pages.filter((item) => item.error || ["error", "completed_with_warnings"].includes(item.status || ""));
-  const warnings = Array.from(new Set([document.error, ...(document.errors || []), ...failedPages.map((item) => item.error)].filter(Boolean) as string[]));
+  const warnings = Array.from(new Set([
+    document.error, ...(document.errors || []),
+    ...failedPages.flatMap((item) => [item.error, ...(item.warnings || [])]),
+  ].filter(Boolean) as string[]));
   const usable = expected.length > 0 || fields.length > 0 || pages.some((item) => item.text || ["completed", "completed_with_warnings"].includes(item.status || ""));
 
   if (!usable) return <section className="panel document-error"><h2>{document.file_name}</h2><p className="error">{warnings.map(safeError).join(", ") || text("noFields")}</p><p>{text("rerunRequired")}</p></section>;
@@ -128,7 +147,7 @@ export default function ReviewWorkspace({ jobId, document, terminal, initialPage
       <div className="panel editor-panel">
         <div className="workspace-head"><div><p className="eyebrow">{text("fields")}</p><h2>{fieldLabel(selectedField) || text("selectField")}</h2></div>{document.review_status === "approved" && <span className="status completed">{text("approved")}</span>}</div>
         {conflict && <div className="conflict" role="alert"><b>{text("conflict")}</b><div className="conflict-values">{Object.entries(drafts).map(([name, draft]) => <div key={name}><strong>{fieldLabel(name)}</strong><span>{text("serverValue")}: {display(document.fields?.[name]?.value) || text("emptyValue")}</span><span>{text("draftValue")}: {draft.value || text("emptyValue")}</span></div>)}</div><button className="button secondary" onClick={keepDraft}>{text("keepDraft")}</button><button className="button secondary" onClick={() => { setDrafts({}); setConflict(false); }}>{text("useServer")}</button></div>}
-        {!!document.approval_blockers?.length && <div className="notice error">{document.approval_blockers.map((issue) => <small key={`${issue.code}-${issue.field || issue.page_index}`}>{safeError(issue.code)}{issue.field ? ` · ${fieldLabel(issue.field)}` : issue.page_index != null ? ` · ${issue.page_index + 1}` : ""}</small>)}</div>}
+        {!!blockers.length && <div className="notice error">{blockers.map((issue) => <small key={`${issue.code}-${issue.field || issue.page_index}`}>{safeError(issue.code)}{issue.field ? ` · ${fieldLabel(issue.field)}` : issue.page_index != null ? ` · ${issue.page_index + 1}` : ""}</small>)}</div>}
         {!!document.review_risks?.length && <div className="notice warning">{document.review_risks.map((issue) => <small key={`${issue.code}-${issue.field || issue.page_index}`}>{safeError(issue.code)}{issue.field ? ` · ${fieldLabel(issue.field)}` : issue.page_index != null ? ` · ${issue.page_index + 1}` : ""}</small>)}</div>}
         <div className="field-groups">{!orderedFields.length && <p className="empty">{text("noFields")}</p>}{Object.entries(groups).map(([group, items]) => <section key={group}><h3>{groupLabel(group)}</h3>{items.map(([name, data]) => {
           const editable = terminal && (expected.length ? expected.includes(name) : legacyCanonical.has(name)) && scalar(data.value); const value = drafts[name]?.value ?? display(data.value); const score = data.confidence; const confidence = typeof score === "number" && score >= 0 && score <= 1 ? text("confidence", { value: Math.round(score * 100) }) : text("noConfidence");
