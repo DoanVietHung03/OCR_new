@@ -4,11 +4,11 @@ Hệ thống OCR tài liệu hành chính tiếng Việt, chỉ nhận PDF. Stac
 dụng Next.js, FastAPI, Celery, Redis và một endpoint OCR tương thích OpenAI do
 máy chủ cấu hình.
 
-Milestone A, B, browser baseline v1 và **Legacy+ v2** đã hoàn thiện local ngày
+Milestone A, B, browser baseline v1 và **Legacy+ v2** đã có closure local ngày
 2026-07-21. Legacy+ phục hồi browser tham chiếu trong `OCR_paper`, chỉ loại trừ
-ZIP/ảnh/folder upload, và đạt 18/18 checkpoint local. Checkpoint 19/Milestone C
-vẫn phải được nghiệm thu trên máy chủ mạnh. Cho đến khi Gate C đạt,
-`src/ocr/` và `web/` vẫn là runtime rollback.
+ZIP/ảnh/folder upload. Repair Gate đã pass local ngày 2026-07-22; Milestone C vẫn
+phải được nghiệm thu trên máy chủ mạnh. Cho đến khi Gate C đạt, `src/ocr/` và
+`web/` vẫn là runtime rollback.
 
 Giao diện Next.js Legacy+ có route Jobs, Upload, Manage/Documents, Logs, Reports,
 Codes và job workspace. Dữ liệu giàu gồm Provider Profile, OCR text/quality/
@@ -18,10 +18,10 @@ API/dữ liệu bền vững hoặc hiển thị unavailable trung thực.
 Closure audit còn kiểm chứng sort, job timing, document warnings, scoped Logs,
 report throughput/coverage và CPU load đều đi qua generated typed contract.
 
-Closure đạt 27 backend tests, 10 legacy compatibility tests, 11 browser tests
-mặc định và 12/12 capture mode; typecheck/build/OpenAPI/compile/diff pass. Bảng
-Legacy+ hiện là 18/19. Đây là contract/UI evidence local, không phải bằng chứng
-chất lượng OCR hoặc production readiness.
+Repair Gate ngày 2026-07-22 đạt 28 backend tests, 10 legacy compatibility tests,
+focused browser coverage cho task/page retry và partial-result UI, typecheck,
+build, OpenAPI/types và diff checks. Repro live `63-btc.pdf` vẫn thuộc evidence
+Milestone C, không được thay bằng kết quả local.
 
 ## Cấu trúc repository
 
@@ -30,12 +30,11 @@ chất lượng OCR hoặc production readiness.
 - `nginx/`: định tuyến production trên cùng một domain.
 - `data/jobs/`: JSON, PDF và artifact bền vững của job; không lưu trong Redis.
 - `src/ocr/`, `web/`, `tests/`: runtime rollback legacy và các bài kiểm tra.
-- `legacy_browser_recreated.md`: đặc tả Legacy+ v2, 18 checkpoint local đã đóng,
-  checkpoint Milestone C và lịch sử baseline v1.
-- `CONTEXT.md`: glossary ngắn cho Legacy+, Provider Profile, Codes và evidence.
-- `docs/ui-parity/`: ảnh ẩn danh tại 1440×900, 1366×768 và 390×844 cùng mapping.
-- `docs/phase4_cutover_runbook.md`: quy trình thực hiện trên máy chủ mạnh.
-- `docs/phase4_acceptance.md`: bằng chứng bắt buộc cho Milestone C.
+- `implementation_plan.md`: nguồn chuẩn backend, Repair Gate, cutover và ledger
+  bằng chứng Milestone C.
+- `legacy_browser_recreated.md`: nguồn chuẩn frontend, workflow, regression gate
+  và mapping ảnh parity.
+- `docs/ui-parity/`: ảnh ẩn danh tại 1440×900, 1366×768 và 390×844.
 
 ## Các ràng buộc đã khóa
 
@@ -171,8 +170,7 @@ ngày kết thúc.
 trước khi gửi ảnh trang đến endpoint bên ngoài. `BACKEND_PORT` cố ý không được
 hỗ trợ — backend luôn lắng nghe tại `50177`.
 
-Xem [legacy_browser_recreated.md](legacy_browser_recreated.md) để xem evidence
-18/19 checkpoint Legacy+ v2, [implementation_plan.md](implementation_plan.md)
-để biết Gate Milestone C còn lại và
-[docs/phase4_cutover_runbook.md](docs/phase4_cutover_runbook.md) để thực hiện
-cutover và rollback.
+Xem [implementation_plan.md](implementation_plan.md) cho backend, Repair Gate,
+cutover và evidence Milestone C; xem
+[legacy_browser_recreated.md](legacy_browser_recreated.md) cho frontend và các
+counterpart `FE-X1`–`FE-X6`.

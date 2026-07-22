@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from app.services.jobs import JobStore
-from app.services.ocr_runner import validate_result
+from app.services.ocr_runner import message_text, parse_json_object, validate_result
 
 
 def completed_job(store: JobStore, pdf_bytes: bytes) -> dict:
@@ -81,15 +81,23 @@ def test_legacy_and_new_store_preserve_unknown_fields(tmp_path, pdf_bytes):
     new_store.update(job["id"], future_field={"kept": True})
     legacy_jobs.JobStore(tmp_path).update(job["id"], legacy_field="also-kept")
 
+    before = (new_store.path(job["id"]) / "job.json").read_bytes()
     restored = new_store.read(job["id"])
+    assert (new_store.path(job["id"]) / "job.json").read_bytes() == before
     assert restored["future_field"] == {"kept": True}
     assert restored["legacy_field"] == "also-kept"
 
 
-def test_runner_normalizes_alias_and_rejects_unknown_field():
+def test_runner_accepts_partial_metadata_and_markdown_json():
     result = validate_result({"fields": {"so_hieu": {
         "value": "1", "confidence": 0.9, "bbox": [0, 0, 1, 1], "page_index": 0,
-    }}})
+    }, "trich_yeu": "Tóm tắt", "unknown": {"value": "ignored"}}}, page_index=2)
     assert "so_van_ban" in result["fields"]
+    assert result["fields"]["trich_yeu"] == {
+        "value": "Tóm tắt", "confidence": None, "bbox": [], "page_index": 2, "needs_review": True,
+    }
+    assert result["warnings"] == ["unknown_field"]
+    assert parse_json_object('```json\n{"fields": {}}\n```') == {"fields": {}}
+    assert message_text({"choices": [{"message": {"content": [{"type": "text", "text": "A"}, {"type": "text", "text": "B"}]}}]}) == "A\nB"
     with pytest.raises(ValueError, match="invalid_model_json"):
-        validate_result({"fields": {"unknown": {}}})
+        validate_result({"not_fields": {}})

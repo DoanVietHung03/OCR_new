@@ -28,13 +28,15 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     job = store.create({"file_count": 1, "provider": "qwen", "model": "snapshot-model"})
     store.add_pdf(job["id"], "document.pdf", pdf_bytes)
     store.begin_start(job["id"])
-    models = []
+    calls = []
 
     async def fake_request(_: bytes, **options):
-        models.append(options["model"])
+        calls.append((options["model"], options["task"], options["page_index"]))
+        if options["task"] == "full_ocr":
+            return {"text": "OCR text", "fields": {}, "warnings": []}
         return {"fields": {"so_van_ban": {
             "value": "1", "confidence": 0.9, "bbox": [0, 0, 1, 1], "page_index": 0,
-        }}}
+        }}, "warnings": []}
 
     monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(tasks, "request_page", fake_request)
@@ -44,7 +46,12 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     assert result["page_count"] == 1
     assert result["started_at"]
     assert result["completed_at"]
-    assert models == ["snapshot-model"]
+    assert calls == [("snapshot-model", "full_ocr", 0), ("snapshot-model", "metadata", 0)]
+    assert result["documents"][0]["pages"][0] == {
+        "page_index": 0, "image_url": f"/api/jobs/{job['id']}/artifacts/document/page-1.png",
+        "ocr_scope": "full_ocr+metadata", "status": "completed", "error": "",
+        "text": "OCR text", "ocr_line_count": 1,
+    }
     assert (store.path(job["id"]) / "artifacts" / "document" / "page-1.png").is_file()
 
 
@@ -89,7 +96,7 @@ def test_provider_retries_429_once_but_not_read_timeout(monkeypatch):
         "AsyncClient",
         lambda **options: real_client(transport=httpx.MockTransport(handler), **options),
     )
-    assert asyncio.run(runner.request_page(b"image", base_url="http://provider", api_key="x", model="m")) == {"fields": {}}
+    assert asyncio.run(runner.request_page(b"image", base_url="http://provider", api_key="x", model="m")) == {"fields": {}, "warnings": []}
     assert attempts == 2
 
     def timeout(_: httpx.Request) -> httpx.Response:
@@ -109,3 +116,29 @@ def test_provider_retries_429_once_but_not_read_timeout(monkeypatch):
 
     import app.workers.tasks as tasks
     assert tasks.safe_error(RuntimeError("raw provider secret")) == "ocr_failed"
+
+
+def test_page_planner_and_metadata_scope(tmp_path, monkeypatch, pdf_bytes):
+    import app.workers.tasks as tasks
+
+    assert tasks.plan_pages(1, "auto") == [0]
+    assert tasks.plan_pages(2, "first,last") == [0, 1]
+    assert tasks.plan_pages(5, "auto") == [0, 3, 4]
+    assert tasks.plan_pages(5, "auto", 2) == [0, 3]
+    assert tasks.plan_pages(3, "all", 2) == [0, 1]
+
+    store = JobStore(tmp_path)
+    job = store.create({"file_count": 1, "provider": "qwen", "model": "test", "vlm_task": "metadata", "vlm_pages": "first,last", "vlm_max_pages": 1})
+    store.add_pdf(job["id"], "document.pdf", pdf_bytes)
+    store.begin_start(job["id"])
+    calls = []
+
+    async def fake_request(_: bytes, **options):
+        calls.append((options["task"], options["page_index"]))
+        return {"fields": {}, "warnings": []}
+
+    monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(tasks, "request_page", fake_request)
+    result = asyncio.run(tasks.process_job_async(job["id"]))
+    assert calls == [("metadata", 0)]
+    assert result["documents"][0]["pages"][0]["ocr_scope"] == "metadata"

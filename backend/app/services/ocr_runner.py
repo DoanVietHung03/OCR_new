@@ -33,23 +33,59 @@ PROMPT = (
     f"Extract every visible field from this administrative-document schema: {', '.join(ADMIN_FIELDS)}. "
     "Do not invent fields. Use {\"fields\": {}} when nothing is found."
 )
+OCR_PROMPT = (
+    'Return one JSON object only: {"text": "..."}. Transcribe all visible text '
+    "in reading order without summarizing or inventing content."
+)
 RETRYABLE_STATUSES = {429, 502, 503, 504}
 
 
-def validate_result(payload: object) -> dict:
+def parse_json_object(content: str) -> object:
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(content):
+        if char == "{":
+            try:
+                return decoder.raw_decode(content[index:])[0]
+            except json.JSONDecodeError:
+                continue
+    raise ValueError("invalid_model_json:malformed_json")
+
+
+def validate_result(payload: object, *, page_index: int = 0, task: str = "metadata") -> dict:
+    if task == "full_ocr":
+        if not isinstance(payload, dict) or not isinstance(payload.get("text"), str):
+            raise ValueError("invalid_model_json")
+        return {"text": payload["text"], "fields": {}, "warnings": []}
     if not isinstance(payload, dict) or not isinstance(payload.get("fields"), dict):
         raise ValueError("invalid_model_json")
-    fields = {}
+    fields, warnings = {}, []
     for raw_name, item in payload["fields"].items():
         normalized = str(raw_name).strip().casefold().replace("-", "_").replace(" ", "_")
         name = FIELD_ALIASES.get(normalized, raw_name)
-        if name not in FIELDS or not isinstance(item, dict):
-            raise ValueError("invalid_model_json")
-        if not {"value", "confidence", "bbox", "page_index"}.issubset(item):
-            raise ValueError("invalid_model_json")
-        if name not in fields or float(item["confidence"]) > float(fields[name]["confidence"]):
-            fields[name] = item
-    return {"fields": fields}
+        if name not in FIELDS:
+            warnings.append("unknown_field")
+            continue
+        if isinstance(item, dict) and "value" not in item:
+            warnings.append("incomplete_field")
+            continue
+        value = item.get("value") if isinstance(item, dict) else item
+        if isinstance(value, (dict, list)):
+            warnings.append("invalid_field_value")
+            continue
+        if isinstance(item, dict):
+            raw_confidence = item.get("confidence")
+            confidence = float(raw_confidence) if isinstance(raw_confidence, (int, float)) and not isinstance(raw_confidence, bool) and 0 <= raw_confidence <= 1 else None
+            raw_bbox = item.get("bbox")
+            bbox = [float(value) for value in raw_bbox] if isinstance(raw_bbox, list) and len(raw_bbox) == 4 and all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in raw_bbox) else []
+            if ("confidence" in item and confidence is None) or ("bbox" in item and not bbox):
+                warnings.append("invalid_field_value")
+        else:
+            confidence, bbox = None, []
+        field = {"value": value, "confidence": confidence, "bbox": bbox, "page_index": page_index,
+                 "needs_review": confidence is None or not bbox}
+        if name not in fields or (confidence or -1) > (fields[name]["confidence"] or -1):
+            fields[name] = field
+    return {"fields": fields, "warnings": list(dict.fromkeys(warnings))}
 
 
 def message_text(response: object) -> str:
@@ -71,7 +107,7 @@ def message_text(response: object) -> str:
     return ""
 
 
-def request_body(image: bytes, model: str) -> dict:
+def request_body(image: bytes, model: str, task: str = "metadata") -> dict:
     encoded = base64.b64encode(image).decode()
     return {
         "model": model,
@@ -79,7 +115,7 @@ def request_body(image: bytes, model: str) -> dict:
         "thinking": {"type": "disabled"},
         "response_format": {"type": "json_object"},
         "messages": [{"role": "user", "content": [
-            {"type": "text", "text": PROMPT},
+            {"type": "text", "text": OCR_PROMPT if task == "full_ocr" else PROMPT},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},
         ]}],
     }
@@ -93,14 +129,15 @@ def retry_delay(response: httpx.Response) -> float:
 
 
 async def request_page(
-    image: bytes, *, base_url: str, api_key: str, model: str, timeout: float = 120
+    image: bytes, *, base_url: str, api_key: str, model: str, timeout: float = 120,
+    page_index: int = 0, task: str = "metadata",
 ) -> dict:
     async with httpx.AsyncClient(timeout=timeout) as client:
         for attempt in range(2):
             try:
                 response = await client.post(
                     base_url.rstrip("/") + "/chat/completions",
-                    json=request_body(image, model),
+                    json=request_body(image, model, task),
                     headers={"Authorization": f"Bearer {api_key}"},
                 )
             except httpx.ReadTimeout as exc:
@@ -123,10 +160,10 @@ async def request_page(
             try:
                 content = message_text(response.json())
                 if not content:
-                    raise ValueError("invalid_model_json")
-                return validate_result(json.loads(content))
-            except (json.JSONDecodeError, ValueError) as exc:
-                raise ValueError("invalid_model_json") from exc
+                    raise ValueError("invalid_model_json:missing_content")
+                return validate_result(parse_json_object(content), page_index=page_index, task=task)
+            except ValueError as exc:
+                raise ValueError(str(exc) if str(exc).startswith("invalid_model_json") else "invalid_model_json") from exc
     raise RuntimeError("provider_unavailable")
 
 

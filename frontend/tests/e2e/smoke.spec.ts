@@ -142,10 +142,12 @@ test("mobile English keeps PDF-only errors, instant language and closable monito
   await page.goto("/upload"); await expect(page.locator("html")).toHaveAttribute("lang", "en"); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Upload PDF");
   await page.getByRole("button", { name: "VI", exact: true }).click(); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Tải PDF"); await page.getByRole("button", { name: "EN", exact: true }).click();
   await expect(page.locator('input[type="file"]')).toHaveAttribute("accept", "application/pdf,.pdf"); expect((await page.request.get("/icon.svg")).ok()).toBeTruthy();
+  await page.getByLabel("VLM task").selectOption("metadata"); await page.getByLabel("Page scope").selectOption("first,last"); await page.getByLabel("Maximum pages").fill("2");
   await page.locator('input[type="file"]').setInputFiles({ name: "bad.pdf", mimeType: "application/pdf", buffer: pdf }); await page.getByRole("button", { name: "Start OCR" }).click();
   await expect(page.locator(".notice.error")).toContainText("Unsupported file"); uploadFails = false;
   await page.getByRole("button", { name: "Start OCR" }).click();
   await expect(page.locator(".notice.error")).toContainText("Worker unavailable");
+  await expect(page.locator('input[type="file"]')).toHaveValue(/bad\.pdf$/); await expect(page.getByLabel("VLM task")).toHaveValue("metadata"); await expect(page.getByLabel("Page scope")).toHaveValue("first,last"); await expect(page.getByLabel("Maximum pages")).toHaveValue("2");
   await page.getByRole("button", { name: /system monitor/i }).click(); await expect(page.locator(".monitor-modal")).toBeVisible(); await page.locator(".monitor-modal").getByRole("button", { name: "Close" }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/mobile-upload-390x844.png") }); }
@@ -187,7 +189,7 @@ test("upload sends selected PDFs sequentially with a compact name", async ({ pag
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
   await page.goto("/upload"); await page.locator('input[type="file"]').setInputFiles([{ name: "first.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "second.pdf", mimeType: "application/pdf", buffer: pdf }]); await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`)); expect(uploaded).toEqual(["first.pdf", "second.pdf"]); expect(createBody.upload_name).toBe("first.pdf +1");
+  await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`)); expect(uploaded).toEqual(["first.pdf", "second.pdf"]); expect(createBody).toMatchObject({ upload_name: "first.pdf +1", vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0 });
 });
 
 test("default document, dirty navigation and browser back keep drafts", async ({ page }) => {
@@ -209,6 +211,26 @@ test("default document, dirty navigation and browser back keep drafts", async ({
   const input = page.locator(".field-card input").first(); await input.fill("DRAFT"); await page.locator("a.brand").click(); await expect(page.locator("dialog[open]")).toContainText("Thay đổi chưa lưu"); await page.locator("dialog[open] .modal-actions").getByRole("button", { name: "Đóng" }).click(); await expect(input).toHaveValue("DRAFT");
   await page.evaluate(() => history.back()); await expect(page.locator("dialog[open]")).toContainText("Bỏ các thay đổi"); await page.locator("dialog[open] .modal-actions").getByRole("button", { name: "Đóng" }).click(); await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`)); await expect(input).toHaveValue("DRAFT");
   await page.getByRole("button", { name: /approved\.pdf/i }).click(); await page.locator("dialog[open]").getByRole("button", { name: "Xác nhận" }).click(); await expect(page.locator(".document-tabs button.active")).toContainText("approved.pdf");
+});
+
+test("partial page warning keeps usable review fields visible", async ({ page }) => {
+  const document = { ...fixtureDocument(), errors: ["provider_timeout"], pages: [
+    { page_index: 0, image_url: `/api/jobs/${id}/artifacts/smoke/page-1.png`, status: "completed", ocr_scope: "metadata", error: "" },
+    { page_index: 1, image_url: `/api/jobs/${id}/artifacts/smoke/page-2.png`, status: "error", ocr_scope: "metadata", error: "provider_timeout" },
+  ] } as any;
+  const job = { ...fixtureJob("completed_with_warnings"), documents: [document], failed_pages: 1 } as any;
+  await page.route("**/api/**", async (route) => {
+    const apiPath = new URL(route.request().url()).pathname;
+    if (apiPath === `/api/jobs/${id}`) return route.fulfill({ json: job });
+    if (apiPath.endsWith(".png")) return route.fulfill({ contentType: "image/svg+xml", body: svg });
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.goto(`/jobs/${id}?view=review`);
+  await expect(page.locator(".partial-warning")).toContainText(/1\/2/);
+  await expect(page.locator(".field-card")).toBeVisible();
+  await expect(page.locator(".viewer-panel")).toBeVisible();
+  await expect(page.locator(".page-numbers .page-error")).toHaveText("2");
+  await expect(page.locator(".document-error")).toHaveCount(0);
 });
 
 test("monitor stops polling and preserves nullable GPU values", async ({ page }) => {

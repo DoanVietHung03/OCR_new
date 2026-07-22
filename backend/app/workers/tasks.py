@@ -52,6 +52,17 @@ def cancelled(store: JobStore, job_id: str) -> bool:
     return True
 
 
+def plan_pages(page_count: int, mode: str, max_pages: int = 0) -> list[int]:
+    if mode == "all":
+        planned = list(range(page_count))
+    elif mode == "first,last":
+        planned = [0, page_count - 1]
+    else:
+        planned = [0, page_count - 2, page_count - 1]
+    planned = list(dict.fromkeys(index for index in planned if 0 <= index < page_count))
+    return planned[:max_pages] if max_pages else planned
+
+
 async def process_job_async(job_id: str) -> dict:
     store = JobStore(os.getenv("OCR_DATA_DIR", "data/jobs"))
     job = store.read(job_id)
@@ -62,7 +73,12 @@ async def process_job_async(job_id: str) -> dict:
         return store.read(job_id)
     job = store.update(job_id, status="running", error=None, started_at=job.get("started_at") or now())
     documents: list[dict] = []
-    successes = failures = page_count = 0
+    successes = 0
+
+    def persist() -> None:
+        pages = [page for item in documents for page in item.get("pages", [])]
+        store.update(job_id, page_count=len(pages), failed_pages=sum(bool(page.get("error")) for page in pages), documents=documents)
+
     for pdf in sorted((store.path(job_id) / "uploads").glob("*.pdf")):
         document = {
             "id": pdf.stem,
@@ -78,47 +94,63 @@ async def process_job_async(job_id: str) -> dict:
                 {
                     "page_index": index,
                     "image_url": f"/api/jobs/{job_id}/artifacts/{pdf.stem}/page-{index + 1}.png",
+                    "ocr_scope": "none",
+                    "status": "pending",
+                    "error": "",
                 }
                 for index in range(len(pages))
             ]
-            page_successes = 0
-            for page in pages:
+            selected = plan_pages(len(pages), job.get("vlm_pages", "all"), int(job.get("vlm_max_pages", 0) or 0))
+            task = job.get("vlm_task", "full_ocr")
+            if task == "metadata":
+                for index, state in enumerate(document["pages"]):
+                    if index not in selected:
+                        state["status"] = "skipped"
+            passes = [(index, "full_ocr") for index in range(len(pages))] if task == "full_ocr" else []
+            passes += [(index, "metadata") for index in selected]
+            for index, pass_task in passes:
                 if cancelled(store, job_id):
                     return store.update(job_id, documents=documents)
+                state = document["pages"][index]
+                state["ocr_scope"] = pass_task if state["ocr_scope"] == "none" else f'{state["ocr_scope"]}+{pass_task}'
                 try:
                     result = await request_page(
-                        page.read_bytes(),
+                        pages[index].read_bytes(),
                         base_url=os.getenv("OCR_BASE_URL", ""),
                         api_key=os.getenv("OCR_API_KEY", ""),
                         model=job.get("model", ""),
                         timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "120")),
+                        page_index=index,
+                        task=pass_task,
                     )
-                    for name, field in result["fields"].items():
-                        current = document["fields"].get(name)
-                        if current is None or float(field.get("confidence", 0)) > float(current.get("confidence", 0)):
-                            document["fields"][name] = field
-                    page_successes += 1
+                    if pass_task == "full_ocr":
+                        state["text"] = result["text"]
+                        state["ocr_line_count"] = len(result["text"].splitlines())
+                    else:
+                        for name, field in result["fields"].items():
+                            current = document["fields"].get(name)
+                            if current is None or (field.get("confidence") or -1) > (current.get("confidence") or -1):
+                                document["fields"][name] = field
+                    warning = next(iter(result.get("warnings", [])), "")
+                    state["error"] = state["error"] or warning
+                    state["status"] = "completed_with_warnings" if state["error"] else "completed"
                 except Exception as exc:
-                    failures += 1
-                    document.setdefault("errors", []).append(safe_error(exc))
-                page_count += 1
-                store.update(
-                    job_id,
-                    page_count=page_count,
-                    failed_pages=failures,
-                    documents=documents,
-                )
+                    state["error"] = safe_error(exc)
+                    state["status"] = "completed_with_warnings" if state.get("text") else "error"
+                persist()
             if cancelled(store, job_id):
                 return store.update(job_id, documents=documents)
-            if page_successes:
-                document["status"] = "completed_with_warnings" if document.get("errors") else "completed"
+            document["errors"] = list(dict.fromkeys(page["error"] for page in document["pages"] if page.get("error")))
+            usable = any(page.get("status") in {"completed", "completed_with_warnings"} for page in document["pages"])
+            if usable:
+                document["status"] = "completed_with_warnings" if document["errors"] else "completed"
                 successes += 1
             else:
                 document.update(status="error", error="invalid_model_json")
         except Exception as exc:
-            failures += 1
             document.update(status="error", error=safe_error(exc))
-        store.update(job_id, documents=documents, failed_pages=failures)
+        persist()
+    failures = sum(bool(page.get("error")) for item in documents for page in item.get("pages", []))
     status = "completed" if successes and not failures else "completed_with_warnings" if successes else "error"
     return store.update(job_id, status=status, documents=documents, report_url=f"/jobs/{job_id}", completed_at=now())
 

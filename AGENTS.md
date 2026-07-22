@@ -8,20 +8,21 @@ durable job persistence, correction/approval/crop evidence, rerun, and the
 PDF-only VI/EN UI. Local coverage includes backend tests, legacy compatibility
 tests, mocked browser paths, and a real eager-task/fake-provider browser flow.
 
-Milestone C is not complete. Do not claim production readiness until
-`docs/phase4_acceptance.md` contains real Nginx/Redis/Celery/provider, fixture,
-restart, cross-version, and rollback evidence. Keep `src/ocr/` and `web/` as the
-rollback runtime until the one-day rollback window closes.
+Milestone C is not complete. Do not claim production readiness until the
+`BE-C-EVIDENCE` ledger in `implementation_plan.md` contains real
+Nginx/Redis/Celery/provider, fixture, restart, cross-version, and rollback
+evidence. Keep `src/ocr/` and `web/` as the rollback runtime until the one-day
+rollback window closes.
 
 Legacy+ v2 was implemented and locally verified on 2026-07-21: visual/workflow
 parity with `OCR_paper` except ZIP/image/folder upload, safe Provider Profiles,
 durable Codes, rich typed evidence/reports/artifacts/events, and allowlisted
 telemetry.
 
-The 2026-07-21 closure audit passes 27 backend tests, 10 legacy compatibility
-tests, and 11 default browser tests; capture mode passes 12/12. Baseline v1 is
-14/14 and Legacy+ is 18/19: every local checkpoint is complete, while Milestone
-C remains open. Do not call the stack production-ready before that acceptance.
+The 2026-07-22 Repair Gate passed 28 backend tests, 10 legacy compatibility
+tests, focused browser coverage for task/page retry and partial review, typecheck,
+build, generated OpenAPI/types, and diff checks. Milestone C still requires the
+live `63-btc.pdf` repro and strong-server evidence; do not call this production-ready.
 
 ## Repository map
 
@@ -32,14 +33,11 @@ C remains open. Do not call the stack production-ready before that acceptance.
 - `backend/tests/`: local contract, lifecycle, persistence, and worker checks.
 - `data/jobs/`: durable offline state; Redis is disposable.
 - `src/ocr/`, `web/`, `tests/`: legacy rollback runtime.
-- `implementation_plan.md`: locked decisions and the remaining rollout gate.
-- `legacy_browser_recreated.md`: completed Legacy+ local spec/checkpoints and
-  the pending Milestone C checkpoint.
-- `CONTEXT.md`: canonical product vocabulary for Legacy+, Provider Profiles,
-  Code Catalog, and Review Evidence.
-- `docs/ui-parity/`: sanitized 1440/1366/mobile captures and local evidence notes.
-- `docs/phase4_cutover_runbook.md`: strong-server commands.
-- `docs/phase4_acceptance.md`: sole Milestone C evidence record.
+- `implementation_plan.md`: canonical backend contract, Repair Gate, cutover
+  runbook, and sole Milestone C evidence ledger.
+- `legacy_browser_recreated.md`: canonical frontend workflow, counterpart gates,
+  regression checks, and UI evidence mapping.
+- `docs/ui-parity/`: sanitized 1440/1366/mobile PNG captures.
 
 ## Architecture invariants
 
@@ -112,9 +110,9 @@ C remains open. Do not call the stack production-ready before that acceptance.
 
 ## Working procedure
 
-1. Read `implementation_plan.md` before migration or cutover work. For changes
-   to the recreated browser flow, also read `legacy_browser_recreated.md` and
-   preserve its completed Legacy+ checkpoints and keep the Milestone C boundary.
+1. Read `implementation_plan.md` before backend, migration, or cutover work. For
+   frontend work, read `legacy_browser_recreated.md`. Follow the matching
+   `BE-Xn`/`FE-Xn` backlink and do not close one side without its counterpart.
 2. Before editing code, use the CodeGraph MCP against `C:\HProjecT\OCR` to
    inspect the target symbols, callers, routes, and blast radius. Do not infer
    flow from filenames or query `.codegraph/codegraph.db` directly.
@@ -122,8 +120,8 @@ C remains open. Do not call the stack production-ready before that acceptance.
 4. Preserve unrelated worktree changes. Do not delete legacy code.
 5. Add focused checks for non-trivial branches and persistence behavior.
 6. Regenerate OpenAPI/types whenever public schemas change.
-7. Keep `README.md`, this file, the plan, runbook, and acceptance report aligned
-   when architecture, commands, or rollout state changes.
+7. Keep `README.md`, this file, and both canonical plans aligned when
+   architecture, commands, or rollout state changes.
 8. Do not create commits unless the user explicitly asks for them.
 
 ## Completed browser phases
@@ -141,9 +139,10 @@ C remains open. Do not call the stack production-ready before that acceptance.
 
 Legacy+ then added full routes/sidebar, Provider Profile selection, Documents,
 rich review evidence/suggestions, artifact manifest/Safe Events, typed reports,
-durable Codes and expanded safe telemetry. Future changes must preserve all
-18 local checkpoints. This plan does not authorize automatic commits or deleting
-the legacy runtime.
+durable Codes and expanded safe telemetry. Preserve these regression contracts,
+and keep task/page execution and partial-result rendering under the paired Repair
+Gate regression checks. This plan does not authorize automatic commits or
+deleting the legacy runtime.
 
 ## Required local checks
 
@@ -173,7 +172,7 @@ are contract evidence, not proof of OCR quality or production readiness.
 - Verify Nginx health, registered task, concurrency/prefetch, artifacts/report,
   manual fields, restart/interrupted behavior, cross-version round-trip, and
   rollback rehearsal.
-- Record sanitized evidence in `docs/phase4_acceptance.md`. Do not replace live
-  evidence with mock/unit-test claims.
+- Record sanitized evidence only in `implementation_plan.md#be-c-evidence`. Do
+  not replace live evidence with mock/unit-test claims.
 - Delete `src/`, `web/`, legacy packaging, or tests only in a separate cleanup
   request after the rollback window.

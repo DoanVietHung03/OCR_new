@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 const vi = {
+  partialPages: "{success}/{total} trang thành công",
   title: "IntelliDoc OCR", jobs: "Công việc", newOcr: "OCR mới", systemMonitor: "Giám sát hệ thống",
   manage: "Quản lý", processingLogs: "Nhật ký xử lý", codes: "Danh mục mã", admin: "Quản trị",
   subtitle: "Theo dõi, kiểm tra và hiệu chỉnh kết quả OCR.", filteredResults: "Kết quả đang lọc",
@@ -51,6 +52,7 @@ const vi = {
 
 type TextKey = keyof typeof vi;
 const en: Record<TextKey, string> = {
+  partialPages: "{success}/{total} pages succeeded",
   title: "IntelliDoc OCR", jobs: "Jobs", newOcr: "New OCR", systemMonitor: "System Monitor",
   manage: "Manage", processingLogs: "Processing logs", codes: "Code catalog", admin: "Administration",
   subtitle: "Track, review, and correct OCR results.", filteredResults: "Filtered results",
@@ -131,6 +133,9 @@ export const statusText = (status: string) => {
 };
 
 const errorLabels: Record<string, [string, string]> = {
+  unknown_field: ["Provider trả về trường không xác định", "Provider returned an unknown field"],
+  invalid_field_value: ["Provider trả về giá trị trường không hợp lệ", "Provider returned an invalid field value"],
+  incomplete_field: ["Provider trả về trường chưa đầy đủ", "Provider returned an incomplete field"],
   provider_timeout: ["Provider quá thời gian chờ", "Provider timed out"],
   provider_unavailable: ["Provider không khả dụng", "Provider unavailable"],
   invalid_model_json: ["Kết quả model không hợp lệ", "Invalid model result"],
