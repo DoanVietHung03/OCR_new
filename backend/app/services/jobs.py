@@ -19,7 +19,7 @@ MAX_FILES = 15
 MAX_BYTES = 200 * 1024 * 1024
 MAX_PAGES = 100
 TERMINAL = {"completed", "completed_with_warnings", "error", "cancelled", "interrupted"}
-ACTIVE = {"starting", "queued", "running", "cancelling"}
+ACTIVE = {"starting", "queued", "running", "cancelling", "segmenting", "extraction_starting"}
 DELETABLE = TERMINAL | {"uploading", "ready"}
 FIELDS = (
     "co_quan_ban_hanh", "quoc_hieu_tieu_ngu", "so_van_ban", "dia_diem_ban_hanh",
@@ -59,6 +59,38 @@ def validate_pdf(content: bytes) -> None:
         raise
     except Exception as exc:
         raise ValueError("invalid_pdf") from exc
+
+
+def validate_segments(page_count: int, segments: list[dict[str, Any]]) -> None:
+    ordered = sorted(segments, key=lambda item: (item["start_page"], item["end_page"]))
+    pages = [page for item in ordered for page in range(item["start_page"], item["end_page"] + 1)]
+    if any(item["end_page"] < item["start_page"] for item in ordered) or pages != list(range(page_count)):
+        raise ValueError("invalid_segmentation")
+    kinds = [item["logical_document_type"] for item in ordered]
+    if kinds.count("dossier_cover") != 1 or "administrative_document" not in kinds or "unclassified" in kinds:
+        raise ValueError("invalid_segmentation")
+
+
+def materialize_documents(job_id: str, sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    documents = []
+    for source in sources:
+        for index, segment in enumerate(source["confirmed_segments"], 1):
+            kind = segment["logical_document_type"]
+            if kind == "excluded":
+                continue
+            document_id = f"{source['id']}-document-{index}"
+            pages = [{
+                "page_index": page_index,
+                "source_page_index": source_page_index,
+                "source_pdf_id": source["id"],
+                "image_url": f"/api/jobs/{job_id}/artifacts/{source['id']}/page-{source_page_index + 1}.png",
+                "ocr_scope": "none", "status": "pending", "error": "",
+            } for page_index, source_page_index in enumerate(range(segment["start_page"], segment["end_page"] + 1))]
+            documents.append({
+                "id": document_id, "file_name": source["file_name"], "status": "pending", "fields": {},
+                "pages": pages, "logical_document_type": kind, "source_pdf_id": source["id"],
+            })
+    return documents
 
 
 class JobStore:
@@ -151,6 +183,15 @@ class JobStore:
             "vlm_pages": options.get("vlm_pages", "all"),
             "vlm_max_pages": int(options.get("vlm_max_pages", 0) or 0),
             "cloud_data_confirmed": bool(options.get("cloud_data_confirmed")),
+            "processing_mode": options.get("processing_mode", "administrative_document"),
+            "source_pdfs": [],
+            "source_pdf_count": 0,
+            "dossier_cover_count": 0,
+            "administrative_document_count": 0,
+            "excluded_page_count": 0,
+            "segmentation_completed_pages": 0,
+            "segmentation_total_pages": 0,
+            "events": [],
         }
         return self.write(job_id, job)
 
@@ -173,7 +214,13 @@ class JobStore:
                 self.write(job_id, job)
                 raise
             target.write_bytes(content)
+            source_id = f"source-{job['uploaded_files'] + 1}" if job.get("processing_mode") == "combined_dossier" else Path(name).stem
+            job.setdefault("source_pdfs", []).append({
+                "id": source_id, "file_name": name, "page_count": 0,
+                "pages": [], "proposal": [], "confirmed_segments": [], "revision": 0, "confirmed": False,
+            })
             job["uploaded_files"] += 1
+            job["source_pdf_count"] = len(job["source_pdfs"])
             job["status"] = "ready" if job["uploaded_files"] == job["expected_files"] else "uploading"
             job["updated_at"] = now()
             return self.write(job_id, job)
@@ -187,6 +234,48 @@ class JobStore:
                 raise ValueError("upload_incomplete")
             job.update(status="starting", report_url=f"/jobs/{job_id}", updated_at=now())
             return self.write(job_id, job), True
+
+    def confirm_segmentation(
+        self, job_id: str, source_pdf_id: str, revision: int, segments: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        with self.locked(job_id):
+            job = self.read(job_id)
+            if job.get("status") != "awaiting_segmentation_review":
+                raise ValueError("segmentation_not_reviewable")
+            source = next((item for item in job.get("source_pdfs", []) if item.get("id") == source_pdf_id), None)
+            if source is None:
+                raise ValueError("not_found")
+            if source.get("revision", 0) != revision:
+                raise ValueError("segmentation_conflict")
+            validate_segments(source.get("page_count", 0), segments)
+            source.update(confirmed_segments=segments, confirmed=True, revision=revision + 1)
+            if all(item.get("confirmed") for item in job.get("source_pdfs", [])):
+                job["documents"] = materialize_documents(job_id, job["source_pdfs"])
+                job["dossier_cover_count"] = sum(item["logical_document_type"] == "dossier_cover" for item in job["documents"])
+                job["administrative_document_count"] = len(job["documents"]) - job["dossier_cover_count"]
+                job["excluded_page_count"] = sum(
+                    segment["end_page"] - segment["start_page"] + 1
+                    for item in job["source_pdfs"] for segment in item["confirmed_segments"]
+                    if segment["logical_document_type"] == "excluded"
+                )
+                job["status"] = "segmentation_confirmed"
+            job["updated_at"] = now()
+            return self.write(job_id, job)
+
+    def begin_extraction(self, job_id: str) -> tuple[dict[str, Any], bool]:
+        with self.locked(job_id):
+            job = self.read(job_id)
+            if job.get("status") != "segmentation_confirmed":
+                return job, False
+            job.update(status="extraction_starting", updated_at=now())
+            return self.write(job_id, job), True
+
+    def add_event(self, job_id: str, code: str, **details: Any) -> dict[str, Any]:
+        with self.locked(job_id):
+            job = self.read(job_id)
+            job.setdefault("events", []).append({"timestamp": now(), "code": code, **details})
+            job["updated_at"] = now()
+            return self.write(job_id, job)
 
     def interrupt(self, job_id: str) -> dict[str, Any]:
         with self.locked(job_id):
@@ -203,7 +292,7 @@ class JobStore:
             if job.get("status") in TERMINAL:
                 return job
             self.path(job_id).joinpath("cancel").touch()
-            if job.get("status") in {"uploading", "ready"}:
+            if job.get("status") in {"uploading", "ready", "awaiting_segmentation_review", "segmentation_confirmed"}:
                 stamp = now()
                 job.update(status="cancelled", updated_at=stamp, completed_at=stamp)
                 return self.write(job_id, job)

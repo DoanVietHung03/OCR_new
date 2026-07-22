@@ -37,6 +37,12 @@ OCR_PROMPT = (
     'Return one JSON object only: {"text": "..."}. Transcribe all visible text '
     "in reading order without summarizing or inventing content."
 )
+SEGMENTATION_PROMPT = (
+    'Classify this page for dossier segmentation. Return one JSON object only: '
+    '{"classification":"cover|document_start|continuation|blank|separator"}. '
+    "Use cover for the dossier cover, document_start for the first page of an administrative document, "
+    "continuation for its later pages, blank for empty pages, and separator for divider sheets."
+)
 RETRYABLE_STATUSES = {429, 502, 503, 504}
 
 
@@ -52,6 +58,11 @@ def parse_json_object(content: str) -> object:
 
 
 def validate_result(payload: object, *, page_index: int = 0, task: str = "metadata") -> dict:
+    if task == "segmentation":
+        classification = payload.get("classification") if isinstance(payload, dict) else None
+        if classification not in {"cover", "document_start", "continuation", "blank", "separator"}:
+            raise ValueError("invalid_model_json")
+        return {"classification": classification}
     if task == "full_ocr":
         if not isinstance(payload, dict) or not isinstance(payload.get("text"), str):
             raise ValueError("invalid_model_json")
@@ -115,7 +126,7 @@ def request_body(image: bytes, model: str, task: str = "metadata") -> dict:
         "thinking": {"type": "disabled"},
         "response_format": {"type": "json_object"},
         "messages": [{"role": "user", "content": [
-            {"type": "text", "text": OCR_PROMPT if task == "full_ocr" else PROMPT},
+            {"type": "text", "text": OCR_PROMPT if task == "full_ocr" else SEGMENTATION_PROMPT if task == "segmentation" else PROMPT},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},
         ]}],
     }

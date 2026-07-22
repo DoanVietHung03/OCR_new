@@ -262,6 +262,103 @@
         }
       }
     },
+    "/api/jobs/{job_id}/source-pdfs/{source_pdf_id}/segmentation/confirm": {
+      "post": {
+        "summary": "Confirm Segmentation",
+        "operationId": "confirm_segmentation_api_jobs__job_id__source_pdfs__source_pdf_id__segmentation_confirm_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "source_pdf_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Pdf Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmSegmentationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/continue": {
+      "post": {
+        "summary": "Continue Job",
+        "operationId": "continue_job_api_jobs__job_id__continue_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/jobs/{job_id}/cancel": {
       "post": {
         "summary": "Cancel",
@@ -316,6 +413,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RerunRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1528,6 +1635,28 @@
         ],
         "title": "CodeUpdate"
       },
+      "ConfirmSegmentationRequest": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/Segment"
+            },
+            "type": "array",
+            "title": "Segments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "segments"
+        ],
+        "title": "ConfirmSegmentationRequest"
+      },
       "CorrectionItem": {
         "properties": {
           "field": {
@@ -1649,6 +1778,16 @@
             "minimum": 0.0,
             "title": "Vlm Max Pages",
             "default": 0
+          },
+          "processing_mode": {
+            "type": "string",
+            "enum": [
+              "administrative_document",
+              "dossier_cover",
+              "combined_dossier"
+            ],
+            "title": "Processing Mode",
+            "default": "administrative_document"
           }
         },
         "additionalProperties": true,
@@ -2008,6 +2147,32 @@
             },
             "type": "array",
             "title": "Crop Evidence"
+          },
+          "logical_document_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "dossier_cover",
+                  "administrative_document"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logical Document Type"
+          },
+          "source_pdf_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Pdf Id"
           }
         },
         "additionalProperties": true,
@@ -2602,6 +2767,59 @@
               }
             ],
             "title": "Error"
+          },
+          "processing_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "administrative_document",
+                  "dossier_cover",
+                  "combined_dossier"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Mode"
+          },
+          "source_pdfs": {
+            "items": {
+              "$ref": "#/components/schemas/SourcePdfResponse"
+            },
+            "type": "array",
+            "title": "Source Pdfs"
+          },
+          "source_pdf_count": {
+            "type": "integer",
+            "title": "Source Pdf Count",
+            "default": 0
+          },
+          "dossier_cover_count": {
+            "type": "integer",
+            "title": "Dossier Cover Count",
+            "default": 0
+          },
+          "administrative_document_count": {
+            "type": "integer",
+            "title": "Administrative Document Count",
+            "default": 0
+          },
+          "excluded_page_count": {
+            "type": "integer",
+            "title": "Excluded Page Count",
+            "default": 0
+          },
+          "segmentation_completed_pages": {
+            "type": "integer",
+            "title": "Segmentation Completed Pages",
+            "default": 0
+          },
+          "segmentation_total_pages": {
+            "type": "integer",
+            "title": "Segmentation Total Pages",
+            "default": 0
           }
         },
         "additionalProperties": true,
@@ -2881,6 +3099,28 @@
             "type": "string",
             "title": "Error",
             "default": ""
+          },
+          "source_pdf_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Pdf Id"
+          },
+          "source_page_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Page Index"
           }
         },
         "additionalProperties": true,
@@ -2960,6 +3200,18 @@
           "max_pages": {
             "type": "integer",
             "title": "Max Pages"
+          },
+          "processing_modes": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "administrative_document",
+                "dossier_cover",
+                "combined_dossier"
+              ]
+            },
+            "type": "array",
+            "title": "Processing Modes"
           }
         },
         "additionalProperties": true,
@@ -2970,7 +3222,8 @@
           "status",
           "tasks",
           "page_modes",
-          "max_pages"
+          "max_pages",
+          "processing_modes"
         ],
         "title": "ProviderProfileResponse"
       },
@@ -3080,6 +3333,26 @@
         ],
         "title": "ReportsResponse"
       },
+      "RerunRequest": {
+        "properties": {
+          "cloud_data_confirmed": {
+            "type": "boolean",
+            "title": "Cloud Data Confirmed",
+            "default": false
+          },
+          "rerun_mode": {
+            "type": "string",
+            "enum": [
+              "reuse_segmentation",
+              "resegment"
+            ],
+            "title": "Rerun Mode",
+            "default": "reuse_segmentation"
+          }
+        },
+        "type": "object",
+        "title": "RerunRequest"
+      },
       "RuntimeMetricsResponse": {
         "properties": {
           "os_family": {
@@ -3168,6 +3441,28 @@
             ],
             "title": "Page Index"
           },
+          "source_pdf_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Pdf Id"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
           "message": {
             "type": "string",
             "title": "Message"
@@ -3183,6 +3478,135 @@
           "message"
         ],
         "title": "SafeEvent"
+      },
+      "Segment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "default": ""
+          },
+          "logical_document_type": {
+            "type": "string",
+            "enum": [
+              "dossier_cover",
+              "administrative_document",
+              "excluded",
+              "unclassified"
+            ],
+            "title": "Logical Document Type"
+          },
+          "start_page": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Start Page"
+          },
+          "end_page": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "End Page"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "logical_document_type",
+          "start_page",
+          "end_page"
+        ],
+        "title": "Segment"
+      },
+      "SegmentationPage": {
+        "properties": {
+          "source_page_index": {
+            "type": "integer",
+            "title": "Source Page Index"
+          },
+          "image_url": {
+            "type": "string",
+            "title": "Image Url"
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "cover",
+              "document_start",
+              "continuation",
+              "blank",
+              "separator",
+              "unclassified"
+            ],
+            "title": "Classification"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error",
+            "default": ""
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "source_page_index",
+          "image_url",
+          "classification"
+        ],
+        "title": "SegmentationPage"
+      },
+      "SourcePdfResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count",
+            "default": 0
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentationPage"
+            },
+            "type": "array",
+            "title": "Pages"
+          },
+          "proposal": {
+            "items": {
+              "$ref": "#/components/schemas/Segment"
+            },
+            "type": "array",
+            "title": "Proposal"
+          },
+          "confirmed_segments": {
+            "items": {
+              "$ref": "#/components/schemas/Segment"
+            },
+            "type": "array",
+            "title": "Confirmed Segments"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision",
+            "default": 0
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed",
+            "default": false
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "file_name"
+        ],
+        "title": "SourcePdfResponse"
       },
       "StateResponse": {
         "properties": {

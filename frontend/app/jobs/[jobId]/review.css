@@ -103,3 +103,10 @@
   .workspace-head { align-items: flex-start; flex-direction: column; }
   .approve-bar { align-items: stretch; flex-direction: column; }
 }
+.segmentation-review article { border-top: 1px solid var(--border); padding: 1rem 0; }
+.source-pages { display: flex; gap: .75rem; overflow-x: auto; margin: .75rem 0; }
+.source-pages a { color: inherit; min-width: 92px; text-decoration: none; }
+.source-pages img { aspect-ratio: 3 / 4; display: block; object-fit: cover; width: 92px; }
+.source-pages small { display: block; overflow-wrap: anywhere; }
+.segment-list { display: grid; gap: .5rem; margin: .75rem 0; }
+.segment-list > div { align-items: center; display: flex; flex-wrap: wrap; gap: .75rem; }

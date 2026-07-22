@@ -2,6 +2,7 @@ import asyncio
 import importlib
 
 import httpx
+import fitz
 
 from app.services.jobs import JobStore
 
@@ -51,6 +52,7 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
         "page_index": 0, "image_url": f"/api/jobs/{job['id']}/artifacts/document/page-1.png",
         "ocr_scope": "full_ocr+metadata", "status": "completed", "error": "",
         "text": "OCR text", "ocr_line_count": 1,
+        "source_pdf_id": "document", "source_page_index": 0,
     }
     assert (store.path(job["id"]) / "artifacts" / "document" / "page-1.png").is_file()
 
@@ -142,3 +144,29 @@ def test_page_planner_and_metadata_scope(tmp_path, monkeypatch, pdf_bytes):
     result = asyncio.run(tasks.process_job_async(job["id"]))
     assert calls == [("metadata", 0)]
     assert result["documents"][0]["pages"][0]["ocr_scope"] == "metadata"
+
+
+def test_combined_dossier_segments_every_page_and_waits_for_confirmation(tmp_path, monkeypatch):
+    import app.workers.tasks as tasks
+
+    pdf = fitz.open()
+    for _ in range(3):
+        pdf.new_page(width=100, height=100)
+    content = pdf.tobytes(); pdf.close()
+    store = JobStore(tmp_path)
+    job = store.create({"file_count": 1, "provider": "qwen", "model": "test", "processing_mode": "combined_dossier"})
+    store.add_pdf(job["id"], "dossier.pdf", content); store.begin_start(job["id"])
+    classifications = iter(["cover", "document_start", "continuation"])
+    calls = []
+
+    async def fake_request(_: bytes, **options):
+        calls.append((options["task"], options["page_index"]))
+        return {"classification": next(classifications)}
+
+    monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path)); monkeypatch.setattr(tasks, "request_page", fake_request)
+    result = asyncio.run(tasks.process_job_async(job["id"]))
+    assert result["status"] == "awaiting_segmentation_review"
+    assert calls == [("segmentation", 0), ("segmentation", 1), ("segmentation", 2)]
+    assert [item["logical_document_type"] for item in result["source_pdfs"][0]["proposal"]] == ["dossier_cover", "administrative_document"]
+    assert result["segmentation_completed_pages"] == result["segmentation_total_pages"] == 3
+    assert JobStore(tmp_path).read(job["id"])["status"] == "awaiting_segmentation_review"

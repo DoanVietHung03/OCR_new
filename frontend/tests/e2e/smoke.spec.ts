@@ -316,6 +316,29 @@ test("ready detail delete uses preview and result", async ({ page }) => {
   allow = true; await page.getByRole("button", { name: /xóa|delete/i }).click(); await page.locator("dialog[open]").getByRole("button", { name: /xóa vĩnh viễn|delete permanently/i }).click(); await expect(page.locator(".notice.error")).toContainText("Không xóa được 1 công việc");
 });
 
+test("combined dossier keeps revisioned segmentation review in the job detail", async ({ page }) => {
+  const source = {
+    id: "source-1", file_name: "dossier.pdf", page_count: 3, revision: 1, confirmed: false, confirmed_segments: [],
+    pages: [0, 1, 2].map((source_page_index) => ({ source_page_index, classification: source_page_index ? "document_start" : "cover", error: "", image_url: `/api/jobs/${id}/artifacts/source-1/page-${source_page_index + 1}.png` })),
+    proposal: [
+      { id: "segment-1", logical_document_type: "dossier_cover", start_page: 0, end_page: 0 },
+      { id: "segment-2", logical_document_type: "administrative_document", start_page: 1, end_page: 2 },
+    ],
+  };
+  const job = { ...fixtureJob("awaiting_segmentation_review"), processing_mode: "combined_dossier", documents: [], source_pdfs: [source], segmentation_completed_pages: 3, segmentation_total_pages: 3 } as any;
+  let body: any;
+  await page.route("**/api/**", async (route) => {
+    const request = route.request(), apiPath = new URL(request.url()).pathname;
+    if (apiPath === `/api/jobs/${id}` && request.method() === "GET") return route.fulfill({ json: job });
+    if (apiPath.endsWith("/segmentation/confirm")) { body = request.postDataJSON(); return route.fulfill({ json: { ...job, status: "extraction_starting" } }); }
+    if (apiPath.includes("/artifacts/") && apiPath.endsWith(".png")) return route.fulfill({ status: 200, contentType: "image/svg+xml", body: svg });
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.goto(`/jobs/${id}`); await expect(page.getByRole("heading", { name: /xác nhận phân đoạn|confirm segmentation/i })).toBeVisible();
+  await page.getByRole("button", { name: /xác nhận PDF này|confirm this PDF/i }).click();
+  expect(body).toEqual({ revision: 1, segments: source.proposal });
+});
+
 test("capture sanitized populated legacy dashboard", async ({ page }) => {
   test.skip(process.env.UPDATE_UI_BASELINE !== "1", "baseline capture only");
   const root = path.resolve(process.cwd(), "..");

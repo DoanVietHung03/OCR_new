@@ -256,7 +256,7 @@ Reference cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
 
 ### FE-X10
 
-**P0 — Rerun snapshot minh bạch — OPEN.** Counterpart:
+**P0 — Rerun snapshot minh bạch — IN PROGRESS 2026-07-22.** Counterpart:
 [`BE-X10`](implementation_plan.md#be-x10).
 
 - Dialog rerun hiển thị read-only Processing Mode, Provider Profile, task, page
@@ -266,6 +266,9 @@ Reference cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
   source profile unavailable, hiển thị safe conflict và giữ nguyên source job.
 - Gate: rerun `metadata/first,last` và `full_ocr/all` dẫn đến job mới hiển thị đúng
   config nguồn, không đổi phạm vi/chi phí ngầm.
+
+Dialog hiện đã công bố snapshot read-only và hai mode reuse/resegment cho hồ sơ
+gộp; còn thiếu focused browser gate cho cả hai nhánh và safe conflict profile.
 
 ### FE-X11
 
@@ -356,7 +359,7 @@ Counterpart: [`BE-X15`](implementation_plan.md#be-x15).
 
 ### FE-X16
 
-**P0 — Source PDF, Bìa và logical-document workflow — OPEN.** Counterpart:
+**P0 — Source PDF, Bìa và logical-document workflow — IN PROGRESS 2026-07-22.** Counterpart:
 [`BE-X16`](implementation_plan.md#be-x16).
 
 - Upload có ba Processing Mode với `administrative_document` mặc định. Browser
@@ -381,6 +384,11 @@ Counterpart: [`BE-X15`](implementation_plan.md#be-x15).
   độc lập sống qua reload.
 
 Reference cũ: `OCR_paper/Web/src/app.js:588-617,1987-1996,2489-2503`.
+
+Upload đã có ba mode; Job Detail đã có source thumbnails, segment list, đổi type,
+tách/gộp native, confirm theo revision và Continue. Focused mocked-browser flow
+đã pass. Vẫn cần fixture thật, conflict reload/discard UX, evidence cho boundary
+khó và review/approval độc lập trước khi đóng.
 
 ## Thứ tự triển khai parity
 

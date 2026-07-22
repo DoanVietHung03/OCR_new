@@ -46,6 +46,7 @@ const vi = {
   used: "Đã dùng", free: "Còn trống", unavailable: "Không khả dụng", telemetryError: "Không đọc được", lastUpdated: "Cập nhật {date}",
   unknownError: "Không thể hoàn tất yêu cầu", noFields: "Tài liệu không có trường để duyệt.", rerunRequired: "Hãy chạy lại toàn bộ công việc.",
   status_uploading: "Đang tải", status_ready: "Sẵn sàng", status_starting: "Đang khởi tạo", status_queued: "Đang chờ",
+  status_segmenting: "Đang phân đoạn", status_awaiting_segmentation_review: "Chờ xác nhận phân đoạn", status_segmentation_confirmed: "Đã xác nhận phân đoạn", status_extraction_starting: "Đang khởi tạo trích xuất",
   status_running: "Đang chạy", status_cancelling: "Đang hủy", status_completed: "Hoàn thành",
   status_completed_with_warnings: "Hoàn thành có cảnh báo", status_error: "Lỗi", status_cancelled: "Đã hủy",
   status_interrupted: "Bị gián đoạn", status_configured: "Đã cấu hình", status_not_configured: "Chưa cấu hình",
@@ -95,6 +96,7 @@ const en: Record<TextKey, string> = {
   unavailable: "Unavailable", telemetryError: "Read error", lastUpdated: "Updated {date}", unknownError: "The request could not be completed",
   noFields: "This document has no fields to approve.", rerunRequired: "Rerun the whole job.", status_uploading: "Uploading",
   status_ready: "Ready", status_starting: "Starting", status_queued: "Queued", status_running: "Running", status_cancelling: "Cancelling",
+  status_segmenting: "Segmenting", status_awaiting_segmentation_review: "Awaiting segmentation review", status_segmentation_confirmed: "Segmentation confirmed", status_extraction_starting: "Starting extraction",
   status_completed: "Completed", status_completed_with_warnings: "Completed with warnings", status_error: "Error", status_cancelled: "Cancelled",
   status_interrupted: "Interrupted", status_configured: "Configured", status_not_configured: "Not configured",
 };

@@ -38,6 +38,43 @@ def test_create_upload_start_is_one_shot(tmp_path, monkeypatch, pdf_bytes):
     assert store.read(job["id"])["provider"] == "qwen"
 
 
+def test_combined_dossier_confirmation_is_revisioned_and_dispatches_once(tmp_path, monkeypatch, pdf_bytes):
+    store = use_store(tmp_path, monkeypatch)
+    calls = []
+    monkeypatch.setattr("app.workers.tasks.dispatch", calls.append)
+    job = client.post("/api/jobs", json={"file_count": 1, "processing_mode": "combined_dossier"}).json()
+    uploaded = client.put(f"/api/jobs/{job['id']}/files?path=dossier.pdf", content=pdf_bytes).json()["job"]
+    source = uploaded["source_pdfs"][0]
+    store.update(job["id"], status="awaiting_segmentation_review", source_pdfs=[{
+        **source, "page_count": 3, "revision": 1,
+    }])
+    segments = [
+        {"id": "cover", "logical_document_type": "dossier_cover", "start_page": 0, "end_page": 0},
+        {"id": "document", "logical_document_type": "administrative_document", "start_page": 1, "end_page": 2},
+    ]
+    response = client.post(
+        f"/api/jobs/{job['id']}/source-pdfs/{source['id']}/segmentation/confirm",
+        json={"revision": 1, "segments": segments},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "extraction_starting"
+    assert response.json()["dossier_cover_count"] == response.json()["administrative_document_count"] == 1
+    assert calls == [job["id"]]
+    stale = client.post(
+        f"/api/jobs/{job['id']}/source-pdfs/{source['id']}/segmentation/confirm",
+        json={"revision": 1, "segments": segments},
+    )
+    assert stale.status_code == 409
+    assert calls == [job["id"]]
+    store.update(job["id"], status="completed", vlm_task="metadata", vlm_pages="first,last", vlm_max_pages=2)
+    rerun = client.post(f"/api/jobs/{job['id']}/rerun", json={"rerun_mode": "reuse_segmentation"})
+    assert rerun.status_code == 200
+    copy = store.read(rerun.json()["id"])
+    assert (copy["processing_mode"], copy["vlm_task"], copy["vlm_pages"], copy["vlm_max_pages"]) == ("combined_dossier", "metadata", "first,last", 2)
+    assert copy["source_pdfs"][0]["proposal"] == segments
+    assert store.read(job["id"])["source_pdfs"][0]["confirmed_segments"] == segments
+
+
 def test_invalid_pdf_fails_job_before_dispatch(tmp_path, monkeypatch):
     store = use_store(tmp_path, monkeypatch)
     job = client.post("/api/jobs", json={"file_count": 1}).json()
@@ -292,6 +329,7 @@ def test_provider_profiles_are_allowlisted_and_safe(tmp_path, monkeypatch):
         "id": "qwen", "label": "Qwen", "external": False,
         "status": "configured", "tasks": ["full_ocr", "metadata"],
         "page_modes": ["all", "auto", "first,last"], "max_pages": 100,
+        "processing_modes": ["administrative_document", "dossier_cover", "combined_dossier"],
     }
     assert "must-not-leak" not in profiles.text
     assert "provider.test" not in profiles.text

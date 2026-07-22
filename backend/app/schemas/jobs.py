@@ -15,6 +15,7 @@ class CreateJobRequest(PublicModel):
     vlm_task: Literal["full_ocr", "metadata"] = "full_ocr"
     vlm_pages: Literal["all", "auto", "first,last"] = "all"
     vlm_max_pages: int = Field(default=0, ge=0, le=100)
+    processing_mode: Literal["administrative_document", "dossier_cover", "combined_dossier"] = "administrative_document"
 
     @model_validator(mode="after")
     def valid_scope(self):
@@ -66,6 +67,33 @@ class PageResponse(PublicModel):
     links: dict[str, str] = Field(default_factory=dict)
     quality: dict[str, Any] = Field(default_factory=dict)
     error: str = ""
+    source_pdf_id: str | None = None
+    source_page_index: int | None = None
+
+
+class SegmentationPage(PublicModel):
+    source_page_index: int
+    image_url: str
+    classification: Literal["cover", "document_start", "continuation", "blank", "separator", "unclassified"]
+    error: str = ""
+
+
+class Segment(PublicModel):
+    id: str = ""
+    logical_document_type: Literal["dossier_cover", "administrative_document", "excluded", "unclassified"]
+    start_page: int = Field(ge=0)
+    end_page: int = Field(ge=0)
+
+
+class SourcePdfResponse(PublicModel):
+    id: str
+    file_name: str
+    page_count: int = 0
+    pages: list[SegmentationPage] = Field(default_factory=list)
+    proposal: list[Segment] = Field(default_factory=list)
+    confirmed_segments: list[Segment] = Field(default_factory=list)
+    revision: int = 0
+    confirmed: bool = False
 
 
 class CropEvidence(PublicModel):
@@ -89,6 +117,8 @@ class DocumentResponse(PublicModel):
     review_status: str | None = None
     approved_at: str | None = None
     crop_evidence: list[CropEvidence] = Field(default_factory=list)
+    logical_document_type: Literal["dossier_cover", "administrative_document"] | None = None
+    source_pdf_id: str | None = None
 
 
 class JobResponse(PublicModel):
@@ -118,6 +148,24 @@ class JobResponse(PublicModel):
     vlm_max_pages: int = 0
     report_url: str | None = None
     error: str | None = None
+    processing_mode: Literal["administrative_document", "dossier_cover", "combined_dossier"] | None = None
+    source_pdfs: list[SourcePdfResponse] = Field(default_factory=list)
+    source_pdf_count: int = 0
+    dossier_cover_count: int = 0
+    administrative_document_count: int = 0
+    excluded_page_count: int = 0
+    segmentation_completed_pages: int = 0
+    segmentation_total_pages: int = 0
+
+
+class ConfirmSegmentationRequest(BaseModel):
+    revision: int = Field(ge=0)
+    segments: list[Segment]
+
+
+class RerunRequest(BaseModel):
+    cloud_data_confirmed: bool = False
+    rerun_mode: Literal["reuse_segmentation", "resegment"] = "reuse_segmentation"
 
 
 class CorrectionItem(PublicModel):
@@ -164,6 +212,7 @@ class ProviderProfileResponse(EngineResponse):
     tasks: list[Literal["full_ocr", "metadata"]]
     page_modes: list[Literal["all", "auto", "first,last"]]
     max_pages: int
+    processing_modes: list[Literal["administrative_document", "dossier_cover", "combined_dossier"]]
 
 
 class ProviderProfilesResponse(BaseModel):
@@ -221,6 +270,8 @@ class SafeEvent(BaseModel):
     provider_profile_id: str | None = None
     document_id: str | None = None
     page_index: int | None = None
+    source_pdf_id: str | None = None
+    revision: int | None = None
     message: str
 
 

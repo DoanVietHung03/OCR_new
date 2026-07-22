@@ -23,7 +23,8 @@ telemetry.
 The 2026-07-22 Repair Gate passed 28 backend tests, 10 legacy compatibility
 tests, focused browser coverage for task/page retry and partial review, typecheck,
 build, generated OpenAPI/types, and diff checks. These are the protected baseline;
-the new P0 field/review/segmentation contracts remain OPEN.
+the new P0 field/review contracts remain OPEN; `X10`/`X16` have a first local
+implementation but remain IN PROGRESS pending fixture/live and full counterpart gates.
 
 ## Repository map
 

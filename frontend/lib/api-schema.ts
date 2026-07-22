@@ -89,6 +89,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/jobs/{job_id}/source-pdfs/{source_pdf_id}/segmentation/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Segmentation */
+        post: operations["confirm_segmentation_api_jobs__job_id__source_pdfs__source_pdf_id__segmentation_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jobs/{job_id}/continue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Continue Job */
+        post: operations["continue_job_api_jobs__job_id__continue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/jobs/{job_id}/cancel": {
         parameters: {
             query?: never;
@@ -563,6 +597,13 @@ export interface components {
              */
             active: boolean;
         };
+        /** ConfirmSegmentationRequest */
+        ConfirmSegmentationRequest: {
+            /** Revision */
+            revision: number;
+            /** Segments */
+            segments: components["schemas"]["Segment"][];
+        };
         /** CorrectionItem */
         CorrectionItem: {
             /** Field */
@@ -634,6 +675,12 @@ export interface components {
              * @default 0
              */
             vlm_max_pages: number;
+            /**
+             * Processing Mode
+             * @default administrative_document
+             * @enum {string}
+             */
+            processing_mode: "administrative_document" | "dossier_cover" | "combined_dossier";
         } & {
             [key: string]: unknown;
         };
@@ -772,6 +819,10 @@ export interface components {
             approved_at?: string | null;
             /** Crop Evidence */
             crop_evidence?: components["schemas"]["CropEvidence"][];
+            /** Logical Document Type */
+            logical_document_type?: ("dossier_cover" | "administrative_document") | null;
+            /** Source Pdf Id */
+            source_pdf_id?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -1073,6 +1124,40 @@ export interface components {
             report_url?: string | null;
             /** Error */
             error?: string | null;
+            /** Processing Mode */
+            processing_mode?: ("administrative_document" | "dossier_cover" | "combined_dossier") | null;
+            /** Source Pdfs */
+            source_pdfs?: components["schemas"]["SourcePdfResponse"][];
+            /**
+             * Source Pdf Count
+             * @default 0
+             */
+            source_pdf_count: number;
+            /**
+             * Dossier Cover Count
+             * @default 0
+             */
+            dossier_cover_count: number;
+            /**
+             * Administrative Document Count
+             * @default 0
+             */
+            administrative_document_count: number;
+            /**
+             * Excluded Page Count
+             * @default 0
+             */
+            excluded_page_count: number;
+            /**
+             * Segmentation Completed Pages
+             * @default 0
+             */
+            segmentation_completed_pages: number;
+            /**
+             * Segmentation Total Pages
+             * @default 0
+             */
+            segmentation_total_pages: number;
         } & {
             [key: string]: unknown;
         };
@@ -1209,6 +1294,10 @@ export interface components {
              * @default
              */
             error: string;
+            /** Source Pdf Id */
+            source_pdf_id?: string | null;
+            /** Source Page Index */
+            source_page_index?: number | null;
         } & {
             [key: string]: unknown;
         };
@@ -1242,6 +1331,8 @@ export interface components {
             page_modes: ("all" | "auto" | "first,last")[];
             /** Max Pages */
             max_pages: number;
+            /** Processing Modes */
+            processing_modes: ("administrative_document" | "dossier_cover" | "combined_dossier")[];
         } & {
             [key: string]: unknown;
         };
@@ -1282,6 +1373,20 @@ export interface components {
             /** Benchmark Samples */
             benchmark_samples: components["schemas"]["BenchmarkSample"][];
         };
+        /** RerunRequest */
+        RerunRequest: {
+            /**
+             * Cloud Data Confirmed
+             * @default false
+             */
+            cloud_data_confirmed: boolean;
+            /**
+             * Rerun Mode
+             * @default reuse_segmentation
+             * @enum {string}
+             */
+            rerun_mode: "reuse_segmentation" | "resegment";
+        };
         /** RuntimeMetricsResponse */
         RuntimeMetricsResponse: {
             /** Os Family */
@@ -1315,8 +1420,80 @@ export interface components {
             document_id?: string | null;
             /** Page Index */
             page_index?: number | null;
+            /** Source Pdf Id */
+            source_pdf_id?: string | null;
+            /** Revision */
+            revision?: number | null;
             /** Message */
             message: string;
+        };
+        /** Segment */
+        Segment: {
+            /**
+             * Id
+             * @default
+             */
+            id: string;
+            /**
+             * Logical Document Type
+             * @enum {string}
+             */
+            logical_document_type: "dossier_cover" | "administrative_document" | "excluded" | "unclassified";
+            /** Start Page */
+            start_page: number;
+            /** End Page */
+            end_page: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SegmentationPage */
+        SegmentationPage: {
+            /** Source Page Index */
+            source_page_index: number;
+            /** Image Url */
+            image_url: string;
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "cover" | "document_start" | "continuation" | "blank" | "separator" | "unclassified";
+            /**
+             * Error
+             * @default
+             */
+            error: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SourcePdfResponse */
+        SourcePdfResponse: {
+            /** Id */
+            id: string;
+            /** File Name */
+            file_name: string;
+            /**
+             * Page Count
+             * @default 0
+             */
+            page_count: number;
+            /** Pages */
+            pages?: components["schemas"]["SegmentationPage"][];
+            /** Proposal */
+            proposal?: components["schemas"]["Segment"][];
+            /** Confirmed Segments */
+            confirmed_segments?: components["schemas"]["Segment"][];
+            /**
+             * Revision
+             * @default 0
+             */
+            revision: number;
+            /**
+             * Confirmed
+             * @default false
+             */
+            confirmed: boolean;
+        } & {
+            [key: string]: unknown;
         };
         /** StateResponse */
         StateResponse: {
@@ -1539,6 +1716,73 @@ export interface operations {
             };
         };
     };
+    confirm_segmentation_api_jobs__job_id__source_pdfs__source_pdf_id__segmentation_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+                source_pdf_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmSegmentationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    continue_job_api_jobs__job_id__continue_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     cancel_api_jobs__job_id__cancel_post: {
         parameters: {
             query?: never;
@@ -1579,7 +1823,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RerunRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

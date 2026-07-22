@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from app.services.jobs import JobStore
+from app.services.jobs import JobStore, materialize_documents, validate_segments
 from app.services.ocr_runner import message_text, parse_json_object, validate_result
 
 
@@ -101,3 +101,18 @@ def test_runner_accepts_partial_metadata_and_markdown_json():
     assert message_text({"choices": [{"message": {"content": [{"type": "text", "text": "A"}, {"type": "text", "text": "B"}]}}]}) == "A\nB"
     with pytest.raises(ValueError, match="invalid_model_json"):
         validate_result({"not_fields": {}})
+
+
+def test_segmentation_requires_complete_dossier_and_materializes_one_document_store():
+    valid = [
+        {"logical_document_type": "dossier_cover", "start_page": 0, "end_page": 0},
+        {"logical_document_type": "administrative_document", "start_page": 1, "end_page": 2},
+        {"logical_document_type": "excluded", "start_page": 3, "end_page": 3},
+    ]
+    validate_segments(4, valid)
+    with pytest.raises(ValueError, match="invalid_segmentation"):
+        validate_segments(4, valid[:2])
+    sources = [{"id": "source-1", "file_name": "dossier.pdf", "confirmed_segments": valid}]
+    documents = materialize_documents("job-id", sources)
+    assert [item["logical_document_type"] for item in documents] == ["dossier_cover", "administrative_document"]
+    assert [page["source_page_index"] for page in documents[1]["pages"]] == [1, 2]

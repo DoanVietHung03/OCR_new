@@ -311,7 +311,7 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_corrections.py:374-388`.
 
 ### BE-X10
 
-**P0 — Rerun giữ snapshot xử lý — OPEN.** Counterpart:
+**P0 — Rerun giữ snapshot xử lý — IN PROGRESS 2026-07-22.** Counterpart:
 [`FE-X10`](legacy_browser_recreated.md#fe-x10).
 
 - Mặc định copy `processing_mode`, `provider_profile_id`, `vlm_task`, `vlm_pages`,
@@ -326,6 +326,10 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_corrections.py:374-388`.
   plan; source job bất biến; chi phí/phạm vi không đổi ngầm.
 
 Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_queue.py:227-255`.
+
+Đã có local contract cho snapshot mode/profile/task/page scope, hai `rerun_mode`,
+source job bất biến và reuse boundary phải xác nhận lại. Còn thiếu readiness thật,
+focused browser gate cho hai mode và provider-call evidence trước khi đóng.
 
 ### BE-X11
 
@@ -422,7 +426,7 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_benchmark.py:97-255`,
 
 ### BE-X16
 
-**P0 — Source PDF, Bìa và logical-document segmentation — OPEN.** Counterpart:
+**P0 — Source PDF, Bìa và logical-document segmentation — IN PROGRESS 2026-07-22.** Counterpart:
 [`FE-X16`](legacy_browser_recreated.md#fe-x16).
 
 - Public `processing_mode` có ba ID `administrative_document`, `dossier_cover`,
@@ -458,6 +462,13 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_benchmark.py:97-255`,
   fixture khó sửa được về ground truth rồi extraction/review/approval thành công.
 
 Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web.py:286-348`.
+
+Đã triển khai local contract/runtime tối thiểu: ba Processing Mode, additive
+`source_pdfs[]`, phân loại toàn trang trong cùng task, proposal/revision/confirm,
+validation coverage/Bìa/văn bản, materialize vào `documents[]`, Continue,
+counters/safe events, cancel/restart boundary và typed OpenAPI. Focused backend
+và browser mock đã pass. Mục này vẫn mở cho bốn fixture/ground truth, difficult
+manual-boundary flow, live provider và cross-version/rollback evidence.
 
 ## Thứ tự triển khai parity
 

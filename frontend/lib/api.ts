@@ -16,8 +16,10 @@ export type CodeCatalog = Schemas["CodeCatalogResponse"];
 export type CodeEntry = Schemas["CodeEntry"];
 export type CodeInput = Schemas["CodeInput"];
 export type Artifacts = Schemas["ArtifactsResponse"];
+export type SourcePdf = Schemas["SourcePdfResponse"];
+export type Segment = Schemas["Segment"];
 
-export const ACTIVE_JOB_STATUSES = new Set(["starting", "queued", "running", "cancelling"]);
+export const ACTIVE_JOB_STATUSES = new Set(["starting", "queued", "running", "cancelling", "segmenting", "awaiting_segmentation_review", "segmentation_confirmed", "extraction_starting"]);
 export const TERMINAL_JOB_STATUSES = new Set(["completed", "completed_with_warnings", "error", "cancelled", "interrupted"]);
 export const DELETABLE_JOB_STATUSES = new Set(["uploading", "ready", ...TERMINAL_JOB_STATUSES]);
 
@@ -40,9 +42,12 @@ export const createJob = (payload: Schemas["CreateJobRequest"]) =>
 export const uploadFile = (id: string, file: File) =>
   request<Schemas["UploadResponse"]>(`/api/jobs/${encodeURIComponent(id)}/files?path=${encodeURIComponent(file.name)}`, { method: "PUT", body: file });
 export const startJob = (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}/start`, { method: "POST" });
+export const confirmSegmentation = (id: string, sourceId: string, revision: number, segments: Segment[]) =>
+  request<Job>(`/api/jobs/${encodeURIComponent(id)}/source-pdfs/${encodeURIComponent(sourceId)}/segmentation/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision, segments }) });
+export const continueJob = (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}/continue`, { method: "POST" });
 export const cancelJob = (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}/cancel`, { method: "POST" });
-export const rerunJob = (id: string, cloudDataConfirmed = false) =>
-  request<Job>(`/api/jobs/${encodeURIComponent(id)}/rerun`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cloud_data_confirmed: cloudDataConfirmed }) });
+export const rerunJob = (id: string, cloudDataConfirmed = false, rerunMode: "reuse_segmentation" | "resegment" = "reuse_segmentation") =>
+  request<Job>(`/api/jobs/${encodeURIComponent(id)}/rerun`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cloud_data_confirmed: cloudDataConfirmed, rerun_mode: rerunMode }) });
 export const deletePreview = (ids: string[]) =>
   request<Schemas["DeletePreviewResponse"]>("/api/jobs/delete-preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_ids: ids }) });
 export const bulkDelete = (ids: string[]) =>

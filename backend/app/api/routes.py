@@ -16,6 +16,7 @@ from ..schemas.jobs import (
     CodeCatalogResponse,
     CodeInput,
     CodeUpdate,
+    ConfirmSegmentationRequest,
     CreateJobRequest,
     CropEvidence,
     DeletePreviewResponse,
@@ -29,6 +30,7 @@ from ..schemas.jobs import (
     ManualCropRequest,
     ProviderProfilesResponse,
     ReportsResponse,
+    RerunRequest,
     StateResponse,
     SystemMetricsResponse,
     UploadResponse,
@@ -123,6 +125,13 @@ def safe_events(jobs: list[dict]) -> list[dict]:
                         "code": "manual_crop_created", "job_id": job_id, "document_id": document_id,
                         "page_index": evidence.get("page_index"), "message": "manual_crop_created",
                     })
+        for item in job.get("events", []):
+            if isinstance(item, dict) and item.get("code") in {"segmentation_proposed", "segmentation_confirmed", "extraction_dispatched"}:
+                events.append({
+                    "timestamp": str(item.get("timestamp", "")), "severity": "info", "category": "lifecycle",
+                    "code": item["code"], "job_id": job_id, "message": item["code"],
+                    "source_pdf_id": item.get("source_pdf_id"), "revision": item.get("revision"),
+                })
         profile_id = str(job.get("provider_profile_id") or job.get("provider") or job.get("ocr_method") or "") or None
         for event in events[first:]:
             event["provider_profile_id"] = profile_id
@@ -147,6 +156,7 @@ def provider_profiles() -> list[dict]:
         "tasks": ["full_ocr", "metadata"],
         "page_modes": ["all", "auto", "first,last"],
         "max_pages": 100,
+        "processing_modes": ["administrative_document", "dossier_cover", "combined_dossier"],
     }]
 
 
@@ -261,6 +271,45 @@ async def get_job(job_id: str):
     return public_job(job_or_404(job_id))
 
 
+def dispatch_extraction(job_id: str) -> dict:
+    if not configured(settings.ocr_base_url, settings.ocr_model):
+        return store.read(job_id)
+    job, should_dispatch = store.begin_extraction(job_id)
+    if not should_dispatch:
+        return job
+    try:
+        from ..workers.tasks import dispatch
+
+        dispatch(job_id)
+        store.add_event(job_id, "extraction_dispatched")
+    except Exception:
+        store.update(job_id, status="segmentation_confirmed")
+        fail(503, "worker_unavailable")
+    return store.read(job_id)
+
+
+@router.post("/jobs/{job_id}/source-pdfs/{source_pdf_id}/segmentation/confirm", response_model=JobResponse)
+async def confirm_segmentation(job_id: str, source_pdf_id: str, payload: ConfirmSegmentationRequest):
+    try:
+        job = store.confirm_segmentation(job_id, source_pdf_id, payload.revision, [item.model_dump() for item in payload.segments])
+        store.add_event(job_id, "segmentation_confirmed", source_pdf_id=source_pdf_id, revision=payload.revision + 1)
+    except FileNotFoundError:
+        fail(404, "not_found")
+    except ValueError as exc:
+        fail(409, str(exc))
+    return public_job(dispatch_extraction(job_id) if job.get("status") == "segmentation_confirmed" else job)
+
+
+@router.post("/jobs/{job_id}/continue", response_model=JobResponse)
+async def continue_job(job_id: str):
+    job = job_or_404(job_id)
+    if job.get("status") != "segmentation_confirmed":
+        fail(409, "segmentation_not_confirmed")
+    if not configured(settings.ocr_base_url, settings.ocr_model):
+        fail(503, "ocr_not_configured")
+    return public_job(dispatch_extraction(job_id))
+
+
 @router.post("/jobs/{job_id}/cancel", response_model=JobResponse)
 async def cancel(job_id: str):
     try:
@@ -270,26 +319,40 @@ async def cancel(job_id: str):
 
 
 @router.post("/jobs/{job_id}/rerun", response_model=JobResponse)
-async def rerun(job_id: str, request: Request):
+async def rerun(job_id: str, payload: RerunRequest):
     source = job_or_404(job_id)
     if source.get("status") not in TERMINAL:
         fail(409, "job_active")
-    options = await request.json()
     pdfs = sorted((store.path(job_id) / "uploads").glob("*.pdf"))
     if len(pdfs) != source.get("expected_files"):
         fail(409, "source_files_incomplete")
+    if source.get("provider_profile_id") not in {profile["id"] for profile in provider_profiles()}:
+        fail(409, "provider_profile_unavailable")
+    reuse = source.get("processing_mode") == "combined_dossier" and payload.rerun_mode == "reuse_segmentation" and all(
+        item.get("confirmed_segments") for item in source.get("source_pdfs", [])
+    )
     new = store.create({
         "file_count": source["expected_files"],
         "upload_name": source.get("upload_name", ""),
-        "cloud_data_confirmed": bool(options.get("cloud_data_confirmed")),
-        "provider_profile_id": settings.ocr_provider,
-        "provider": settings.ocr_provider,
+        "cloud_data_confirmed": payload.cloud_data_confirmed,
+        "provider_profile_id": source.get("provider_profile_id"),
+        "provider": source.get("provider", settings.ocr_provider),
         "model": settings.ocr_model,
         "prompt_version": PROMPT_VERSION,
         "endpoint_external": settings.ocr_endpoint_external,
+        "processing_mode": source.get("processing_mode", "administrative_document"),
+        "vlm_task": source.get("vlm_task", "full_ocr"),
+        "vlm_pages": source.get("vlm_pages", "all"),
+        "vlm_max_pages": source.get("vlm_max_pages", 0),
+        "reuse_segmentation": reuse,
     })
     for pdf in pdfs:
         store.add_pdf(new["id"], pdf.name, pdf.read_bytes())
+    if reuse:
+        rerun_sources = store.read(new["id"])["source_pdfs"]
+        for target, original in zip(rerun_sources, source["source_pdfs"], strict=True):
+            target.update(proposal=original["confirmed_segments"], revision=1)
+        store.update(new["id"], source_pdfs=rerun_sources, reuse_segmentation=True)
     return await start(new["id"])
 
 

@@ -7,6 +7,7 @@ import { ACTIVE_JOB_STATUSES, ApiError, Artifacts, bulkDelete, cancelJob, DELETA
 import { language, safeError, statusText, text, useLanguage } from "../../../lib/i18n";
 import LegacyShell from "../../legacy-shell";
 import ReviewWorkspace from "./review-workspace";
+import SegmentationReview from "./segmentation-review";
 import "./review.css";
 
 type PendingNavigation = { href: string } | { documentId: string } | null;
@@ -27,6 +28,7 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
   const [artifactManifest, setArtifactManifest] = useState<Artifacts | null>(null); const [artifactError, setArtifactError] = useState("");
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation>(null); const [action, setAction] = useState<LifecycleAction>(null);
   const [actionConsent, setActionConsent] = useState(false); const [deleteAllowed, setDeleteAllowed] = useState(false); const [deleteBlocked, setDeleteBlocked] = useState<{ id: string; name?: string | null }[]>([]);
+  const [rerunMode, setRerunMode] = useState<"reuse_segmentation" | "resegment">("reuse_segmentation");
   const discardDialog = useRef<HTMLDialogElement>(null); const actionDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { params.then(({ jobId }) => setId(jobId)); }, [params]);
   useEffect(() => { if (!id) return; const query = new URLSearchParams(location.search); const requested = query.get("view") as JobView | null; if (requested && ["overview", "review", "artifacts", "report", "logs"].includes(requested)) setView(requested); if (query.get("document")) setDocumentId(query.get("document")!); }, [id]);
@@ -85,7 +87,7 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
     setBusy(true); setError("");
     try {
       if (action === "cancel") setJob(await cancelJob(id));
-      if (action === "rerun") { const next = await rerunJob(id, Boolean(job.endpoint_external && actionConsent)); router.push(`/jobs/${next.id}`); return; }
+      if (action === "rerun") { const next = await rerunJob(id, Boolean(job.endpoint_external && actionConsent), rerunMode); router.push(`/jobs/${next.id}`); return; }
       if (action === "delete" && deleteAllowed) {
         const result = await bulkDelete([id]);
         if (result.deleted.includes(id)) { router.push("/"); return; }
@@ -123,6 +125,7 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
     <section className="job-facts panel"><div><span>{text("provider")}</span><b>{job.provider_profile_id || job.provider || job.ocr_method || "—"}</b><small>{job.model || "—"} · prompt {job.prompt_version || "—"}</small></div><div><span>{text("documents")}</span><b>{documents.length}</b><small>{job.uploaded_files}/{job.expected_files} PDF</small></div><div><span>{text("pdfPages")}</span><b>{job.page_count}</b><small>{scopeSummary} · {job.failed_pages} failed</small></div><div><span>{text("updated")}</span><b>{new Date(job.updated_at).toLocaleDateString(language())}</b><small>{text("created")}: {new Date(job.created_at).toLocaleString(language())}<br />{job.started_at ? `${statusText("starting")}: ${new Date(job.started_at).toLocaleString(language())}` : ""}{job.completed_at ? <><br />{statusText("completed")}: {new Date(job.completed_at).toLocaleString(language())}</> : null}</small></div><div className="job-actions">{active && <button className="button danger" disabled={busy || job.status === "cancelling"} onClick={() => setAction("cancel")}>{text("cancel")}</button>}{terminal && <button className="button secondary" disabled={busy} onClick={() => setAction("rerun")}>{text("rerun")}</button>}{DELETABLE_JOB_STATUSES.has(job.status) && <button className="button danger ghost" disabled={busy} onClick={requestDelete}>{text("delete")}</button>}</div></section>
     <p className="lifecycle-note">{active ? text("activeHint") : terminal ? text("terminalHint") : statusText(job.status)}</p>
     {(error || job.error) && <p className="notice error" role="alert">{error || safeError(job.error!)}</p>}
+    {job.processing_mode === "combined_dossier" && ["awaiting_segmentation_review", "segmentation_confirmed"].includes(job.status) && <SegmentationReview job={job} onJob={setJob} onError={setError} />}
     <nav className="detail-tabs" aria-label={text("job")}>{(["overview", "review", "artifacts", "report", "logs"] as JobView[]).map((item) => <button className={view === item ? "active" : ""} aria-current={view === item ? "page" : undefined} onClick={() => selectView(item)} key={item}>{text(item)}</button>)}</nav>
     {view === "review" && <>{!!documents.length && <nav className="document-tabs" aria-label={text("documents")}>{documents.map((item, index) => <button className={item.id === document?.id ? "active" : ""} aria-current={item.id === document?.id ? "page" : undefined} key={item.id} onClick={() => selectDocument(item.id)}><span>{index + 1}</span><b>{item.file_name}</b><small>{item.error || item.errors?.length ? statusText("error") : item.review_status === "approved" ? text("approved") : statusText(item.status)}</small></button>)}</nav>}{document ? <ReviewWorkspace key={document.id} jobId={id} document={document} terminal={terminal} onJob={setJob} onDirty={setDirty} onError={setError} /> : <section className="panel empty">{text("noResult")}</section>}</>}
     {view === "overview" && <section className="panel report-section"><div className="section-head"><div><p className="eyebrow">{text("overview")}</p><h2>{text("reportSummary", { documents: documents.length, pages: job.page_count, corrections: job.correction_count, failures })}</h2><small>{scopeSummary}</small></div></div><div className="report-documents">{documents.map((item) => <div key={item.id}><b>{item.file_name}</b><span>{statusText(item.status)}</span><small>{item.pages?.length || 0} {text("pdfPages").toLocaleLowerCase(language())} · {text("processedPages", { count: processedPageCount(item.pages || []) })} · {item.review_status === "approved" ? text("approved") : "—"}</small></div>)}</div></section>}
@@ -138,6 +141,7 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
         <p>{text(action === "delete" ? "deleteSummary" : action === "cancel" ? "cancelBody" : "rerunBody", action === "delete" ? { count: deleteAllowed ? 1 : 0 } : {})}</p>
         {dirty && <p className="notice warning">{text("discardDraft")}</p>}{!!deleteBlocked.length && <><b>{text("blocked")}</b><ul>{deleteBlocked.map((item) => <li key={item.id}>{item.name || item.id}</li>)}</ul></>}
         {action === "rerun" && job.endpoint_external && <label className="consent"><input type="checkbox" checked={actionConsent} onChange={(event) => setActionConsent(event.target.checked)} />{text("consent")}</label>}
+        {action === "rerun" && <><p><b>{job.processing_mode || "legacy"}</b> · {job.provider_profile_id} · {job.vlm_task} · {job.vlm_pages}{job.vlm_max_pages ? ` · max ${job.vlm_max_pages}` : ""}</p>{job.processing_mode === "combined_dossier" && <label><span>{language() === "vi" ? "Phân đoạn" : "Segmentation"}</span><select value={rerunMode} onChange={(event) => setRerunMode(event.target.value as typeof rerunMode)}><option value="reuse_segmentation">{language() === "vi" ? "Dùng lại và xác nhận lại" : "Reuse and reconfirm"}</option><option value="resegment">{language() === "vi" ? "Phân đoạn lại" : "Resegment"}</option></select></label>}</>}
         <footer className="modal-actions"><button className="button secondary" onClick={() => setAction(null)}>{text("close")}</button><button className={action === "delete" || action === "cancel" ? "button danger" : "button primary"} disabled={busy || (action === "delete" && !deleteAllowed) || (action === "rerun" && job.endpoint_external && !actionConsent)} onClick={confirmAction}>{text(action === "delete" ? "confirmDelete" : "confirm")}</button></footer></>}
     </dialog>
   </LegacyShell>;
