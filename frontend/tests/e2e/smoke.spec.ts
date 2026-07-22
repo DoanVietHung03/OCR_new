@@ -233,6 +233,31 @@ test("partial page warning keeps usable review fields visible", async ({ page })
   await expect(page.locator(".document-error")).toHaveCount(0);
 });
 
+test("metadata page plan distinguishes processed pages from PDF pages", async ({ page }) => {
+  const document = { ...fixtureDocument(), pages: Array.from({ length: 5 }, (_, pageIndex) => ({
+    page_index: pageIndex,
+    image_url: `/api/jobs/${id}/artifacts/smoke/page-${pageIndex + 1}.png`,
+    status: pageIndex === 0 || pageIndex === 4 ? "completed" : "skipped",
+    ocr_scope: pageIndex === 0 || pageIndex === 4 ? "metadata" : "none",
+    error: "",
+  })) } as any;
+  const job = { ...fixtureJob("completed", document), page_count: 5, vlm_task: "metadata", vlm_pages: "first,last" } as any;
+  await page.route("**/api/**", async (route) => {
+    const apiPath = new URL(route.request().url()).pathname;
+    if (apiPath === `/api/jobs/${id}`) return route.fulfill({ json: job });
+    if (apiPath.endsWith(".png")) return route.fulfill({ contentType: "image/svg+xml", body: svg });
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.goto(`/jobs/${id}?view=overview`);
+  await expect(page.locator(".job-header")).toContainText("5 trang PDF");
+  await expect(page.locator(".job-header")).toContainText("2/5 trang metadata");
+  await expect(page.locator(".job-facts")).toContainText("Trang PDF");
+  await expect(page.locator(".report-section")).toContainText("2 trang xử lý");
+  await page.getByRole("button", { name: "Rà soát" }).click();
+  await expect(page.locator(".page-numbers button")).toHaveCount(5);
+  await expect(page.locator(".page-numbers .page-skipped")).toHaveCount(3);
+});
+
 test("monitor stops polling and preserves nullable GPU values", async ({ page }) => {
   let metricsCalls = 0;
   await page.route("**/api/**", async (route) => {

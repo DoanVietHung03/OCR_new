@@ -92,6 +92,8 @@ terminal dừng polling và stale refresh giữ snapshot gần nhất kèm cản
   có; `full_ocr` khóa `all`/max `0`, metadata cho các scope server công bố.
 - Copy phải giải thích rõ metadata nhanh chỉ xử lý page plan, còn full OCR xử lý
   toàn bộ trang; không hứa “nhanh” khi profile không hỗ trợ.
+- Job detail phân biệt tổng **trang PDF** với số trang provider thực sự xử lý
+  (`2/5 trang metadata` cho `first,last`) và đánh dấu page `skipped` trong navigation.
 - Browser chỉ gửi `provider_profile_id`, task/pages/max-pages và consent; không
   gửi URL/key/header/model tùy ý.
 - E2E phải chứng minh payload đúng và kết quả live hiển thị selected pages/status
