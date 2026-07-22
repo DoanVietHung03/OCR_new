@@ -13,6 +13,9 @@ def use_store(tmp_path, monkeypatch):
     monkeypatch.setattr(routes.settings, "ocr_base_url", "http://provider.test/v1")
     monkeypatch.setattr(routes.settings, "ocr_model", "test-model")
     monkeypatch.setattr(routes.settings, "ocr_endpoint_external", False)
+    async def ready(**_):
+        return "ready"
+    monkeypatch.setattr(routes, "probe_provider", ready)
     return store
 
 
@@ -36,6 +39,43 @@ def test_create_upload_start_is_one_shot(tmp_path, monkeypatch, pdf_bytes):
     assert first.json()["status"] == second.json()["status"] == "starting"
     assert calls == [job["id"]]
     assert store.read(job["id"])["provider"] == "qwen"
+
+
+def test_readiness_gates_start_without_losing_durable_state(tmp_path, monkeypatch, pdf_bytes):
+    import app.api.routes as routes
+
+    store = use_store(tmp_path, monkeypatch)
+    job = create_and_upload(pdf_bytes)
+
+    async def unavailable(**_):
+        return "unreachable"
+
+    monkeypatch.setattr(routes, "probe_provider", unavailable)
+    check = client.post("/api/engines/qwen/check")
+    start = client.post(f"/api/jobs/{job['id']}/start")
+
+    assert check.json() == {
+        "id": "qwen", "status": "unreachable", "summary": "OCR provider is unreachable.",
+    }
+    assert (start.status_code, start.json()["detail"]["code"]) == (503, "ocr_unreachable")
+    assert store.read(job["id"])["status"] == "ready"
+    store.update(job["id"], status="segmentation_confirmed")
+    continued = client.post(f"/api/jobs/{job['id']}/continue")
+    assert (continued.status_code, continued.json()["detail"]["code"]) == (503, "ocr_unreachable")
+    assert store.read(job["id"])["status"] == "segmentation_confirmed"
+
+    dossier = client.post("/api/jobs", json={"file_count": 1, "processing_mode": "combined_dossier"}).json()
+    uploaded = client.put(f"/api/jobs/{dossier['id']}/files?path=dossier.pdf", content=pdf_bytes).json()["job"]
+    source = {**uploaded["source_pdfs"][0], "page_count": 2, "revision": 1}
+    store.update(dossier["id"], status="awaiting_segmentation_review", source_pdfs=[source])
+    confirmed = client.post(f"/api/jobs/{dossier['id']}/source-pdfs/{source['id']}/segmentation/confirm", json={
+        "revision": 1, "segments": [
+            {"logical_document_type": "dossier_cover", "start_page": 0, "end_page": 0},
+            {"logical_document_type": "administrative_document", "start_page": 1, "end_page": 1},
+        ],
+    })
+    assert confirmed.json()["status"] == "segmentation_confirmed"
+    assert any(event["code"] == "segmentation_confirmed" for event in confirmed.json()["logs"])
 
 
 def test_combined_dossier_confirmation_is_revisioned_and_dispatches_once(tmp_path, monkeypatch, pdf_bytes):
@@ -72,6 +112,10 @@ def test_combined_dossier_confirmation_is_revisioned_and_dispatches_once(tmp_pat
     copy = store.read(rerun.json()["id"])
     assert (copy["processing_mode"], copy["vlm_task"], copy["vlm_pages"], copy["vlm_max_pages"]) == ("combined_dossier", "metadata", "first,last", 2)
     assert copy["source_pdfs"][0]["proposal"] == segments
+    resegmented = client.post(f"/api/jobs/{job['id']}/rerun", json={"rerun_mode": "resegment"})
+    clean_copy = store.read(resegmented.json()["id"])
+    assert not clean_copy.get("reuse_segmentation")
+    assert not clean_copy["source_pdfs"][0].get("proposal")
     assert store.read(job["id"])["source_pdfs"][0]["confirmed_segments"] == segments
 
 
@@ -187,6 +231,11 @@ def test_crop_evidence_persists_and_rerun_is_clean(tmp_path, monkeypatch, pdf_by
     assert copied["correction_count"] == 0
     assert len(list((store.path(copied["id"]) / "uploads").glob("*.pdf"))) == 1
     assert store.read(source["id"])["status"] == "completed"
+    count = len(store.list())
+    store.update(source["id"], provider_profile_id="removed")
+    unavailable = client.post(f"/api/jobs/{source['id']}/rerun", json={})
+    assert (unavailable.status_code, unavailable.json()["detail"]["code"]) == (409, "provider_profile_unavailable")
+    assert len(store.list()) == count
 
 
 def test_error_envelope_and_openapi(monkeypatch):

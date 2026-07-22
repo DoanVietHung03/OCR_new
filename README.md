@@ -6,8 +6,8 @@ máy chủ cấu hình.
 
 Milestone A, B, browser baseline v1 và **Legacy+ v2** đã có closure local ngày
 2026-07-21. Legacy+ phục hồi browser tham chiếu trong `OCR_paper`, chỉ loại trừ
-ZIP/ảnh/folder upload. Repair Gate đã pass local ngày 2026-07-22; `X8`/`X9` đã
-pass local, `X7`/`X10`/`X16` đang IN PROGRESS và `X11` vẫn OPEN.
+ZIP/ảnh/folder upload. Repair Gate đã pass local ngày 2026-07-22; `X8`–`X11` đã
+pass local, còn `X7`/`X16` đang IN PROGRESS.
 Milestone C chỉ là internal production-like pilot,
 không phải customer-production approval. Cho đến khi Gate C đạt, `src/ocr/` và
 `web/` vẫn là runtime rollback.
@@ -26,7 +26,7 @@ build, OpenAPI/types và diff checks. Đây là baseline cần bảo vệ; field
 segmentation hồ sơ gộp và bốn fixture thật vẫn phải qua local/live gate mới.
 Contract local hiện có field policy dùng chung, missing-field atomic approval,
 typed blocker/risk, field evidence, Processing Mode, review segmentation theo
-revision, Continue và rerun reuse/resegment. Bộ backend đạt 35 tests; browser
+revision, Continue, rerun reuse/resegment và readiness thật. Bộ backend đạt 37 tests; browser
 focused và eager Celery/fake-provider pass. Đây chưa phải bằng chứng bốn fixture
 hoặc provider production-like thật.
 

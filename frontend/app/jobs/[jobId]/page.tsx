@@ -94,7 +94,7 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
         setError(text("deleteIncomplete", { count: result.skipped.length + result.failed.length || 1 }));
       }
       setAction(null); setActionConsent(false);
-    } catch (reason) { setAction(null); setError(message(reason)); } finally { setBusy(false); }
+    } catch (reason) { setError(message(reason)); } finally { setBusy(false); }
   }
   const logs = job?.logs || [];
   const logText = logs.map((item) => typeof item === "string" ? item : JSON.stringify(item, null, 2)).join("\n");

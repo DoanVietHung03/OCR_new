@@ -849,8 +849,11 @@ export interface components {
         EngineCheckResponse: {
             /** Id */
             id: string;
-            /** Status */
-            status: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_configured" | "unreachable" | "reachable" | "ready";
             /** Summary */
             summary: string;
         };

@@ -5,8 +5,8 @@ cutover và bằng chứng Milestone C. Kế hoạch frontend nằm trong
 [`legacy_browser_recreated.md`](legacy_browser_recreated.md).
 
 **Trạng thái 2026-07-22:** Repair Gate `BE-X1`–`BE-X3` và `FE-X1`–`FE-X3` đã pass
-local. `X8`/`X9` đã pass local; `X7` có contract/worker/UI local nhưng còn chờ
-bốn fixture và restart thật. `X10`/`X16` vẫn IN PROGRESS. Milestone C là
+local. `X8`–`X11` đã pass local; `X7` có contract/worker/UI local nhưng còn chờ
+bốn fixture và restart thật. `X16` vẫn IN PROGRESS. Milestone C là
 **internal production-like pilot**, không phải customer-production-ready; chỉ ký
 sau local contract gate và evidence strong-server. `src/ocr/` và `web/` vẫn là
 runtime rollback.
@@ -314,7 +314,7 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_corrections.py:374-388`.
 
 ### BE-X10
 
-**P0 — Rerun giữ snapshot xử lý — IN PROGRESS 2026-07-22.** Counterpart:
+**P0 — Rerun giữ snapshot xử lý — PASS LOCAL 2026-07-22.** Counterpart:
 [`FE-X10`](legacy_browser_recreated.md#fe-x10).
 
 - Mặc định copy `processing_mode`, `provider_profile_id`, `vlm_task`, `vlm_pages`,
@@ -330,13 +330,12 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_corrections.py:374-388`.
 
 Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_queue.py:227-255`.
 
-Đã có local contract cho snapshot mode/profile/task/page scope, hai `rerun_mode`,
-source job bất biến và reuse boundary phải xác nhận lại. Còn thiếu readiness thật,
-focused browser gate cho hai mode và provider-call evidence trước khi đóng.
+Local gate đã pass cho snapshot mode/profile/task/page scope, source bất biến,
+safe conflict profile và hai nhánh reuse/resegment trên backend/browser.
 
 ### BE-X11
 
-**P0/P1 — Provider configuration và readiness thật — OPEN.** Counterpart:
+**P0/P1 — Provider configuration và readiness thật — PASS LOCAL 2026-07-22.** Counterpart:
 [`FE-X11`](legacy_browser_recreated.md#fe-x11).
 
 - Giữ một profile và gọi đúng là “Cấu hình OCR hiện tại”; readiness phân biệt
@@ -354,6 +353,10 @@ focused browser gate cho hai mode và provider-call evidence trước khi đóng
   configured; không có secret trong API/log.
 
 Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_readiness.py:43-83,133-225`.
+
+Probe ảnh tổng hợp authenticated phân biệt `not_configured`, `unreachable`,
+`reachable` và `ready`; Start/Continue giữ nguyên durable state khi probe fail.
+Provider production-like thật vẫn thuộc ledger Milestone C, không phải local gate.
 
 ### BE-X12
 

@@ -2240,6 +2240,12 @@
           },
           "status": {
             "type": "string",
+            "enum": [
+              "not_configured",
+              "unreachable",
+              "reachable",
+              "ready"
+            ],
             "title": "Status"
           },
           "summary": {

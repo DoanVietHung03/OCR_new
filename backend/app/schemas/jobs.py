@@ -367,7 +367,7 @@ class EnginesResponse(BaseModel):
 
 class EngineCheckResponse(BaseModel):
     id: str
-    status: str
+    status: Literal["not_configured", "unreachable", "reachable", "ready"]
     summary: str
 
 

@@ -25,7 +25,7 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
     if (apiPath === "/api/state") return route.fulfill({ json: state(created && !deleted ? [fixtureJob("completed", document)] : []) });
     if (apiPath === "/api/system-metrics") return route.fulfill({ json: { cpu_percent: 12, memory_percent: 34, cpu: { model: "Test CPU", physical_cores: 4, logical_cores: 8, percent: 12, load_1m: .1, load_5m: .2, load_15m: .3 }, disk: { used_bytes: 25, total_bytes: 100, free_bytes: 75, percent: 25 }, gpu: { status: "unavailable", devices: [] } } });
     if (apiPath === "/api/reports") return route.fulfill({ json: { operations: { total_jobs: 1, active_jobs: 0, completed_jobs: 1, error_jobs: 0, documents: 1, pages: 1, duration_seconds_average: 60, pages_per_minute: 1, failure_codes: {} }, quality: { documents: 1, approved_documents: 1, corrected_fields: 0, confidence_average: .91, total_fields: 1, confidence_coverage: 1, evidence_coverage: 0, warning_documents: 0 }, benchmark_samples: [] } });
-    if (apiPath === "/api/engines/qwen/check") return route.fulfill({ json: { id: "qwen", status: "configured", summary: "Configuration is present." } });
+    if (apiPath === "/api/engines/qwen/check") return route.fulfill({ json: { id: "qwen", status: "ready", summary: "OCR provider is ready." } });
     if (apiPath === "/api/jobs" && request.method() === "POST") { created = true; return route.fulfill({ json: fixtureJob("uploading", document) }); }
     if (apiPath === `/api/jobs/${id}/files`) return route.fulfill({ json: { job: fixtureJob("ready", document) } });
     if (apiPath === `/api/jobs/${id}/start`) return route.fulfill({ json: fixtureJob("queued", document) });
@@ -46,7 +46,9 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   });
 
   await page.goto("/upload");
-  await page.getByRole("button", { name: /kiểm tra lại|recheck/i }).click();
+  await expect(page.locator(".upload-options .option-value")).toContainText(/Cấu hình OCR hiện tại|Current OCR configuration/);
+  await page.getByRole("button", { name: /sẵn sàng|readiness/i }).click();
+  await expect(page.locator(".upload-actions")).toContainText(/sẵn sàng|ready/i);
   await page.locator('input[type="file"]').setInputFiles({ name: "smoke.pdf", mimeType: "application/pdf", buffer: pdf });
   await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
   await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`));
@@ -339,6 +341,33 @@ test("combined dossier keeps revisioned segmentation review in the job detail", 
   await page.goto(`/jobs/${id}`); await expect(page.getByRole("heading", { name: /xác nhận phân đoạn|confirm segmentation/i })).toBeVisible();
   await page.getByRole("button", { name: /xác nhận PDF này|confirm this PDF/i }).click();
   expect(body).toEqual({ revision: 1, segments: source.proposal });
+});
+
+test("rerun keeps the snapshot and exposes both segmentation choices", async ({ page }) => {
+  const source = { ...fixtureJob("completed"), processing_mode: "combined_dossier", vlm_task: "metadata", vlm_pages: "first,last", vlm_max_pages: 2 } as any;
+  const bodies: any[] = [];
+  await page.route("**/api/**", async (route) => {
+    const request = route.request(), apiPath = new URL(request.url()).pathname;
+    if (apiPath === `/api/jobs/${id}`) return route.fulfill({ json: source });
+    if (apiPath.endsWith("/rerun")) {
+      bodies.push(request.postDataJSON());
+      if (bodies.length === 1) return route.fulfill({ status: 409, json: { detail: { code: "provider_profile_unavailable", message: "provider_profile_unavailable" } } });
+      return route.fulfill({ json: { ...source, id: rerunId, status: "starting" } });
+    }
+    if (apiPath === `/api/jobs/${rerunId}`) return route.fulfill({ json: { ...source, id: rerunId, status: "starting" } });
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.goto(`/jobs/${id}`);
+  await page.getByRole("button", { name: /chạy lại|rerun/i }).click();
+  const dialog = page.locator("dialog[open]");
+  await expect(dialog).toContainText(/metadata.*first,last.*max 2/i);
+  await dialog.getByRole("combobox").selectOption("resegment");
+  await dialog.getByRole("button", { name: /xác nhận|confirm/i }).click();
+  await expect(dialog).toBeVisible(); await expect(page.locator(".notice.error")).toContainText(/không còn khả dụng|unavailable/i);
+  await dialog.getByRole("combobox").selectOption("reuse_segmentation");
+  await dialog.getByRole("button", { name: /xác nhận|confirm/i }).click();
+  await expect(page).toHaveURL(new RegExp(rerunId));
+  expect(bodies.map((body) => body.rerun_mode)).toEqual(["resegment", "reuse_segmentation"]);
 });
 
 test("missing canonical fields keep drafts until atomic approval succeeds", async ({ page }) => {

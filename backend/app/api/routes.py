@@ -37,7 +37,7 @@ from ..schemas.jobs import (
 )
 from ..services.codes import CodeCatalog
 from ..services.jobs import ApprovalBlocked, DELETABLE, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
-from ..services.ocr_runner import PROMPT_VERSION, configured
+from ..services.ocr_runner import PROMPT_VERSION, configured, probe_provider
 from ..services.system_metrics import system_metrics as read_system_metrics
 from ..settings import settings
 
@@ -165,6 +165,24 @@ def provider_profiles() -> list[dict]:
     }]
 
 
+async def provider_readiness() -> str:
+    return await probe_provider(
+        base_url=settings.ocr_base_url,
+        api_key=settings.ocr_api_key,
+        model=settings.ocr_model,
+        timeout=min(settings.ocr_timeout_seconds, 10),
+    )
+
+
+async def require_provider_ready() -> None:
+    readiness = await provider_readiness()
+    if readiness != "ready":
+        fail(503, {
+            "not_configured": "ocr_not_configured",
+            "unreachable": "ocr_unreachable",
+        }.get(readiness, "ocr_not_ready"))
+
+
 def engines() -> list[dict]:
     return provider_profiles()
 
@@ -253,8 +271,7 @@ async def start(job_id: str):
         fail(409, "upload_incomplete")
     if job.get("endpoint_external", True) and not job.get("cloud_data_confirmed"):
         fail(400, "cloud_data_confirmation_required")
-    if not configured(settings.ocr_base_url, settings.ocr_model):
-        fail(503, "ocr_not_configured")
+    await require_provider_ready()
     try:
         job, should_dispatch = store.begin_start(job_id)
     except ValueError as exc:
@@ -297,12 +314,14 @@ def dispatch_extraction(job_id: str) -> dict:
 async def confirm_segmentation(job_id: str, source_pdf_id: str, payload: ConfirmSegmentationRequest):
     try:
         job = store.confirm_segmentation(job_id, source_pdf_id, payload.revision, [item.model_dump() for item in payload.segments])
-        store.add_event(job_id, "segmentation_confirmed", source_pdf_id=source_pdf_id, revision=payload.revision + 1)
+        job = store.add_event(job_id, "segmentation_confirmed", source_pdf_id=source_pdf_id, revision=payload.revision + 1)
     except FileNotFoundError:
         fail(404, "not_found")
     except ValueError as exc:
         fail(409, str(exc))
-    return public_job(dispatch_extraction(job_id) if job.get("status") == "segmentation_confirmed" else job)
+    if job.get("status") == "segmentation_confirmed" and await provider_readiness() == "ready":
+        job = dispatch_extraction(job_id)
+    return public_job(job)
 
 
 @router.post("/jobs/{job_id}/continue", response_model=JobResponse)
@@ -310,8 +329,7 @@ async def continue_job(job_id: str):
     job = job_or_404(job_id)
     if job.get("status") != "segmentation_confirmed":
         fail(409, "segmentation_not_confirmed")
-    if not configured(settings.ocr_base_url, settings.ocr_model):
-        fail(503, "ocr_not_configured")
+    await require_provider_ready()
     return public_job(dispatch_extraction(job_id))
 
 
@@ -490,11 +508,16 @@ async def get_reports():
 async def check_engine(engine_id: str):
     if engine_id not in {engine["id"] for engine in engines()}:
         fail(404, "invalid_ocr_method")
-    configured_now = configured(settings.ocr_base_url, settings.ocr_model)
+    readiness = await provider_readiness()
     return {
         "id": engine_id,
-        "status": "configured" if configured_now else "not_configured",
-        "summary": "Configuration is present." if configured_now else "OCR provider is not configured.",
+        "status": readiness,
+        "summary": {
+            "not_configured": "OCR provider is not configured.",
+            "unreachable": "OCR provider is unreachable.",
+            "reachable": "OCR provider responded but is not ready.",
+            "ready": "OCR provider is ready.",
+        }[readiness],
     }
 
 

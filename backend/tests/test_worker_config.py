@@ -123,6 +123,28 @@ def test_provider_retries_429_once_but_not_read_timeout(monkeypatch):
     assert tasks.safe_error(RuntimeError("raw provider secret")) == "ocr_failed"
 
 
+def test_provider_probe_distinguishes_reachability_from_readiness(monkeypatch):
+    import app.services.ocr_runner as runner
+
+    real_client = httpx.AsyncClient
+
+    def use(handler):
+        monkeypatch.setattr(
+            runner.httpx,
+            "AsyncClient",
+            lambda **options: real_client(transport=httpx.MockTransport(handler), **options),
+        )
+        return asyncio.run(runner.probe_provider(base_url="http://provider", api_key="secret", model="model"))
+
+    assert use(lambda _: httpx.Response(401)) == "reachable"
+    assert use(lambda _: httpx.Response(200, json={"choices": [{"message": {"content": '{"fields": {}}'}}]})) == "ready"
+
+    def unavailable(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("secret endpoint", request=request)
+
+    assert use(unavailable) == "unreachable"
+
+
 def test_page_planner_and_metadata_scope(tmp_path, monkeypatch, pdf_bytes):
     import app.workers.tasks as tasks
 

@@ -12,6 +12,9 @@ from .field_policy import ADMIN_FIELDS
 from .jobs import FIELDS
 
 PROMPT_VERSION = "3"
+PROBE_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nCEAAAAASUVORK5CYII="
+)
 FIELD_ALIASES = {
     "co_quan": "co_quan_ban_hanh", "so_hieu": "so_van_ban",
     "so_ky_hieu": "so_van_ban", "ma_van_ban": "so_van_ban",
@@ -188,3 +191,25 @@ async def request_page(
 
 def configured(base_url: str, model: str) -> bool:
     return bool(base_url and model)
+
+
+async def probe_provider(*, base_url: str, api_key: str, model: str, timeout: float = 10) -> str:
+    if not configured(base_url, model):
+        return "not_configured"
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(
+                base_url.rstrip("/") + "/chat/completions",
+                json=request_body(PROBE_PNG, model, expected_fields=ADMIN_FIELDS),
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+    except httpx.HTTPError:
+        return "unreachable"
+    if not response.is_success:
+        return "reachable"
+    try:
+        content = message_text(response.json())
+        validate_result(parse_json_object(content), expected_fields=ADMIN_FIELDS)
+    except (TypeError, ValueError):
+        return "reachable"
+    return "ready"

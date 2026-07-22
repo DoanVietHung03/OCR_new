@@ -52,7 +52,7 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 .upload-panel { margin-bottom: 20px; padding: 22px; }
 .upload-panel .section-head p:last-child { margin-top: 5px; color: #60718a; }
 .upload-options { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin-top: 18px; }
-.upload-options label, .form-grid label { display: grid; gap: 6px; color: #526782; font-size: .78rem; font-weight: 700; }
+.upload-options label, .upload-options .option-value, .form-grid label { display: grid; gap: 6px; color: #526782; font-size: .78rem; font-weight: 700; }
 .upload-options select, .upload-options input, .form-grid select, .form-grid input { min-height: 41px; min-width: 0; border: 1px solid #c8d2df; border-radius: 8px; padding: 8px 10px; background: #fff; }
 .dropzone { position: relative; display: grid; min-height: 142px; margin: 18px 0; place-items: center; align-content: center; gap: 5px; border: 1.5px dashed #8aa3c4; border-radius: 11px; color: #345175; background: #f7faff; cursor: pointer; }
 .dropzone:hover { border-color: #1768d4; background: #f0f6ff; }

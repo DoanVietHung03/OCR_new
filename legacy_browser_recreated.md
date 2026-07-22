@@ -5,8 +5,8 @@ parity và browser evidence. Backend contract, worker, cutover và Milestone C n
 trong [`implementation_plan.md`](implementation_plan.md).
 
 **Trạng thái 2026-07-22:** Repair Gate `FE-X1`–`FE-X3` và counterpart backend đã
-pass local. `FE-X8`/`FE-X9` đã pass local; `FE-X7` có UI/contract local nhưng
-còn chờ bốn fixture và restart thật. `FE-X10`/`FE-X16` vẫn IN PROGRESS.
+pass local. `FE-X8`–`FE-X11` đã pass local; `FE-X7` có UI/contract local nhưng
+còn chờ bốn fixture và restart thật. `FE-X16` vẫn IN PROGRESS.
 Milestone C là internal production-like pilot; live evidence vẫn
 ghi duy nhất trong `BE-C-EVIDENCE`.
 
@@ -259,7 +259,7 @@ Reference cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
 
 ### FE-X10
 
-**P0 — Rerun snapshot minh bạch — IN PROGRESS 2026-07-22.** Counterpart:
+**P0 — Rerun snapshot minh bạch — PASS LOCAL 2026-07-22.** Counterpart:
 [`BE-X10`](implementation_plan.md#be-x10).
 
 - Dialog rerun hiển thị read-only Processing Mode, Provider Profile, task, page
@@ -270,12 +270,12 @@ Reference cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
 - Gate: rerun `metadata/first,last` và `full_ocr/all` dẫn đến job mới hiển thị đúng
   config nguồn, không đổi phạm vi/chi phí ngầm.
 
-Dialog hiện đã công bố snapshot read-only và hai mode reuse/resegment cho hồ sơ
-gộp; còn thiếu focused browser gate cho cả hai nhánh và safe conflict profile.
+Dialog snapshot, hai mode reuse/resegment và safe conflict profile đã pass
+focused browser gate.
 
 ### FE-X11
 
-**P0/P1 — Provider readiness trung thực — OPEN.** Counterpart:
+**P0/P1 — Provider readiness trung thực — PASS LOCAL 2026-07-22.** Counterpart:
 [`BE-X11`](implementation_plan.md#be-x11).
 
 - Với một profile, đổi copy/dropdown gây hiểu nhầm thành “Cấu hình OCR hiện tại”.
@@ -284,6 +284,9 @@ gộp; còn thiếu focused browser gate cho cả hai nhánh và safe conflict p
   engine hoạt động chỉ vì settings có giá trị, không hiện URL/model/key/raw reply.
 - Capability điều khiển Processing Mode/task/page input. Configured profile được
   create/upload; readiness chỉ chặn Start/Continue và không làm mất job/draft.
+
+UI một profile dùng copy “Cấu hình OCR hiện tại”, readiness hiển thị safe status
+và capability điều khiển các lựa chọn; focused browser gate đã pass.
 
 ### FE-X12
 
@@ -434,7 +437,7 @@ khó và review/approval độc lập trước khi đóng.
 | Artifacts/timeline/logs | PASS LOCAL `X2` | Per-page safe diagnostics render đúng |
 | Reports/benchmark/Codes/Monitor | PROTECT | Nullable/unavailable và durable data vẫn đúng |
 | Generated API/compatibility | PASS LOCAL `X3` | OpenAPI check và legacy read pass |
-| Evidence/missing field/approval/rerun/readiness | `X8`/`X9` PASS LOCAL; `X7`/`X10` IN PROGRESS; `X11` OPEN | Nhóm P0 pass focused/local và fixture |
+| Evidence/missing field/approval/rerun/readiness | `X8`–`X11` PASS LOCAL; `X7` IN PROGRESS | Nhóm P0 pass focused/local và fixture |
 | Segmentation/Bìa/logical documents | IN PROGRESS P0 `X16` | Bốn fixture, confirm/restart/review và legacy read pass |
 | Progress/timeline/triage | OPEN `X12`–`X13` | X16 counters/audit P0; phần P1 reload/deep-link pass |
 | Report/export/URL/polish | OPEN `X14`–`X15` | Không placeholder, native state và VI/EN pass |
@@ -443,7 +446,7 @@ khó và review/approval độc lập trước khi đóng.
 
 Không dùng lại con số `18/19` cho trạng thái hiện tại cho đến khi các mục OPEN đã
 pass. Repair Gate ngày 2026-07-22 là baseline hiện hành: backend `28 passed`;
-suite mở rộng hiện tại `35 passed`,
+suite mở rộng hiện tại `37 passed`,
 legacy compatibility `10 passed`, focused browser coverage cho task/page retry
 và partial review, typecheck/build/OpenAPI/compile/diff đều pass.
 

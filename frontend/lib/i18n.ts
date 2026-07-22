@@ -14,7 +14,7 @@ const vi = {
   consent: "Tôi đồng ý gửi ảnh trang PDF đến endpoint OCR bên ngoài đã được máy chủ cấu hình.",
   consentConfirm: "Công việc mới chỉ sao chép PDF nguồn và sẽ gửi ảnh trang đến endpoint bên ngoài. Tiếp tục?",
   engine: "Engine OCR", task: "Tác vụ VLM", pageScope: "Phạm vi trang", maxPages: "Số trang tối đa", fullOcr: "OCR toàn văn", metadata: "Metadata nhanh", allPages: "Tất cả trang", autoPages: "Tự động", edgePages: "Trang đầu và cuối", configuredHint: "Đây là trạng thái cấu hình máy chủ, không phải phép thử kết nối provider.",
-  checkEngine: "Kiểm tra lại cấu hình", jobMetrics: "Số liệu công việc", totalJobs: "Tổng công việc", pages: "Số trang", pdfPages: "Trang PDF",
+  checkEngine: "Kiểm tra mức sẵn sàng", jobMetrics: "Số liệu công việc", totalJobs: "Tổng công việc", pages: "Số trang", pdfPages: "Trang PDF",
   metadataPageSummary: "{processed}/{total} trang metadata", fullOcrPageSummary: "{processed}/{total} trang OCR toàn văn", processedPages: "{count} trang xử lý", skippedPage: "Trang không được chọn xử lý",
   corrections: "Số hiệu chỉnh", completedJobs: "Đã hoàn thành", errorJobs: "Công việc lỗi", matchingJobs: "{count} công việc phù hợp", refresh: "Làm mới",
   retry: "Thử lại", stale: "Không thể làm mới. Đang hiển thị dữ liệu thành công gần nhất.", search: "Tìm kiếm",
@@ -50,6 +50,7 @@ const vi = {
   status_running: "Đang chạy", status_cancelling: "Đang hủy", status_completed: "Hoàn thành",
   status_completed_with_warnings: "Hoàn thành có cảnh báo", status_error: "Lỗi", status_cancelled: "Đã hủy",
   status_interrupted: "Bị gián đoạn", status_configured: "Đã cấu hình", status_not_configured: "Chưa cấu hình",
+  status_reachable: "Đã kết nối, chưa sẵn sàng", status_unreachable: "Không thể kết nối",
 } as const;
 
 type TextKey = keyof typeof vi;
@@ -65,7 +66,7 @@ const en: Record<TextKey, string> = {
   consent: "I consent to sending PDF page images to the external OCR endpoint configured by the server.",
   consentConfirm: "The new job copies source PDFs only and will send page images to an external endpoint. Continue?",
   engine: "OCR engine", task: "VLM task", pageScope: "Page scope", maxPages: "Maximum pages", fullOcr: "Full OCR", metadata: "Quick metadata", allPages: "All pages", autoPages: "Auto", edgePages: "First and last pages", configuredHint: "This is server configuration status, not a provider connectivity probe.",
-  checkEngine: "Recheck configuration", jobMetrics: "Job metrics", totalJobs: "Total jobs", pages: "Pages", pdfPages: "PDF pages", corrections: "Corrections",
+  checkEngine: "Check readiness", jobMetrics: "Job metrics", totalJobs: "Total jobs", pages: "Pages", pdfPages: "PDF pages", corrections: "Corrections",
   metadataPageSummary: "{processed}/{total} metadata pages", fullOcrPageSummary: "{processed}/{total} full OCR pages", processedPages: "{count} processed pages", skippedPage: "Page was not selected for processing",
   completedJobs: "Completed jobs", errorJobs: "Error jobs", matchingJobs: "{count} matching jobs", refresh: "Refresh", retry: "Retry",
   stale: "Refresh failed. Showing the last successful data.", search: "Search", allStatuses: "All statuses", allEngines: "All engines",
@@ -99,6 +100,7 @@ const en: Record<TextKey, string> = {
   status_segmenting: "Segmenting", status_awaiting_segmentation_review: "Awaiting segmentation review", status_segmentation_confirmed: "Segmentation confirmed", status_extraction_starting: "Starting extraction",
   status_completed: "Completed", status_completed_with_warnings: "Completed with warnings", status_error: "Error", status_cancelled: "Cancelled",
   status_interrupted: "Interrupted", status_configured: "Configured", status_not_configured: "Not configured",
+  status_reachable: "Reachable, not ready", status_unreachable: "Unreachable",
 };
 
 export type Language = "vi" | "en";
@@ -162,10 +164,13 @@ const errorLabels: Record<string, [string, string]> = {
   job_quota_exceeded: ["Công việc vượt giới hạn tải lên", "The job exceeds upload limits"],
   cloud_data_confirmation_required: ["Cần đồng ý gửi dữ liệu ra endpoint bên ngoài", "External endpoint consent is required"],
   ocr_not_configured: ["OCR chưa được cấu hình", "OCR is not configured"],
+  ocr_unreachable: ["Không thể kết nối provider OCR", "OCR provider is unreachable"],
+  ocr_not_ready: ["Provider OCR chưa sẵn sàng", "OCR provider is not ready"],
   job_active: ["Công việc đang hoạt động", "The job is active"],
   source_files_incomplete: ["PDF nguồn không đầy đủ", "Source PDFs are incomplete"],
   invalid_crop_rectangle: ["Vùng crop không hợp lệ", "Invalid crop rectangle"],
   invalid_provider_profile: ["Provider Profile không hợp lệ", "Invalid Provider Profile"],
+  provider_profile_unavailable: ["Cấu hình OCR nguồn không còn khả dụng", "Source OCR configuration is unavailable"],
   invalid_vlm_scope: ["Phạm vi trang không hợp lệ", "Invalid page scope"],
   catalog_conflict: ["Code Catalog đã thay đổi; hãy tải lại", "Code Catalog changed; reload it"],
   code_exists: ["Code đã tồn tại", "Code already exists"],
