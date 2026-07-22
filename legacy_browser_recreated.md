@@ -404,8 +404,9 @@ Reference cũ: `OCR_paper/Web/src/app.js:588-617,1987-1996,2489-2503`.
 
 Upload đã có ba mode; Job Detail đã có source thumbnails, segment list, đổi type,
 tách/gộp native, confirm theo revision và Continue. Focused mocked-browser flow
-đã pass. Vẫn cần fixture thật, conflict reload/discard UX, evidence cho boundary
-khó và review/approval độc lập trước khi đóng.
+đã pass. Conflict reload/discard đã có UX giữ draft hoặc tải bản server mới.
+Vẫn cần fixture thật, evidence cho boundary khó và review/approval độc lập trước
+khi đóng.
 
 ## Thứ tự triển khai parity
 
@@ -451,12 +452,12 @@ khó và review/approval độc lập trước khi đóng.
 | Evidence/missing field/approval/rerun/readiness | `X8`–`X11` PASS LOCAL; `X7` IN PROGRESS | Nhóm P0 pass focused/local và fixture |
 | Segmentation/Bìa/logical documents | IN PROGRESS P0 `X16` | Bốn fixture, confirm/restart/review và legacy read pass |
 | Progress/timeline/triage | PASS LOCAL `X12`–`X13` | Persisted counters/failure/timeline, backend triage, deep-link và missing artifact pass |
-| Report/export/URL/polish | OPEN `X14`–`X15` | Không placeholder, native state và VI/EN pass |
+| Report/export/URL/polish | `X14` PARTIAL LOCAL; `X15` PASS LOCAL | Benchmark fingerprint thật; data-driven polish chỉ mở khi operator yêu cầu |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 
-Không dùng lại con số `18/19` cho trạng thái hiện tại cho đến khi các mục OPEN đã
-pass. Repair Gate ngày 2026-07-22 là baseline hiện hành: backend `28 passed`;
+Không dùng lại con số `18/19` cho trạng thái hiện tại cho đến khi các gate còn lại
+đã pass. Repair Gate ngày 2026-07-22 là baseline hiện hành: backend `28 passed`;
 suite mở rộng hiện tại `39 passed`,
 legacy compatibility `10 passed`, browser `17 passed`, `1 skipped`, gồm task/page retry
 và partial review, typecheck/build/OpenAPI/compile/diff đều pass.
@@ -497,5 +498,5 @@ git diff --check
 Legacy+ chỉ đạt Milestone C **internal production-like pilot** khi Repair Gate vẫn
 pass, nhóm P0 `FE-X7`–`FE-X11`/`FE-X16` và counterpart backend pass,
 `BE-C-EVIDENCE` được ký bằng runtime thật, và cửa sổ rollback một ngày kết thúc.
-Không gọi đây là customer-production-ready; phần P1/P2 chưa có gate vẫn OPEN và
-không xóa legacy runtime trong kế hoạch frontend.
+Không gọi đây là customer-production-ready; phần P1/P2 còn lại được liệt kê trong
+`incomlpeted.md` và không xóa legacy runtime trong kế hoạch frontend.

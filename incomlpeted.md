@@ -27,9 +27,8 @@ Contract, worker và UI mock đã có; chưa có fixture/live evidence để xá
   PDF theo revision, sau đó extraction thành công;
 - Bìa và từng văn bản được review, sửa missing field và approve độc lập; trạng
   thái cùng artifact sống qua reload/restart;
-- kiểm tra conflict reload/discard, terminal job đọc được qua runtime legacy,
-  job X16 đang chạy trở thành `interrupted` khi rollback và không bị resume chéo
-  phiên bản.
+- kiểm tra terminal job đọc được qua runtime legacy, job X16 đang chạy trở thành
+  `interrupted` khi rollback và không bị resume chéo phiên bản.
 
 ## 3. X14 — Benchmark tương thích
 
@@ -50,9 +49,9 @@ URL state, page jump, monitor deep-link, phím tắt, copy ID và select-all ter
 
 - chốt bốn dashboard metric và mật độ 1366×768 sau usability review với dữ liệu
   vận hành đại diện;
-- thêm safe server-log download hoặc `total_bytes` cho delete preview chỉ khi
-  operator xác nhận cần; nếu duyệt, phải đi qua OpenAPI/generated types và kiểm
-  thử không lộ dữ liệu nhạy cảm;
+- safe server-log download và `total_bytes` cho delete preview hiện giữ `N/A` vì
+  chưa có nhu cầu operator; chỉ mở lại khi có xác nhận, rồi đi qua
+  OpenAPI/generated types và kiểm thử không lộ dữ liệu nhạy cảm;
 - retry-specific timeline chỉ mở khi X7 đã persist metadata retry thật.
 
 ## 5. Milestone C — internal production-like pilot

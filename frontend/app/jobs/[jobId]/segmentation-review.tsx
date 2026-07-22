@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { confirmSegmentation, continueJob, Job, Segment } from "../../../lib/api";
+import { ApiError, confirmSegmentation, continueJob, getJob, Job, Segment } from "../../../lib/api";
 import { language } from "../../../lib/i18n";
 
 type Props = { job: Job; onJob: (job: Job) => void; onError: (message: string) => void };
@@ -9,10 +9,15 @@ const label = (vi: string, en: string) => language() === "vi" ? vi : en;
 
 export default function SegmentationReview({ job, onJob, onError }: Props) {
   const [drafts, setDrafts] = useState<Record<string, Segment[]>>({});
+  const [revisions, setRevisions] = useState<Record<string, number>>({});
+  const [conflict, setConflict] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(() => setDrafts(Object.fromEntries((job.source_pdfs || []).map((source) => [
-    source.id, ((source.confirmed_segments || []).length ? source.confirmed_segments! : source.proposal || []).map((segment) => ({ ...segment })),
-  ]))), [job.source_pdfs]);
+  useEffect(() => {
+    setDrafts(Object.fromEntries((job.source_pdfs || []).map((source) => [
+      source.id, ((source.confirmed_segments || []).length ? source.confirmed_segments! : source.proposal || []).map((segment) => ({ ...segment })),
+    ])));
+    setRevisions({}); setConflict("");
+  }, [job.source_pdfs]);
 
   const update = (sourceId: string, segments: Segment[]) => setDrafts((value) => ({ ...value, [sourceId]: segments.map((segment, index) => ({ ...segment, id: `segment-${index + 1}` })) }));
   const split = (sourceId: string, segmentIndex: number, page: number) => {
@@ -30,7 +35,19 @@ export default function SegmentationReview({ job, onJob, onError }: Props) {
   async function confirm(sourceId: string, revision: number) {
     setBusy(true); onError("");
     try { onJob(await confirmSegmentation(job.id, sourceId, revision, drafts[sourceId] || [])); }
-    catch (reason) { onError(reason instanceof Error ? reason.message : String(reason)); }
+    catch (reason) {
+      if (reason instanceof ApiError && reason.code === "segmentation_conflict") setConflict(sourceId);
+      else onError(reason instanceof Error ? reason.message : String(reason));
+    }
+    finally { setBusy(false); }
+  }
+  async function resolveConflict(sourceId: string, keepDraft: boolean) {
+    setBusy(true); onError("");
+    try {
+      const latest = await getJob(job.id), source = latest.source_pdfs?.find((item) => item.id === sourceId);
+      if (keepDraft && source && !source.confirmed) { setRevisions((value) => ({ ...value, [sourceId]: source.revision })); setConflict(""); }
+      else onJob(latest);
+    } catch (reason) { onError(reason instanceof Error ? reason.message : String(reason)); }
     finally { setBusy(false); }
   }
   async function resume() {
@@ -51,7 +68,8 @@ export default function SegmentationReview({ job, onJob, onError }: Props) {
         {segment.start_page > 0 && <button className="text-button" disabled={busy || source.confirmed} onClick={() => merge(source.id, index)}>{label("Gộp phần trước", "Merge previous")}</button>}
         {segment.end_page > segment.start_page && <button className="text-button" disabled={busy || source.confirmed} onClick={() => split(source.id, index, segment.start_page + 1)}>{label("Tách sau trang đầu", "Split after first page")}</button>}
       </div>)}</div>
-      {!source.confirmed && <button className="button primary" disabled={busy} onClick={() => confirm(source.id, source.revision)}>{label("Xác nhận PDF này", "Confirm this PDF")}</button>}
+      {conflict === source.id && <div className="conflict" role="alert"><p>{label("PDF đã được cập nhật ở nơi khác.", "This PDF was updated elsewhere.")}</p><button className="button secondary" disabled={busy} onClick={() => resolveConflict(source.id, true)}>{label("Giữ bản nháp", "Keep draft")}</button><button className="button secondary" disabled={busy} onClick={() => resolveConflict(source.id, false)}>{label("Tải lại và bỏ bản nháp", "Reload and discard")}</button></div>}
+      {!source.confirmed && <button className="button primary" disabled={busy} onClick={() => confirm(source.id, revisions[source.id] ?? source.revision)}>{label("Xác nhận PDF này", "Confirm this PDF")}</button>}
       {source.confirmed && <span className="status completed">{label("Đã xác nhận", "Confirmed")}</span>}
     </article>)}
     {job.status === "segmentation_confirmed" && <button className="button primary" disabled={busy} onClick={resume}>{label("Tiếp tục trích xuất", "Continue extraction")}</button>}

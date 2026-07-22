@@ -358,17 +358,20 @@ test("combined dossier keeps revisioned segmentation review in the job detail", 
     ],
   };
   const job = { ...fixtureJob("awaiting_segmentation_review"), processing_mode: "combined_dossier", documents: [], source_pdfs: [source], segmentation_completed_pages: 3, segmentation_total_pages: 3 } as any;
-  let body: any;
+  const bodies: any[] = []; let conflicted = false;
   await page.route("**/api/**", async (route) => {
     const request = route.request(), apiPath = new URL(request.url()).pathname;
-    if (apiPath === `/api/jobs/${id}` && request.method() === "GET") return route.fulfill({ json: job });
-    if (apiPath.endsWith("/segmentation/confirm")) { body = request.postDataJSON(); return route.fulfill({ json: { ...job, status: "extraction_starting" } }); }
+    if (apiPath === `/api/jobs/${id}` && request.method() === "GET") return route.fulfill({ json: conflicted ? { ...job, source_pdfs: [{ ...source, revision: 2 }] } : job });
+    if (apiPath.endsWith("/segmentation/confirm")) { bodies.push(request.postDataJSON()); if (!conflicted) { conflicted = true; return route.fulfill({ status: 409, json: { detail: { code: "segmentation_conflict", message: "segmentation_conflict" } } }); } return route.fulfill({ json: { ...job, status: "extraction_starting" } }); }
     if (apiPath.includes("/artifacts/") && apiPath.endsWith(".png")) return route.fulfill({ status: 200, contentType: "image/svg+xml", body: svg });
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
   await page.goto(`/jobs/${id}`); await expect(page.getByRole("heading", { name: /xác nhận phân đoạn|confirm segmentation/i })).toBeVisible();
+  await page.locator(".segment-list select").nth(1).selectOption("excluded");
   await page.getByRole("button", { name: /xác nhận PDF này|confirm this PDF/i }).click();
-  expect(body).toEqual({ revision: 1, segments: source.proposal });
+  const conflict = page.locator(".segmentation-review .conflict"); await expect(conflict).toBeVisible(); await expect(conflict.getByRole("button", { name: /tải lại và bỏ bản nháp|reload and discard/i })).toBeVisible(); await conflict.getByRole("button", { name: /giữ bản nháp|keep draft/i }).click();
+  await page.getByRole("button", { name: /xác nhận PDF này|confirm this PDF/i }).click();
+  expect(bodies.map((body) => body.revision)).toEqual([1, 2]); expect(bodies[1].segments[1].logical_document_type).toBe("excluded");
 });
 
 test("rerun keeps the snapshot and exposes both segmentation choices", async ({ page }) => {
