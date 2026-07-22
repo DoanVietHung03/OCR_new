@@ -31,7 +31,7 @@ export default function Home() {
   const [actionConsent, setActionConsent] = useState(false); const actionDialog = useRef<HTMLDialogElement>(null); const uploadPanel = useRef<HTMLElement>(null);
   const [rerunMode, setRerunMode] = useState<"reuse_segmentation" | "resegment">("reuse_segmentation");
   const [profiles, setProfiles] = useState<ProviderProfile[]>([]); const [profileId, setProfileId] = useState("");
-  const [reports, setReports] = useState<Reports | null>(null); const [reportsReady, setReportsReady] = useState(false);
+  const [reports, setReports] = useState<Reports | null>(null);
   const [task, setTask] = useState<"full_ocr" | "metadata">("full_ocr"); const [pages, setPages] = useState<"all" | "auto" | "first,last">("all"); const [maxPages, setMaxPages] = useState(0);
   const [processingMode, setProcessingMode] = useState<"administrative_document" | "dossier_cover" | "combined_dossier">("administrative_document");
   const availableProfiles: ProviderProfile[] = profiles.length ? profiles : state.ocr_methods.map((item) => ({ ...item, tasks: ["full_ocr", "metadata"], page_modes: ["all", "auto", "first,last"], max_pages: 100, processing_modes: ["administrative_document"] }));
@@ -46,7 +46,7 @@ export default function Home() {
   useEffect(() => { setUploadOpen(uploadOnly); }, [uploadOnly]);
   useEffect(() => { const timer = setTimeout(() => { setQuery(search); setPage(1); }, 300); return () => clearTimeout(timer); }, [search]);
   useEffect(() => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(location.search); ["q", "status", "engine", "sort", "page"].forEach((key) => params.delete(key));
     if (query) params.set("q", query); if (status !== "all") params.set("status", status); if (method !== "all") params.set("engine", method); if (sort !== "created_desc") params.set("sort", sort); if (page > 1) params.set("page", String(page));
     history.replaceState(null, "", `${location.pathname}${params.size ? `?${params}` : ""}`); setSelected([]);
   }, [query, status, method, sort, page]);
@@ -64,7 +64,7 @@ export default function Home() {
   }, [refresh]);
   useEffect(() => { if (action) actionDialog.current?.showModal(); else actionDialog.current?.close(); }, [action]);
   useEffect(() => { getProviderProfiles().then(({ profiles }) => { setProfiles(profiles); setProfileId((value) => value || profiles[0]?.id || ""); }).catch(() => { /* old backend: state.ocr_methods remains the compatibility fallback */ }); }, []);
-  useEffect(() => { if (uploadOnly) return; getReports().then(setReports).catch(() => setReports(null)).finally(() => setReportsReady(true)); }, [uploadOnly]);
+  useEffect(() => { if (!uploadOnly) getReports().then(setReports).catch(() => setReports(null)); }, [uploadOnly]);
 
   function choose(incoming: File[]) {
     const next = incoming;
@@ -114,6 +114,7 @@ export default function Home() {
   const openUpload = () => { if (!uploadOnly) return router.push("/upload"); setUploadOpen(true); requestAnimationFrame(() => uploadPanel.current?.scrollIntoView({ behavior: "smooth" })); };
 
   if (!loaded && loadError) return <LegacyShell onNew={openUpload}><section className="panel empty" role="alert"><p>{loadError}</p><button className="button secondary" onClick={refresh}>{text("retry")}</button></section></LegacyShell>;
+  const terminalIds = state.jobs.filter((job) => TERMINAL_JOB_STATUSES.has(job.status)).map((job) => job.id);
 
   return <LegacyShell onNew={openUpload}>
     <header className="page-header"><div><p className="eyebrow">{text("title")}</p><h1>{text(uploadOnly ? "upload" : "jobs")}</h1><p>{text(uploadOnly ? "uploadSubtitle" : "subtitle")}</p></div>{!uploadOnly && <button className="button primary" onClick={openUpload}>＋ {text("newOcr")}</button>}</header>
@@ -137,13 +138,13 @@ export default function Home() {
     {(error || (!uploadOnly && stale)) && <div className={error ? "notice error" : "notice warning"} role="alert"><span>{error || text("stale")}</span><button className="button secondary" onClick={refresh}>{text("retry")}</button></div>}
     {!uploadOnly && <>
     <section className="metrics" aria-label={text("jobMetrics")}>{Object.entries(state.metrics).map(([key, value]) => <article className="panel metric" key={key}><span>{text(metricLabels[key as keyof State["metrics"]])}</span><strong>{value}</strong><small>{text("filteredResults")}</small></article>)}</section>
-    <section className="panel benchmark-panel"><div className="section-head"><div><p className="eyebrow">Legacy+</p><h2>{text("benchmark")}</h2></div><span>{reports?.benchmark_samples.length || 0} {text("samples")}</span></div>{!reportsReady ? <p className="empty">{text("loading")}</p> : !reports ? <p className="empty">{text("unavailable")}</p> : reports.benchmark_samples.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>{text("provider")}</th><th>{text("fixtureGroup")}</th><th>{text("task")}</th><th>{text("sampleSize")}</th><th>{text("measured")}</th></tr></thead><tbody>{reports.benchmark_samples.map((sample) => <tr key={`${sample.provider_profile_id}-${sample.fixture_group}-${sample.measured_at}`}><td>{sample.provider_profile_id}</td><td>{sample.fixture_group}</td><td>{sample.task} · {sample.page_scope}</td><td>{sample.sample_size}</td><td>{new Date(sample.measured_at).toLocaleString(language())}</td></tr>)}</tbody></table></div> : <p className="empty">{text("noBenchmark")}</p>}</section>
+    {!!reports?.benchmark_samples?.length && <section className="panel benchmark-panel"><div className="section-head"><div><p className="eyebrow">Legacy+</p><h2>{text("benchmark")}</h2></div><span>{reports.benchmark_samples.length} {text("samples")}</span></div><div className="table-scroll"><table className="data-table"><thead><tr><th>{text("provider")}</th><th>{text("fixtureGroup")}</th><th>{text("task")}</th><th>{text("sampleSize")}</th><th>{text("measured")}</th></tr></thead><tbody>{reports.benchmark_samples.map((sample) => <tr key={`${sample.provider_profile_id}-${sample.fixture_group}-${sample.measured_at}`}><td>{sample.provider_profile_id}</td><td>{sample.fixture_group}</td><td>{sample.task} · {sample.page_scope}</td><td>{sample.sample_size}</td><td>{new Date(sample.measured_at).toLocaleString(language())}</td></tr>)}</tbody></table></div></section>}
     <section className="panel jobs-panel">
       <div className="section-head"><div><h2>{text("jobs")}</h2><p>{text("matchingJobs", { count: state.pagination.total })}</p></div><button className="button secondary" onClick={refresh}>{text("refresh")}</button></div>
       <div className="filters"><input aria-label={text("search")} placeholder={text("search")} value={search} onChange={(event) => setSearch(event.target.value)} /><select aria-label={text("status")} value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="all">{text("allStatuses")}</option>{["uploading", "ready", "starting", "queued", "segmenting", "awaiting_segmentation_review", "segmentation_confirmed", "extraction_starting", "running", "cancelling", "completed", "completed_with_warnings", "error", "cancelled", "interrupted"].map((value) => <option value={value} key={value}>{statusText(value)}</option>)}</select><select aria-label={text("engine")} value={method} onChange={(event) => { setMethod(event.target.value); setPage(1); }}><option value="all">{text("allEngines")}</option>{state.ocr_methods.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select><select aria-label={text("sort")} value={sort} onChange={(event) => { setSort(event.target.value); setPage(1); }}><option value="created_desc">{text("newest")}</option><option value="created_asc">{text("oldest")}</option><option value="updated_desc">{text("recentlyUpdated")}</option><option value="updated_asc">{text("leastRecentlyUpdated")}</option></select></div>
       {!!selected.length && <div className="bulk-toolbar"><b>{text("selectedJobs", { count: selected.length })}</b><button className="button danger" onClick={() => requestDelete(state.jobs.filter((job) => selected.includes(job.id)))}>{text("delete")}</button></div>}
       <div className="job-table">
-        <div className="job-row job-head"><span /><span>{text("job")}</span><span>{text("status")}</span><span>{text("provider")}</span><span>{text("pages")}</span><span>{text("updated")}</span><span>{text("actions")}</span></div>
+        <div className="job-row job-head"><input aria-label={text("selectAllTerminal")} type="checkbox" disabled={!terminalIds.length} checked={terminalIds.length > 0 && terminalIds.every((id) => selected.includes(id))} onChange={(event) => setSelected(event.target.checked ? terminalIds : [])} /><span>{text("job")}</span><span>{text("status")}</span><span>{text("provider")}</span><span>{text("pages")}</span><span>{text("updated")}</span><span>{text("actions")}</span></div>
         {state.jobs.map((job) => <article className="job-row" key={job.id}>
           <input aria-label={text("selectJob", { name: job.upload_name || job.id })} type="checkbox" disabled={!DELETABLE_JOB_STATUSES.has(job.status)} checked={selected.includes(job.id)} onChange={() => setSelected((ids) => ids.includes(job.id) ? ids.filter((id) => id !== job.id) : [...ids, job.id])} />
           <div><Link href={`/jobs/${job.id}`}><b>{job.upload_name || job.id}</b></Link><small>{job.id.slice(0, 8)}</small></div><span className={`status ${job.status}`}>{statusText(job.status)}</span>

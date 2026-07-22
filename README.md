@@ -6,8 +6,10 @@ máy chủ cấu hình.
 
 Milestone A, B, browser baseline v1 và **Legacy+ v2** đã có closure local ngày
 2026-07-21. Legacy+ phục hồi browser tham chiếu trong `OCR_paper`, chỉ loại trừ
-ZIP/ảnh/folder upload. Repair Gate đã pass local ngày 2026-07-22; `X8`–`X13` đã
-pass local, còn `X7`/`X16` đang IN PROGRESS.
+ZIP/ảnh/folder upload. Repair Gate đã pass local ngày 2026-07-22; `X8`–`X13` và
+phần local của `X15` đã pass, `X14` còn benchmark thật, còn `X7`/`X16` đang
+IN PROGRESS. Điều kiện hoàn thành các phần phụ thuộc bên ngoài nằm trong
+[`incomlpeted.md`](incomlpeted.md).
 Milestone C chỉ là internal production-like pilot,
 không phải customer-production approval. Cho đến khi Gate C đạt, `src/ocr/` và
 `web/` vẫn là runtime rollback.
@@ -41,6 +43,8 @@ hoặc provider production-like thật.
   bằng chứng Milestone C.
 - `legacy_browser_recreated.md`: nguồn chuẩn frontend, workflow, regression gate
   và mapping ảnh parity.
+- `incomlpeted.md`: các việc còn phụ thuộc fixture, provider, strong server hoặc
+  xác nhận operator, kèm điều kiện nghiệm thu.
 - `docs/ui-parity/`: ảnh ẩn danh tại 1440×900, 1366×768 và 390×844.
 
 ## Các ràng buộc đã khóa

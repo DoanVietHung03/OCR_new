@@ -2305,6 +2305,17 @@
             "type": "integer",
             "title": "Review Risk Count",
             "default": 0
+          },
+          "corrected_artifact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrected Artifact"
           }
         },
         "additionalProperties": true,
@@ -3427,6 +3438,34 @@
         ],
         "title": "PaginationResponse"
       },
+      "ProfileReport": {
+        "properties": {
+          "provider_profile_id": {
+            "type": "string",
+            "title": "Provider Profile Id"
+          },
+          "operations": {
+            "$ref": "#/components/schemas/OperationsReport"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/QualityReport"
+          },
+          "recent_errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recent Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider_profile_id",
+          "operations",
+          "quality"
+        ],
+        "title": "ProfileReport"
+      },
       "ProviderProfileResponse": {
         "properties": {
           "id": {
@@ -3589,11 +3628,25 @@
           "quality": {
             "$ref": "#/components/schemas/QualityReport"
           },
-          "benchmark_samples": {
+          "profiles": {
             "items": {
-              "$ref": "#/components/schemas/BenchmarkSample"
+              "$ref": "#/components/schemas/ProfileReport"
             },
             "type": "array",
+            "title": "Profiles"
+          },
+          "benchmark_samples": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BenchmarkSample"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Benchmark Samples"
           }
         },
@@ -3601,7 +3654,7 @@
         "required": [
           "operations",
           "quality",
-          "benchmark_samples"
+          "profiles"
         ],
         "title": "ReportsResponse"
       },
@@ -3791,6 +3844,17 @@
               }
             ],
             "title": "Ocr Pass"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
           },
           "message": {
             "type": "string",

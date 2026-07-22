@@ -132,6 +132,7 @@ class DocumentResponse(PublicModel):
     approval_blockers: list[ReviewIssue] = Field(default_factory=list)
     review_risks: list[ReviewIssue] = Field(default_factory=list)
     review_risk_count: int = 0
+    corrected_artifact: str | None = None
 
 
 class FailureResponse(BaseModel):
@@ -324,6 +325,7 @@ class SafeEvent(BaseModel):
     revision: int | None = None
     related_job_id: str | None = None
     ocr_pass: str | None = None
+    duration_seconds: float | None = None
     message: str
 
 
@@ -383,10 +385,18 @@ class BenchmarkSample(BaseModel):
     resource_summary: str = ""
 
 
+class ProfileReport(BaseModel):
+    provider_profile_id: str
+    operations: OperationsReport
+    quality: QualityReport
+    recent_errors: list[str] = Field(default_factory=list)
+
+
 class ReportsResponse(BaseModel):
     operations: OperationsReport
     quality: QualityReport
-    benchmark_samples: list[BenchmarkSample]
+    profiles: list[ProfileReport]
+    benchmark_samples: list[BenchmarkSample] | None = None
 
 
 class StateResponse(PublicModel):

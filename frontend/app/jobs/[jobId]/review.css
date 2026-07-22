@@ -21,6 +21,7 @@
 .segmented button[aria-pressed="true"] { color: #173d6b; background: #fff; box-shadow: 0 1px 4px rgb(20 39 65 / 15%); font-weight: 800; }
 .page-numbers { display: flex; gap: 5px; overflow-x: auto; margin: 15px 0 10px; padding-bottom: 4px; }
 .page-numbers button { min-width: 34px; height: 32px; border: 1px solid #ccd6e3; border-radius: 7px; color: #4b5f79; background: #fff; }
+.page-numbers input { width: 64px; height: 32px; }
 .page-numbers button.page-error { border-color: #b42318; color: #b42318; }
 .page-numbers button.page-skipped { border-style: dashed; opacity: .55; }
 .page-numbers button[aria-current="page"] { border-color: #1768d4; color: #fff; background: #1768d4; font-weight: 800; }

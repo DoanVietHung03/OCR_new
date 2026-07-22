@@ -37,7 +37,7 @@ from ..schemas.jobs import (
     UploadResponse,
 )
 from ..services.codes import CodeCatalog
-from ..services.jobs import ApprovalBlocked, DELETABLE, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
+from ..services.jobs import ACTIVE, ApprovalBlocked, DELETABLE, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
 from ..services.ocr_runner import PROMPT_VERSION, configured, probe_provider
 from ..services.system_metrics import system_metrics as read_system_metrics
 from ..settings import settings
@@ -146,6 +146,7 @@ def safe_events(jobs: list[dict]) -> list[dict]:
                     "source_pdf_id": item.get("source_pdf_id"), "revision": item.get("revision"),
                     "document_id": item.get("document_id"), "page_index": item.get("page_index"),
                     "related_job_id": item.get("related_job_id"), "ocr_pass": item.get("ocr_pass"),
+                    "duration_seconds": item.get("duration_seconds"),
                 })
         profile_id = str(job.get("provider_profile_id") or job.get("provider") or job.get("ocr_method") or "") or None
         for event in events[first:]:
@@ -511,9 +512,7 @@ async def get_events(
     return paginated(events, page, page_size)
 
 
-@router.get("/reports", response_model=ReportsResponse)
-async def get_reports():
-    jobs = store.list()
+def report_summary(jobs: list[dict]) -> dict:
     documents = [document for job in jobs for document in job.get("documents", [])]
     timed_jobs = [(job, duration) for job in jobs if (duration := elapsed_seconds(job)) is not None]
     durations = [duration for _, duration in timed_jobs]
@@ -537,7 +536,7 @@ async def get_reports():
     return {
         "operations": {
             "total_jobs": len(jobs),
-            "active_jobs": sum(job.get("status") in {"starting", "queued", "running", "cancelling"} for job in jobs),
+            "active_jobs": sum(job.get("status") in ACTIVE for job in jobs),
             "completed_jobs": sum(job.get("status") in {"completed", "completed_with_warnings"} for job in jobs),
             "error_jobs": sum(job.get("status") in {"error", "interrupted"} for job in jobs),
             "documents": len(documents),
@@ -559,7 +558,24 @@ async def get_reports():
                 for document in documents
             ),
         },
-        "benchmark_samples": [],
+    }
+
+
+@router.get("/reports", response_model=ReportsResponse)
+async def get_reports():
+    jobs = store.list()
+    grouped: dict[str, list[dict]] = {}
+    for job in jobs:
+        profile = str(job.get("provider_profile_id") or job.get("provider") or job.get("ocr_method") or "legacy")
+        grouped.setdefault(profile, []).append(job)
+    profiles = []
+    for profile, items in sorted(grouped.items()):
+        summary = report_summary(items)
+        profiles.append({"provider_profile_id": profile, **summary, "recent_errors": list(summary["operations"]["failure_codes"])[:5]})
+    return {
+        **report_summary(jobs),
+        "profiles": profiles,
+        "benchmark_samples": None,
     }
 
 
@@ -725,6 +741,11 @@ async def artifacts(job_id: str):
         for item in document.get("crop_evidence", [])
         if isinstance(item, dict) and item.get("crop_image")
     }
+    export_documents = {
+        unquote(str(document["corrected_artifact"]).split("/artifacts/", 1)[1]): str(document.get("id", ""))
+        for document in job.get("documents", [])
+        if isinstance(document.get("corrected_artifact"), str) and "/artifacts/" in document["corrected_artifact"]
+    }
     kinds = {".png": "image", ".jpg": "image", ".jpeg": "image", ".webp": "image", ".json": "json", ".txt": "text", ".md": "text"}
     for target in sorted(path for path in root.rglob("*") if path.is_file()):
         relative = target.relative_to(root)
@@ -742,7 +763,7 @@ async def artifacts(job_id: str):
             "status": "available",
             "size_bytes": stat.st_size,
             "updated_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
-            "document_id": relative.parts[0] if len(relative.parts) > 1 else None,
+            "document_id": export_documents.get(relative.as_posix(), relative.parts[0] if len(relative.parts) > 1 else None),
             "page_index": crop.get("page_index", int(page.group(1)) - 1 if page else None),
             "field": crop.get("field"),
             "download_url": f"/api/jobs/{job_id}/artifacts/{encoded}",
@@ -755,6 +776,7 @@ async def artifacts(job_id: str):
             (item.get("crop_image"), document_id, item.get("page_index"), item.get("field"))
             for item in document.get("crop_evidence", []) if isinstance(item, dict)
         ]
+        references.append((document.get("corrected_artifact"), document_id, None, None))
     for url, document_id, page_index, field in references:
         if not isinstance(url, str) or "/artifacts/" not in url:
             continue

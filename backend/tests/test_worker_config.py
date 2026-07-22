@@ -59,6 +59,8 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     assert result["documents"][0]["approval_blockers"]
     assert (result["progress_stage"], result["completed_pages"], result["total_pages"]) == ("completed", 2, 2)
     assert [event["code"] for event in result["events"]] == ["page_pass_completed", "page_pass_completed", "job_completed"]
+    assert all(event.get("duration_seconds", -1) >= 0 for event in result["events"][:2])
+    assert result["report_url"] is None
     assert JobStore(tmp_path).read(job["id"])["completed_pages"] == 2
     assert (store.path(job["id"]) / "artifacts" / "document" / "page-1.png").is_file()
 

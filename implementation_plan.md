@@ -5,8 +5,10 @@ cutover và bằng chứng Milestone C. Kế hoạch frontend nằm trong
 [`legacy_browser_recreated.md`](legacy_browser_recreated.md).
 
 **Trạng thái 2026-07-22:** Repair Gate `BE-X1`–`BE-X3` và `FE-X1`–`FE-X3` đã pass
-local. `X8`–`X13` đã pass local; `X7` có contract/worker/UI local nhưng còn chờ
-bốn fixture và restart thật. `X16` vẫn IN PROGRESS. Milestone C là
+local. `X8`–`X13` và phần local của `X15` đã pass; `X14` đã có corrected export,
+timing/report thật nhưng còn chờ benchmark fingerprint. `X7` và `X16` còn chờ
+bốn fixture, provider/restart thật. Phần chưa thể đóng được tập trung tại
+[`incomlpeted.md`](incomlpeted.md). Milestone C là
 **internal production-like pilot**, không phải customer-production-ready; chỉ ký
 sau local contract gate và evidence strong-server. `src/ocr/` và `web/` vẫn là
 runtime rollback.
@@ -64,7 +66,7 @@ runtime rollback.
 
 Mức ưu tiên: `P0` ảnh hưởng tính đúng/review và phải đóng trước Milestone C;
 `P1` ảnh hưởng năng suất vận hành; `P2` là polish/analytics chỉ làm sau dữ liệu
-thật. `X16` đã được fixture `OCR_paper/box_3` chứng minh và không còn conditional.
+thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đóng `X16`.
 
 ## Invariant đã khóa
 
@@ -402,7 +404,7 @@ Nguồn đối chiếu cũ: `OCR_paper/Web/src/app.js:1893-2255`.
 
 ### BE-X14
 
-**P1/P2 — Benchmark, report và corrected export — OPEN.** Counterpart:
+**P1/P2 — Benchmark, report và corrected export — PARTIAL LOCAL 2026-07-22.** Counterpart:
 [`FE-X14`](legacy_browser_recreated.md#fe-x14).
 
 - P1: persist timing tối thiểu theo job/pass và fingerprint gồm fixture + Provider
@@ -418,12 +420,18 @@ Nguồn đối chiếu cũ: `OCR_paper/Web/src/app.js:1893-2255`.
 - Gate: sample khác fingerprint không bị trộn; export reload/download được; report
   không trùng Overview và không phụ thuộc dữ liệu client đang tải.
 
+Đã hoàn thành local: worker persist duration cho page pass; report aggregate và
+group theo Provider Profile; benchmark thiếu sample trả `null`; approval ghi
+atomic corrected JSON và Artifact Manifest tải được; bỏ self-link `report_url`.
+Fingerprint/sample thật và các mục P2 còn lại theo
+[`incomlpeted.md`](incomlpeted.md).
+
 Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_benchmark.py:97-255`,
 `web_corrections.py:391-427,504-608`.
 
 ### BE-X15
 
-**P2 — Hỗ trợ URL state và tiện ích native — OPEN sau X7–X14.** Counterpart:
+**P2 — Hỗ trợ URL state và tiện ích native — N/A BACKEND / PASS LOCAL FRONTEND 2026-07-22.** Counterpart:
 [`FE-X15`](legacy_browser_recreated.md#fe-x15).
 
 - Chỉ bổ sung public aggregate thật sự thiếu cho frontend: safe log download và
@@ -431,6 +439,10 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_benchmark.py:97-255`,
   select-all, keyboard shortcut, page URL state và monitor state là frontend-only.
 - Không thêm endpoint/config/abstraction cho polish. Gate backend là `N/A` trừ khi
   một public field trên được duyệt; nếu có thì đi qua `BE-X3`/`FE-X3`.
+
+Không có public field mới được duyệt nên backend giữ `N/A`. Các utility native đã
+hoàn thành; phần cần dữ liệu/usability hoặc xác nhận operator nằm trong
+[`incomlpeted.md`](incomlpeted.md).
 
 ### BE-X16
 

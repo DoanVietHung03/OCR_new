@@ -1,3 +1,4 @@
+import json
 import importlib.util
 from pathlib import Path
 
@@ -52,6 +53,11 @@ def test_correction_approval_and_crop_survive_reload(tmp_path, pdf_bytes):
     assert restored["documents"][0]["review_status"] == "approved"
     assert restored["documents"][0]["crop_evidence"] == [evidence]
     assert restored["events"][0]["code"] == "document_corrected"
+    export_url = restored["documents"][0]["corrected_artifact"]
+    exported = json.loads((store.path(job["id"]) / "artifacts" / "document" / "corrected.json").read_text(encoding="utf-8"))
+    assert export_url.endswith("/artifacts/document/corrected.json")
+    assert exported["fields"]["so_van_ban"]["value"] == "NEW"
+    assert "source_text" not in json.dumps(exported)
     assert len(list((store.path(job["id"]) / "corrections").glob("*.json"))) == 1
     assert document["approved_at"]
 

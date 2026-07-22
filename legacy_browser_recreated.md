@@ -5,8 +5,9 @@ parity và browser evidence. Backend contract, worker, cutover và Milestone C n
 trong [`implementation_plan.md`](implementation_plan.md).
 
 **Trạng thái 2026-07-22:** Repair Gate `FE-X1`–`FE-X3` và counterpart backend đã
-pass local. `FE-X8`–`FE-X13` đã pass local; `FE-X7` có UI/contract local nhưng
-còn chờ bốn fixture và restart thật. `FE-X16` vẫn IN PROGRESS.
+pass local. `FE-X8`–`FE-X13` và phạm vi local của `FE-X15` đã pass; `FE-X14` còn
+chờ benchmark fingerprint. `FE-X7`/`FE-X16` còn chờ bốn fixture và restart thật.
+Các điều kiện còn thiếu nằm tại [`incomlpeted.md`](incomlpeted.md).
 Milestone C là internal production-like pilot; live evidence vẫn
 ghi duy nhất trong `BE-C-EVIDENCE`.
 
@@ -328,7 +329,7 @@ Reference cũ: `OCR_paper/Web/src/app.js:1893-2255`.
 
 ### FE-X14
 
-**P1/P2 — Reports, benchmark và corrected export — OPEN.** Counterpart:
+**P1/P2 — Reports, benchmark và corrected export — PARTIAL LOCAL 2026-07-22.** Counterpart:
 [`BE-X14`](implementation_plan.md#be-x14).
 
 - Ẩn benchmark card khi không có compatible sample; thay JSON raw bằng bảng nhỏ
@@ -342,11 +343,16 @@ Reference cũ: `OCR_paper/Web/src/app.js:1893-2255`.
 - Gate: unavailable không hiện `0%`/empty benchmark giả, fingerprint khác nhau
   không bị so sánh và export tải/reload được.
 
+Đã hoàn thành local: report typed theo Provider Profile, benchmark unavailable
+được ẩn, corrected JSON xuất hiện trong Artifacts sau reload và tab Report trùng
+lặp đã bỏ. Benchmark có fingerprint thật còn theo
+[`incomlpeted.md`](incomlpeted.md).
+
 Reference cũ: `OCR_paper/Web/src/app.js:1440-1475,2655-2837`.
 
 ### FE-X15
 
-**P2 — URL state, visual density và utility native — OPEN sau X7–X14.**
+**P2 — URL state, visual density và utility native — PASS LOCAL 2026-07-22 cho phạm vi có dữ liệu.**
 Counterpart: [`BE-X15`](implementation_plan.md#be-x15).
 
 - Persist `view`, document, selected page và selected field trong URL; refresh,
@@ -362,6 +368,11 @@ Counterpart: [`BE-X15`](implementation_plan.md#be-x15).
   copy job ID, select-all terminal jobs trên page; log download/dashboard và
   delete `total_bytes` chỉ thêm khi operator xác nhận cần. Không để Enter textarea
   submit ngoài ý muốn.
+
+Đã hoàn thành local bằng browser API/native controls: URL giữ view/document/page/
+field, monitor deep-link, previous/next/direct jump, dirty guard, Ctrl/Cmd+S,
+copy ID, select-all terminal và VI/EN kỹ thuật. Density/data-driven polish và
+utility cần operator xác nhận được liệt kê trong [`incomlpeted.md`](incomlpeted.md).
 
 ### FE-X16
 

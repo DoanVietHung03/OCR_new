@@ -458,7 +458,9 @@ def test_documents_events_and_reports_are_real_safe_projections(tmp_path, monkey
         "confidence_coverage": 0.667, "evidence_coverage": 0.333,
         "warning_documents": 1,
     }
-    assert report["benchmark_samples"] == []
+    assert report["profiles"][0]["provider_profile_id"] == "qwen"
+    assert report["profiles"][0]["operations"] == report["operations"]
+    assert report["benchmark_samples"] is None
     assert client.get("/api/state").json()["metrics"] == {
         "total_jobs": 1, "active_jobs": 0, "completed_jobs": 1, "error_jobs": 0,
         "documents": 1, "pages": 2, "correction_count": 1,

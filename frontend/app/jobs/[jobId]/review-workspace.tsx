@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, PointerEvent, useEffect, useRef, useState } from "react";
+import { KeyboardEvent as ReactKeyboardEvent, PointerEvent, useEffect, useRef, useState } from "react";
 import { ApiError, crop, Document, Field, getJob, Job, saveCorrections } from "../../../lib/api";
 import { language, safeError, text } from "../../../lib/i18n";
 
@@ -52,6 +52,8 @@ export default function ReviewWorkspace({ jobId, document, terminal, initialPage
   }, {});
 
   useEffect(() => onDirty(Boolean(Object.keys(drafts).length)), [drafts, onDirty]);
+  useEffect(() => { const query = new URLSearchParams(location.search); query.set("page", String(selectedPage)); if (selectedField) query.set("field", selectedField); else query.delete("field"); history.replaceState(null, "", `${location.pathname}?${query}`); }, [selectedPage, selectedField]);
+  useEffect(() => { const shortcut = (event: KeyboardEvent) => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && terminal && !saving) { event.preventDefault(); void save(); } }; window.addEventListener("keydown", shortcut); return () => window.removeEventListener("keydown", shortcut); }, [drafts, saving, terminal]);
   useEffect(() => { setImageFailed(false); }, [selectedPage]);
   useEffect(() => { if (cropOpen) cropDialog.current?.showModal(); else cropDialog.current?.close(); }, [cropOpen]);
   useEffect(() => { if (evidenceUrl) evidenceDialog.current?.showModal(); else evidenceDialog.current?.close(); }, [evidenceUrl]);
@@ -60,6 +62,7 @@ export default function ReviewWorkspace({ jobId, document, terminal, initialPage
     setSelectedField(name);
     setSelectedPage(data.page_index);
   }
+  function goPage(index: number) { if (pages.some((item) => item.page_index === index)) { setSelectedPage(index); if ((document.fields?.[selectedField]?.page_index ?? index) !== index) setSelectedField(""); } }
   function edit(name: string, data: Field, value: string) {
     const old = drafts[name]?.old ?? data.value;
     setDrafts((current) => {
@@ -90,7 +93,7 @@ export default function ReviewWorkspace({ jobId, document, terminal, initialPage
     if (start) { event.currentTarget.setPointerCapture(event.pointerId); setDragStart(point); setRect({ ...point, width: 0, height: 0 }); }
     else if (dragStart) setRect({ x: Math.min(dragStart.x, point.x), y: Math.min(dragStart.y, point.y), width: Math.abs(point.x - dragStart.x), height: Math.abs(point.y - dragStart.y) });
   }
-  function keyMove(event: KeyboardEvent<HTMLDivElement>) {
+  function keyMove(event: ReactKeyboardEvent<HTMLDivElement>) {
     if (!rect || !cropImage.current || !event.key.startsWith("Arrow")) return;
     event.preventDefault(); const dx = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0; const dy = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
     const maxWidth = cropImage.current.clientWidth, maxHeight = cropImage.current.clientHeight;
@@ -118,7 +121,7 @@ export default function ReviewWorkspace({ jobId, document, terminal, initialPage
     <section className="review-grid">
       <div className="panel viewer-panel">
         <div className="workspace-head"><div><p className="eyebrow">{text("document")}</p><h2>{document.file_name}</h2></div><div className="segmented"><button aria-pressed={zoom === "fit"} onClick={() => setZoom("fit")}>{text("fit")}</button><button aria-pressed={zoom === "actual"} onClick={() => setZoom("actual")}>{text("actualSize")}</button></div></div>
-        <nav className="page-numbers" aria-label={text("pages")}>{pages.map((item) => <button className={item.status === "skipped" ? "page-skipped" : item.error || ["error", "completed_with_warnings"].includes(item.status || "") ? "page-error" : ""} title={item.status === "skipped" ? text("skippedPage") : item.error ? safeError(item.error) : undefined} aria-label={item.status === "skipped" ? `${text("pageOf", { page: item.page_index + 1, pages: pages.length })} · ${text("skippedPage")}` : undefined} aria-current={item.page_index === selectedPage ? "page" : undefined} onClick={() => { setSelectedPage(item.page_index); if ((document.fields?.[selectedField]?.page_index ?? item.page_index) !== item.page_index) setSelectedField(""); }} key={item.page_index}>{item.page_index + 1}</button>)}</nav>
+        {!!pages.length && <nav className="page-numbers" aria-label={text("pages")}><button disabled={selectedPage <= pages[0].page_index} onClick={() => goPage(selectedPage - 1)}>{text("previous")}</button><input aria-label={text("jumpPage")} type="number" min="1" max={pages.length} value={selectedPage + 1} onChange={(event) => goPage(Number(event.target.value) - 1)} /><button disabled={selectedPage >= pages.at(-1)!.page_index} onClick={() => goPage(selectedPage + 1)}>{text("next")}</button>{pages.map((item) => <button data-page-index={item.page_index} className={item.status === "skipped" ? "page-skipped" : item.error || ["error", "completed_with_warnings"].includes(item.status || "") ? "page-error" : ""} title={item.status === "skipped" ? text("skippedPage") : item.error ? safeError(item.error) : undefined} aria-label={item.status === "skipped" ? `${text("pageOf", { page: item.page_index + 1, pages: pages.length })} · ${text("skippedPage")}` : undefined} aria-current={item.page_index === selectedPage ? "page" : undefined} onClick={() => goPage(item.page_index)} key={item.page_index}>{item.page_index + 1}</button>)}</nav>}
         <div className={`page-stage ${zoom}`}>{page && !imageFailed ? <img className="page-image" src={page.image_url} alt={text("pageOf", { page: page.page_index + 1, pages: pages.length })} onError={() => setImageFailed(true)} /> : <div className="artifact-error"><p>{page ? text("imageFailed") : text("pageUnknown")}</p>{page && <><button className="button secondary" onClick={() => setImageFailed(false)}>{text("retry")}</button><a className="button secondary" href={page.image_url} target="_blank" rel="noreferrer">{text("openArtifact")}</a></>}</div>}</div>
         {page && <div className="page-inspector">{page.text && <details><summary>{text("rawText")} · {page.ocr_line_count}</summary><pre>{page.text}</pre></details>}{Object.keys(page.quality || {}).length > 0 && <details><summary>{text("quality")}</summary><pre>{JSON.stringify(page.quality, null, 2)}</pre></details>}{Object.keys(page.links || {}).length > 0 && <details><summary>{text("artifacts")}</summary>{Object.entries(page.links || {}).map(([name, url]) => url && <a href={url} target="_blank" rel="noreferrer" key={name}>{name}</a>)}</details>}</div>}
       </div>

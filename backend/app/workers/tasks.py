@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import time
 from pathlib import Path
 from threading import Thread
 
@@ -221,6 +222,7 @@ async def process_job_async(job_id: str) -> dict:
                 state = document["pages"][index]
                 state["ocr_scope"] = pass_task if state["ocr_scope"] == "none" else f'{state["ocr_scope"]}+{pass_task}'
                 pass_error = ""
+                pass_started = time.monotonic()
                 try:
                     result = await request_page(
                         pages[index].read_bytes(),
@@ -261,6 +263,7 @@ async def process_job_async(job_id: str) -> dict:
                     document_id=document["id"],
                     page_index=index,
                     ocr_pass=pass_task,
+                    duration_seconds=round(time.monotonic() - pass_started, 3),
                 )
                 store.update(job_id, completed_pages=completed, progress_detail=pass_task)
                 persist()
@@ -282,7 +285,7 @@ async def process_job_async(job_id: str) -> dict:
     first_failure = next((page for item in documents for page in item.get("pages", []) if page.get("error")), None)
     store.add_event(job_id, "job_completed", severity="error" if status == "error" else "warning" if failures else "info")
     return store.update(
-        job_id, status=status, documents=documents, report_url=f"/jobs/{job_id}", completed_at=now(),
+        job_id, status=status, documents=documents, report_url=None, completed_at=now(),
         progress_stage="failed" if status == "error" else "completed",
         failure=failure(first_failure["error"], first_failure.get("page_index")) if status == "error" and first_failure else None,
         dossier_cover_count=sum(item.get("logical_document_type") == "dossier_cover" for item in documents),

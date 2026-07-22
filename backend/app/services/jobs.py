@@ -43,6 +43,25 @@ def failure(code: str, page_index: int | None = None) -> dict[str, Any]:
     return {"code": code, "retryable": retryable, "operator_hint": "rerun_job" if retryable else "inspect_logs", "page_index": page_index}
 
 
+def atomic_json(path: Path, data: dict[str, Any]) -> None:
+    descriptor, temporary = tempfile.mkstemp(dir=path.parent, prefix=f".{path.stem}-", suffix=".json")
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+        for attempt in range(5):
+            try:
+                os.replace(temporary, path)
+                return
+            except PermissionError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.01 * (attempt + 1))
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 def safe_name(value: str) -> str:
     value = value.replace("\\", "/")
     if not value or value.startswith("/") or ".." in Path(value).parts:
@@ -133,24 +152,8 @@ class JobStore:
             raise FileNotFoundError(job_id) from exc
 
     def write(self, job_id: str, data: dict[str, Any]) -> dict[str, Any]:
-        path = self.path(job_id) / "job.json"
-        descriptor, temporary = tempfile.mkstemp(dir=path.parent, prefix=".job-", suffix=".json")
-        try:
-            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-                json.dump(data, handle, ensure_ascii=False, indent=2)
-                handle.write("\n")
-            for attempt in range(5):
-                try:
-                    os.replace(temporary, path)
-                    break
-                except PermissionError:
-                    if attempt == 4:
-                        raise
-                    time.sleep(0.01 * (attempt + 1))
-            return data
-        finally:
-            if os.path.exists(temporary):
-                os.unlink(temporary)
+        atomic_json(self.path(job_id) / "job.json", data)
+        return data
 
     def update(self, job_id: str, **changes: Any) -> dict[str, Any]:
         with self.locked(job_id):
@@ -367,7 +370,20 @@ class JobStore:
                 "corrections": corrections,
             }
             audit_path = self.path(job_id) / "corrections" / f"{stamp.replace(':', '-')}-{uuid.uuid4().hex}.json"
-            audit_path.write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            atomic_json(audit_path, audit)
+            export = {
+                "schema_version": "1", "job_id": job_id, "document_id": document_id,
+                "approved_at": stamp, "logical_document_type": document.get("logical_document_type"),
+                "fields": {
+                    name: {key: field.get(key) for key in ("value", "method", "confidence", "page_index", "corrected_at") if field.get(key) is not None}
+                    for name, field in document.get("fields", {}).items()
+                    if name in allowed and isinstance(field, dict) and not isinstance(field.get("value"), (dict, list))
+                },
+            }
+            export_dir = self.path(job_id) / "artifacts" / re.sub(r"[^A-Za-z0-9._-]", "_", document_id)
+            export_dir.mkdir(exist_ok=True)
+            atomic_json(export_dir / "corrected.json", export)
+            document["corrected_artifact"] = f"/api/jobs/{job_id}/artifacts/{export_dir.name}/corrected.json"
             if corrections:
                 job.setdefault("events", []).append({
                     "timestamp": stamp, "code": "document_corrected", "category": "review",

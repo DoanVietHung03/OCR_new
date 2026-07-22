@@ -897,6 +897,8 @@ export interface components {
              * @default 0
              */
             review_risk_count: number;
+            /** Corrected Artifact */
+            corrected_artifact?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -1478,6 +1480,15 @@ export interface components {
             /** Pages */
             pages: number;
         };
+        /** ProfileReport */
+        ProfileReport: {
+            /** Provider Profile Id */
+            provider_profile_id: string;
+            operations: components["schemas"]["OperationsReport"];
+            quality: components["schemas"]["QualityReport"];
+            /** Recent Errors */
+            recent_errors?: string[];
+        };
         /** ProviderProfileResponse */
         ProviderProfileResponse: {
             /** Id */
@@ -1536,8 +1547,10 @@ export interface components {
         ReportsResponse: {
             operations: components["schemas"]["OperationsReport"];
             quality: components["schemas"]["QualityReport"];
+            /** Profiles */
+            profiles: components["schemas"]["ProfileReport"][];
             /** Benchmark Samples */
-            benchmark_samples: components["schemas"]["BenchmarkSample"][];
+            benchmark_samples?: components["schemas"]["BenchmarkSample"][] | null;
         };
         /** RerunRequest */
         RerunRequest: {
@@ -1603,6 +1616,8 @@ export interface components {
             related_job_id?: string | null;
             /** Ocr Pass */
             ocr_pass?: string | null;
+            /** Duration Seconds */
+            duration_seconds?: number | null;
             /** Message */
             message: string;
         };
