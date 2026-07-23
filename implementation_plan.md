@@ -92,6 +92,10 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
 - FastAPI không render PDF hoặc gọi provider; Celery sở hữu toàn bộ OCR.
 - Server giữ URL/key/header/model thật. Job chỉ snapshot provider, model,
   prompt version và external status; external endpoint yêu cầu consent từng job.
+- Provider HTTP dùng subset OpenAI Chat Completions tối thiểu:
+  `POST /chat/completions`, Bearer auth, `model`, `temperature` và `messages` có
+  `image_url`. Prompt/parser hiện có chịu trách nhiệm ép JSON; không gửi
+  `thinking` riêng theo vendor và không bắt endpoint hỗ trợ `response_format`.
 - Mặc định chỉ có một cấu hình OCR hiện tại. Chỉ mở multi-profile khi có provider
   thứ hai thật; profile luôn do server định nghĩa và readiness probe phải có
   timeout, safe status code, không trả raw response.
@@ -349,6 +353,9 @@ safe conflict profile và hai nhánh reuse/resegment trên backend/browser.
 - Giữ một profile và gọi đúng là “Cấu hình OCR hiện tại”; readiness phân biệt
   `configured`, `reachable` và `ready`. `ready` cần authenticated request tối
   thiểu tới đúng model bằng ảnh tổng hợp không chứa dữ liệu khách hàng.
+- Readiness và worker dùng cùng payload OpenAI-compatible tối thiểu; contract test
+  khóa đúng ba top-level field `model`, `temperature`, `messages` để đổi VLM
+  không kéo theo dialect riêng.
 - Create/upload chỉ cần profile tồn tại, configured và hỗ trợ mode/task. Probe
   `ready` chặn tại `/start` và `/continue`; thất bại giữ `ready` hoặc
   `segmentation_confirmed`, không làm mất PDF/segmentation.
@@ -591,6 +598,8 @@ Local test không thay thế được các mục dưới đây.
 - Partial-page result, correction reload, crop, approval, rerun, delete: _pending_
 - Missing canonical field, blocker/warning và rerun snapshot: _pending_
 - Provider configured/reachable/ready probe không lộ secret: _pending_
+- Cùng payload chạy current VLM và một Qwen VLM cho metadata/full OCR/segmentation:
+  _pending_
 - Field evidence tối thiểu của job mới: _pending_
 - Ba Processing Mode, capability và readiness gate tại start/continue: _pending_
 - Per-page segmentation, monotonic counters và partial `unclassified`: _pending_

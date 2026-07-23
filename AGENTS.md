@@ -87,6 +87,10 @@ revision conflict, and Continue in the browser gate.
   again after terminal. Cancel creates a marker; do not add distributed locks.
 - Snapshot provider/model/prompt/external status without URL, key, or headers.
   `OCR_ENDPOINT_EXTERNAL` defaults to `true` and requires per-job consent.
+- Provider HTTP uses the minimal OpenAI Chat Completions subset: `model`,
+  `temperature`, and `messages` with `image_url`. Keep JSON enforcement in the
+  prompt/parser; do not add provider-specific `thinking` fields or require
+  optional `response_format` support.
 - The frontend may expose server-defined Provider Profile IDs, labels, capabilities,
   and safe readiness. The browser must never receive or submit arbitrary provider
   URLs, keys, headers, or models.

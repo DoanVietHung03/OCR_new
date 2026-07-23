@@ -283,6 +283,8 @@ focused browser gate.
   engine hoạt động chỉ vì settings có giá trị, không hiện URL/model/key/raw reply.
 - Capability điều khiển Processing Mode/task/page input. Configured profile được
   create/upload; readiness chỉ chặn Start/Continue và không làm mất job/draft.
+- UI chỉ hiển thị profile/capability/readiness an toàn; việc đổi MiniMax/Qwen qua
+  cùng contract OpenAI-compatible không thêm control URL/model hoặc nhánh vendor.
 
 UI một profile dùng copy “Cấu hình OCR hiện tại”, readiness hiển thị safe status
 và capability điều khiển các lựa chọn; focused browser gate đã pass.

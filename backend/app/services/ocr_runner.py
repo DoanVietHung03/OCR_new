@@ -171,8 +171,6 @@ def request_body(image: bytes, model: str, task: str = "metadata", expected_fiel
     return {
         "model": model,
         "temperature": 0,
-        "thinking": {"type": "disabled"},
-        "response_format": {"type": "json_object"},
         "messages": [{"role": "user", "content": [
             {"type": "text", "text": OCR_PROMPT if task == "full_ocr" else SEGMENTATION_PROMPT if task == "segmentation" else metadata_prompt(expected_fields or ADMIN_FIELDS)},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},

@@ -22,6 +22,8 @@ eager-task/fake-provider; không thay thế lần chạy `63-btc.pdf` qua provid
   liệu vào Git;
 - chạy job mới qua provider thật, kiểm tra evidence/provenance cho field, partial
   page, reload/restart và chất lượng so với ground truth;
+- chạy cùng payload OpenAI-compatible tối thiểu với cấu hình hiện tại và một Qwen
+  VLM; xác nhận readiness, metadata, full OCR và segmentation đều trả JSON hợp lệ;
 - ghi bằng chứng đã khử nhạy cảm vào `implementation_plan.md#be-c-evidence`.
 
 ## 2. X16 — Segmentation hồ sơ gộp thật

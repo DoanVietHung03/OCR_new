@@ -166,6 +166,7 @@ def test_dossier_approval_requires_confirmed_segmentation(tmp_path, pdf_bytes):
 
 def test_cover_prompt_and_parser_share_the_policy_allowlist():
     body = request_body(b"image", "model", expected_fields=COVER_FIELDS)
+    assert set(body) == {"model", "temperature", "messages"}
     prompt = body["messages"][0]["content"][0]["text"]
     assert all(name in prompt for name in COVER_FIELDS)
     assert "co_quan_ban_hanh" not in prompt
