@@ -11,7 +11,7 @@ import httpx
 from .field_policy import ADMIN_FIELDS
 from .jobs import FIELDS
 
-PROMPT_VERSION = "4"
+PROMPT_VERSION = "6"
 PROBE_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAACuklEQVR4nO3TMQEA"
     "AAiAMPuX1hgebAl4mIWw+Q6ATwYgzQCkGYA0A5BmANIMQJoBSDMAaQYgzQCkGYA0"
@@ -46,7 +46,8 @@ def metadata_prompt(fields: tuple[str, ...]) -> str:
         if "so_van_ban" in fields else ""
     )
     archive_code = (
-        " ma_luu_tru is the archive/file code, commonly the general code printed on a dossier cover; never use the document number."
+        " ma_luu_tru is the archival notation, commonly like A.30.15.03.05.001; on a dossier cover or document page, it may be printed or handwritten anywhere on the page. "
+        "Never use the document number or a recipient/distribution line such as 'Lưu: VT, KH-TC (PTT)'."
         if "ma_luu_tru" in fields else ""
     )
     signing_authority = (
@@ -60,7 +61,8 @@ def metadata_prompt(fields: tuple[str, ...]) -> str:
     return (
         "Return one JSON object only, with no Markdown or explanation. Its only top-level key is fields. "
         "Each fields entry uses an existing archival field name and has value (string), confidence "
-        "(number 0..1), bbox ([left, top, right, bottom]), and page_index (integer). "
+        "(number 0..1), bbox ([left, top, right, bottom] normalized to 0..1 relative to the input image), "
+        "and page_index (integer). The bbox must tightly enclose only the exact visible value, not a nearby section or the whole page. "
         f"Extract every visible field from this schema: {', '.join(fields)}.{document_number}{archive_code}{signing_authority} "
         "Do not invent fields. Use {\"fields\": {}} when nothing is found."
     )
@@ -122,6 +124,8 @@ def validate_result(payload: object, *, page_index: int = 0, task: str = "metada
             confidence = float(raw_confidence) if isinstance(raw_confidence, (int, float)) and not isinstance(raw_confidence, bool) and 0 <= raw_confidence <= 1 else None
             raw_bbox = item.get("bbox")
             bbox = [float(value) for value in raw_bbox] if isinstance(raw_bbox, list) and len(raw_bbox) == 4 and all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in raw_bbox) else []
+            if bbox and not (0 <= bbox[0] < bbox[2] <= 1 and 0 <= bbox[1] < bbox[3] <= 1 and (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]) <= 0.5):
+                bbox = []
             if ("confidence" in item and confidence is None) or ("bbox" in item and not bbox):
                 warnings.append("invalid_field_value")
         else:

@@ -588,9 +588,14 @@ def test_artifact_manifest_lists_only_safe_existing_job_files(tmp_path, monkeypa
     document = artifacts / "document-1"
     document.mkdir()
     (document / "page-1.png").write_bytes(b"png")
+    (document / "field-so_van_ban-page-1.png").write_bytes(b"crop")
     (artifacts / "report.json").write_text("{}", encoding="utf-8")
     store.update(job["id"], documents=[{
         "id": "document-1", "file_name": "document.pdf", "status": "completed",
+        "fields": {"so_van_ban": {
+            "value": "1", "page_index": 0,
+            "evidence_url": f"/api/jobs/{job['id']}/artifacts/document-1/field-so_van_ban-page-1.png",
+        }},
         "pages": [{"page_index": 0, "image_url": f"/api/jobs/{job['id']}/artifacts/document-1/page-1.png"}],
         "crop_evidence": [{"page_index": 0, "field": "so_van_ban", "crop_image": f"/api/jobs/{job['id']}/artifacts/document-1/missing-crop.png"}],
     }])
@@ -598,18 +603,19 @@ def test_artifact_manifest_lists_only_safe_existing_job_files(tmp_path, monkeypa
     response = client.get(f"/api/jobs/{job['id']}/artifacts")
     assert response.status_code == 200
     payload = response.json()
-    assert [item["name"] for item in payload["items"]] == ["page-1.png", "report.json", "missing-crop.png"]
-    assert payload["items"][0] == {
+    assert [item["name"] for item in payload["items"]] == ["field-so_van_ban-page-1.png", "page-1.png", "report.json", "missing-crop.png"]
+    assert payload["items"][1] == {
         "name": "page-1.png",
         "kind": "image",
         "status": "available",
         "size_bytes": 3,
-        "updated_at": payload["items"][0]["updated_at"],
+        "updated_at": payload["items"][1]["updated_at"],
         "document_id": "document-1",
         "page_index": 0,
         "field": None,
         "download_url": f"/api/jobs/{job['id']}/artifacts/document-1/page-1.png",
     }
+    assert (payload["items"][0]["document_id"], payload["items"][0]["page_index"], payload["items"][0]["field"]) == ("document-1", 0, "so_van_ban")
     assert payload["items"][-1]["status"] == "missing"
     assert (payload["items"][-1]["document_id"], payload["items"][-1]["page_index"], payload["items"][-1]["field"]) == ("document-1", 0, "so_van_ban")
     assert str(tmp_path) not in response.text

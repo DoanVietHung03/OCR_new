@@ -126,8 +126,10 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
   canonical còn thiếu dùng `old_value=null`, provenance `manual`, giữ immutable
   audit. `/corrections` vẫn là một hành động **Lưu và duyệt**, nhưng chỉ approve
   khi backend không còn approval blocker; warning mềm không mặc định là blocker.
-- Manual crop là append-only evidence, không tự thay OCR value. OCR `bbox` không
-  có contract tọa độ ổn định và không được dùng làm crop seed.
+- Manual crop là append-only evidence, không tự thay OCR value. Với job prompt
+  mới, provider `bbox` dùng tọa độ chuẩn hóa `0..1` và worker tạo ảnh evidence
+  sát vùng giá trị cho mọi field trả về; bbox legacy/invalid không được dùng và
+  không seed Manual crop.
 - Backend công bố ordered `expected_fields`, `required_fields`, typed
   `approval_blockers`/`review_risks` và `review_risk_count` trên từng logical
   document; frontend không hard-code hoặc suy lại policy.

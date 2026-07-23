@@ -782,7 +782,13 @@ async def artifacts(job_id: str):
     references = []
     for document in job.get("documents", []):
         document_id = str(document.get("id", ""))
+        page_urls = {page.get("image_url") for page in document.get("pages", [])}
         references += [(page.get("image_url"), document_id, page.get("page_index"), None) for page in document.get("pages", [])]
+        references += [
+            (field.get("evidence_url"), document_id, field.get("page_index"), name)
+            for name, field in document.get("fields", {}).items()
+            if isinstance(field, dict) and field.get("evidence_url") not in page_urls
+        ]
         references += [
             (item.get("crop_image"), document_id, item.get("page_index"), item.get("field"))
             for item in document.get("crop_evidence", []) if isinstance(item, dict)

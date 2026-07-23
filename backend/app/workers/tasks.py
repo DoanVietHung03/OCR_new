@@ -47,6 +47,29 @@ def render_pdf(pdf: Path, output: Path) -> list[Path]:
     return pages
 
 
+def crop_field_evidence(image: Path, bbox: list[float], output: Path) -> bool:
+    import fitz
+
+    if len(bbox) != 4:
+        return False
+    try:
+        source = fitz.Pixmap(image)
+        x0, y0, x1, y1 = (
+            round(bbox[0] * source.width),
+            round(bbox[1] * source.height),
+            round(bbox[2] * source.width),
+            round(bbox[3] * source.height),
+        )
+        pad_x, pad_y = max(6, round((x1 - x0) * 0.08)), max(6, round((y1 - y0) * 0.16))
+        clip = fitz.IRect(max(0, x0 - pad_x), max(0, y0 - pad_y), min(source.width, x1 + pad_x), min(source.height, y1 + pad_y))
+        if clip.width < 2 or clip.height < 2:
+            return False
+        fitz.Pixmap(source, source.width, source.height, clip).save(output)
+        return True
+    except (OSError, RuntimeError, ValueError):
+        return False
+
+
 def cancelled(store: JobStore, job_id: str) -> bool:
     if not (store.path(job_id) / "cancel").exists():
         return False
@@ -245,7 +268,15 @@ async def process_job_async(job_id: str) -> dict:
                     else:
                         for name, field in result["fields"].items():
                             field.setdefault("source_text", str(field.get("value", "")))
-                            field.setdefault("evidence_url", state["image_url"])
+                            evidence_name = f"field-{name}-page-{index + 1}.png"
+                            if crop_field_evidence(pages[index], field.get("bbox", []), pages[index].with_name(evidence_name)):
+                                field.update(
+                                    evidence_url=f"{state['image_url'].rsplit('/', 1)[0]}/{evidence_name}",
+                                    evidence_source="provider_bbox",
+                                    evidence_status="available",
+                                )
+                            else:
+                                field["needs_review"] = True
                             if field.get("needs_review"):
                                 field.setdefault("review_reason", "missing_evidence")
                             current = document["fields"].get(name)

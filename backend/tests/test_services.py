@@ -94,12 +94,12 @@ def test_legacy_and_new_store_preserve_unknown_fields(tmp_path, pdf_bytes):
 
 def test_runner_accepts_partial_metadata_and_markdown_json():
     result = validate_result({"fields": {"so_hieu": {
-        "value": "1", "confidence": 0.9, "bbox": [0, 0, 1, 1], "page_index": 0,
+        "value": "1", "confidence": 0.9, "bbox": [0.1, 0.2, 0.4, 0.3], "page_index": 0,
         "suggested_value": "2", "suggestion_confidence": 0.8,
         "suggestion_reason": "normalized", "suggestion_source": "spoofed",
     }, "trich_yeu": "Tóm tắt", "unknown": {"value": "ignored"}}}, page_index=2)
     assert result["fields"]["so_van_ban"] == {
-        "value": "1", "confidence": 0.9, "bbox": [0.0, 0.0, 1.0, 1.0], "page_index": 2,
+        "value": "1", "confidence": 0.9, "bbox": [0.1, 0.2, 0.4, 0.3], "page_index": 2,
         "needs_review": False, "suggested_value": "2", "suggestion_confidence": 0.8,
         "suggestion_reason": "normalized", "suggestion_source": "provider",
     }
@@ -107,6 +107,12 @@ def test_runner_accepts_partial_metadata_and_markdown_json():
         "value": "Tóm tắt", "confidence": None, "bbox": [], "page_index": 2, "needs_review": True,
     }
     assert result["warnings"] == ["unknown_field"]
+    invalid_bbox = validate_result({"fields": {"so_van_ban": {
+        "value": "1", "confidence": 0.9, "bbox": [0, 0, 100, 100],
+    }}})
+    assert invalid_bbox["fields"]["so_van_ban"]["bbox"] == []
+    assert invalid_bbox["fields"]["so_van_ban"]["needs_review"]
+    assert invalid_bbox["warnings"] == ["invalid_field_value"]
     assert parse_json_object('```json\n{"fields": {}}\n```') == {"fields": {}}
     assert message_text({"choices": [{"message": {"content": [{"type": "text", "text": "A"}, {"type": "text", "text": "B"}]}}]}) == "A\nB"
     with pytest.raises(ValueError, match="invalid_model_json"):
@@ -190,6 +196,11 @@ def test_administrative_prompt_requires_complete_signing_authority_line():
     assert "empty string" in prompt
     assert "after Số: or Văn bản số" in prompt
     assert "archive/file code" in prompt
+    assert "A.30.15.03.05.001" in prompt
+    assert "anywhere on the page" in prompt
+    assert "Lưu: VT, KH-TC (PTT)" in prompt
+    assert "normalized to 0..1" in prompt
+    assert "not a nearby section or the whole page" in prompt
 
     cover_prompt = request_body(b"image", "model", expected_fields=COVER_FIELDS)["messages"][0]["content"][0]["text"]
     assert "dossier cover" in cover_prompt

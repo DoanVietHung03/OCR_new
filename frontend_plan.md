@@ -217,8 +217,9 @@ sách suggestion/evidence; workspace hiển thị source, confidence và reason 
 
 - Field card render source/page/confidence, typed review reason, suggestion +
   provenance và page-level `evidence_url`; thiếu dữ liệu hiển thị unavailable.
-- Chọn thumbnail mở native `<dialog>` Fit/100% và tải image; không dùng OCR `bbox`
-  làm crop seed hoặc tự dựng crop trên client.
+- Mọi field có bbox hợp lệ dùng thumbnail crop evidence do worker tạo và mở
+  native `<dialog>` Fit/100%; client không tự crop và không dùng bbox làm seed
+  cho Manual crop.
 - Job mới từ fixture phải có cùng UX evidence như job legacy có data tương ứng;
   artifact thiếu chỉ làm block cục bộ unavailable.
 - Chưa thêm debug timeline, retry variants, layout/result side-by-side hoặc

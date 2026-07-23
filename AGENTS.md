@@ -125,9 +125,10 @@ revision conflict, and Continue in the browser gate.
 - `/corrections` saves and approves in one call. UI with drafts must say “Save
   and approve”; do not invent an unapproved saved-correction state. Unknown or
   non-scalar legacy fields remain visible but read-only.
-- OCR `bbox` has no stable pixel/normalized contract and is not a crop seed.
-  Manual crop starts from a user-drawn natural-pixel rectangle and remains
-  append-only evidence.
+- New provider `bbox` is normalized `[left, top, right, bottom]` in `0..1` and
+  the worker creates a tight automatic evidence crop for every returned field.
+  Legacy/invalid bbox remains unavailable; it never seeds Manual crop, which
+  still starts from a user-drawn natural-pixel rectangle.
 - Preserve valid VI/EN UTF-8, Vietnamese default, and
   `localStorage["intellidoc.language"]`. The approved follow-up is responsive
   desktop-first: visual/functional anchors at `1440×900` and `1366×768`; at

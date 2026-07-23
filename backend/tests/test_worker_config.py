@@ -35,9 +35,14 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
         calls.append((options["model"], options["task"], options["page_index"]))
         if options["task"] == "full_ocr":
             return {"text": "OCR text", "fields": {}, "warnings": []}
-        return {"fields": {"so_van_ban": {
-            "value": "1", "confidence": 0.9, "bbox": [0, 0, 1, 1], "page_index": 0,
-        }}, "warnings": []}
+        return {"fields": {
+            "so_van_ban": {
+                "value": "1", "confidence": 0.9, "bbox": [0.1, 0.2, 0.4, 0.3], "page_index": 0,
+            },
+            "trich_yeu": {
+                "value": "Tóm tắt", "confidence": 0.8, "bbox": [0.2, 0.4, 0.8, 0.5], "page_index": 0,
+            },
+        }, "warnings": []}
 
     monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(tasks, "request_page", fake_request)
@@ -54,8 +59,14 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
         "text": "OCR text", "ocr_line_count": 1, "warnings": [],
         "source_pdf_id": "document", "source_page_index": 0,
     }
-    assert result["documents"][0]["fields"]["so_van_ban"]["evidence_url"].endswith("/artifacts/document/page-1.png")
     assert result["documents"][0]["fields"]["so_van_ban"]["source_text"] == "1"
+    page_pixmap = fitz.Pixmap(store.path(job["id"]) / "artifacts" / "document" / "page-1.png")
+    for name in ("so_van_ban", "trich_yeu"):
+        evidence_name = f"field-{name}-page-1.png"
+        assert result["documents"][0]["fields"][name]["evidence_url"].endswith(f"/artifacts/document/{evidence_name}")
+        evidence_pixmap = fitz.Pixmap(store.path(job["id"]) / "artifacts" / "document" / evidence_name)
+        assert evidence_pixmap.width < page_pixmap.width
+        assert evidence_pixmap.height < page_pixmap.height
     assert result["documents"][0]["approval_blockers"]
     assert (result["progress_stage"], result["completed_pages"], result["total_pages"]) == ("completed", 2, 2)
     assert [event["code"] for event in result["events"]].count("page_pass_completed") == 2
