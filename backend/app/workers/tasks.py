@@ -188,7 +188,7 @@ async def process_job_async(job_id: str) -> dict:
 
     def persist() -> None:
         pages = [page for item in documents for page in item.get("pages", [])]
-        store.update(job_id, page_count=len(pages), failed_pages=sum(bool(page.get("error")) for page in pages), documents=documents)
+        store.update(job_id, page_count=len(pages), failed_pages=sum(page.get("status") == "error" for page in pages), documents=documents)
 
     work: list[tuple[dict, list[Path]]] = []
     if documents:
@@ -322,10 +322,11 @@ async def process_job_async(job_id: str) -> dict:
             document.update(status="error", error=safe_error(exc))
         annotate(document)
         persist()
-    failures = sum(bool(page.get("error")) for item in documents for page in item.get("pages", []))
-    status = "completed" if successes and not failures else "completed_with_warnings" if successes else "error"
-    first_failure = next((page for item in documents for page in item.get("pages", []) if page.get("error")), None)
-    store.add_event(job_id, "job_completed", severity="error" if status == "error" else "warning" if failures else "info")
+    failures = sum(page.get("status") == "error" for item in documents for page in item.get("pages", []))
+    warnings = any(page.get("status") == "completed_with_warnings" for item in documents for page in item.get("pages", []))
+    status = "completed" if successes and not failures and not warnings else "completed_with_warnings" if successes else "error"
+    first_failure = next((page for item in documents for page in item.get("pages", []) if page.get("status") == "error"), None)
+    store.add_event(job_id, "job_completed", severity="error" if status == "error" else "warning" if warnings else "info")
     return store.update(
         job_id, status=status, documents=documents, report_url=None, completed_at=now(),
         progress_stage="failed" if status == "error" else "completed",

@@ -206,7 +206,8 @@ thì không được diễn giải `BE-X1` là provider/runtime production-like 
   text khi task yêu cầu. `failed_pages` phải tổng hợp từ page state.
 - Persist toàn bộ warning code allowlisted trong `page.warnings[]` và event
   `warning_codes[]`; `page.error` chỉ giữ code đầu tiên cho compatibility, không
-  được làm mất các warning còn lại.
+  được làm mất các warning còn lại. `failed_pages` chỉ đếm page có
+  `status="error"`; `completed_with_warnings` vẫn là kết quả dùng được.
 - Một page fail không được xóa fields/page tốt. Approval chỉ bị chặn bởi blocker
   thật, không phải mọi warning.
 - Test content blocks, fenced JSON, alias, field lạ xen field tốt, thiếu evidence

@@ -134,8 +134,9 @@ vào nhãn `PASS LOCAL CONTRACT`.
   “Kết quả model không hợp lệ”. Nếu còn page/field dùng được, vẫn hiển thị viewer,
   fields, correction và evidence.
 - Hiển thị banner `n/m trang thành công`, safe error summary và đánh dấu đúng page
-  lỗi trong page navigation. Chỉ hiện màn hình lỗi toàn document khi không còn
-  kết quả sử dụng được.
+  lỗi trong page navigation. `m` chỉ gồm page đã xử lý, không tính `skipped`;
+  `completed_with_warnings` vẫn thành công nhưng dùng warning marker riêng. Chỉ
+  hiện màn hình lỗi toàn document khi không còn kết quả sử dụng được.
 - Warning không được tự buộc rerun toàn job. Approval UI phải phản ánh blocker do
   backend công bố thay vì suy đoán từ mọi warning.
 - Browser test bắt buộc: một document có fields tốt và một page warning; viewer,

@@ -242,8 +242,11 @@ def test_worker_persists_all_safe_warning_codes(tmp_path, monkeypatch, pdf_bytes
     result = asyncio.run(tasks.process_job_async(job["id"]))
     page = result["documents"][0]["pages"][0]
     assert page["warnings"] == ["unknown_field", "invalid_field_value"]
+    assert page["status"] == "completed_with_warnings"
+    assert result["failed_pages"] == 0
     event = next(item for item in result["events"] if item["code"] == "page_pass_failed")
     assert event["warning_codes"] == page["warnings"]
+    assert next(item for item in result["events"] if item["code"] == "job_completed")["severity"] == "warning"
 
 
 def test_combined_dossier_segments_every_page_and_waits_for_confirmation(tmp_path, monkeypatch):

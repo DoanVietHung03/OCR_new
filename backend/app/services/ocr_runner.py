@@ -160,6 +160,8 @@ def validate_result(
         if isinstance(value, (dict, list)):
             warnings.append("invalid_field_value")
             continue
+        if value is None or isinstance(value, str) and not value.strip():
+            continue
         if isinstance(item, dict):
             raw_confidence = item.get("confidence")
             confidence = float(raw_confidence) if isinstance(raw_confidence, (int, float)) and not isinstance(raw_confidence, bool) and 0 <= raw_confidence <= 1 else None
@@ -167,7 +169,7 @@ def validate_result(
             bbox = [float(value) for value in raw_bbox] if isinstance(raw_bbox, list) and len(raw_bbox) == 4 and all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in raw_bbox) else []
             if bbox and not (0 <= bbox[0] < bbox[2] <= 1 and 0 <= bbox[1] < bbox[3] <= 1 and (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]) <= 0.5):
                 bbox = []
-            if ("confidence" in item and confidence is None) or ("bbox" in item and not bbox):
+            if ("confidence" in item and confidence is None) or (raw_bbox not in (None, []) and not bbox):
                 warnings.append("invalid_field_value")
         else:
             confidence, bbox = None, []

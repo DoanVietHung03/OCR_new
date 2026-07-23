@@ -24,6 +24,7 @@
 .page-numbers button { min-width: 34px; height: 32px; border: 1px solid #ccd6e3; border-radius: 7px; color: #4b5f79; background: #fff; }
 .page-numbers input { width: 64px; height: 32px; }
 .page-numbers button.page-error { border-color: #b42318; color: #b42318; }
+.page-numbers button.page-warning { border-color: #dc920f; color: #8a5900; }
 .page-numbers button.page-skipped { border-style: dashed; opacity: .55; }
 .page-numbers button[aria-current="page"] { border-color: #1768d4; color: #fff; background: #1768d4; font-weight: 800; }
 .partial-warning { display: flex; gap: .75rem; align-items: center; margin-bottom: 1rem; }

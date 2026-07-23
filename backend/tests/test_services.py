@@ -113,6 +113,15 @@ def test_runner_accepts_partial_metadata_and_markdown_json():
     assert invalid_bbox["fields"]["so_van_ban"]["bbox"] == []
     assert invalid_bbox["fields"]["so_van_ban"]["needs_review"]
     assert invalid_bbox["warnings"] == ["invalid_field_value"]
+    uncertain_bbox = validate_result({"fields": {"so_van_ban": {
+        "value": "1", "confidence": 0.9, "bbox": [],
+    }}})
+    assert uncertain_bbox["fields"]["so_van_ban"]["bbox"] == []
+    assert uncertain_bbox["warnings"] == []
+    empty = validate_result({"fields": {"nguoi_ky": {
+        "value": "  ", "confidence": 0.99, "bbox": [0.1, 0.1, 0.2, 0.2],
+    }}})
+    assert empty == {"fields": {}, "warnings": []}
     conflict = validate_result({"fields": {"so_tai_lieu": {
         "value": 23, "confidence": 0.9, "bbox": [0.2, 0.8, 0.4, 0.85],
     }}}, expected_fields=COVER_FIELDS, ocr_text="Số tài liệu: ...33...")

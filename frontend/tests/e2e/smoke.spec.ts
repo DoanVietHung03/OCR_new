@@ -243,6 +243,24 @@ test("partial page warning keeps usable review fields visible", async ({ page })
   await expect(page.locator(".document-error")).toHaveCount(0);
 });
 
+test("warning pages remain successful and skipped pages are excluded", async ({ page }) => {
+  const document = { ...fixtureDocument(), errors: ["invalid_field_value"], pages: [
+    { page_index: 0, image_url: `/api/jobs/${id}/artifacts/smoke/page-1.png`, status: "completed_with_warnings", ocr_scope: "metadata", error: "invalid_field_value", warnings: ["invalid_field_value"] },
+    { page_index: 1, image_url: `/api/jobs/${id}/artifacts/smoke/page-2.png`, status: "skipped", ocr_scope: "none", error: "" },
+  ] } as any;
+  const job = { ...fixtureJob("completed_with_warnings"), documents: [document], page_count: 2, failed_pages: 0 } as any;
+  await page.route("**/api/**", async (route) => {
+    const apiPath = new URL(route.request().url()).pathname;
+    if (apiPath === `/api/jobs/${id}`) return route.fulfill({ json: job });
+    if (apiPath.endsWith(".png")) return route.fulfill({ contentType: "image/svg+xml", body: svg });
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.goto(`/jobs/${id}?view=review`);
+  await expect(page.locator(".partial-warning")).toContainText(/1\/1/);
+  await expect(page.locator(".page-numbers .page-warning")).toHaveText("1");
+  await expect(page.locator(".page-numbers .page-error")).toHaveCount(0);
+});
+
 test("metadata page plan distinguishes processed pages from PDF pages", async ({ page }) => {
   const document = { ...fixtureDocument(), pages: Array.from({ length: 5 }, (_, pageIndex) => ({
     page_index: pageIndex,
