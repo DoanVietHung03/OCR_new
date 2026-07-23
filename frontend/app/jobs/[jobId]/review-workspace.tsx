@@ -6,8 +6,8 @@ import { language, safeError, text } from "../../../lib/i18n";
 
 const legacyFieldOrder = [
   "co_quan_ban_hanh", "quoc_hieu_tieu_ngu", "so_van_ban", "dia_diem_ban_hanh", "ngay_ban_hanh", "loai_van_ban", "trich_yeu",
-  "quyen_han_ky_thay", "chuc_vu_nguoi_ky", "nguoi_ky", "ma_luu_tru", "co_quan_luu_tru", "nhiem_ky", "tieu_de_ho_so",
-  "hop_so", "phong_so", "muc_luc_so", "bat_dau", "ho_so_dvbq", "ket_thuc", "so_tai_lieu", "thoi_han_bao_quan", "so_trang", "document_type",
+  "quyen_han_ky_thay", "chuc_vu_nguoi_ky", "nguoi_ky", "ma_luu_tru", "co_quan_luu_tru", "khoa", "nhiem_ky", "tieu_de_ho_so",
+  "phong_so", "muc_luc_so", "bat_dau", "ho_so_dvbq", "ket_thuc", "so_tai_lieu", "thoi_han_bao_quan", "so_trang", "document_type",
 ] as const;
 const fieldMeta: Record<string, [string, string, string, boolean?]> = {
   co_quan_ban_hanh: ["Cơ quan ban hành", "Issuing authority", "Văn bản"], quoc_hieu_tieu_ngu: ["Quốc hiệu, tiêu ngữ", "National header", "Văn bản", true],
@@ -15,8 +15,8 @@ const fieldMeta: Record<string, [string, string, string, boolean?]> = {
   ngay_ban_hanh: ["Ngày ban hành", "Issue date", "Văn bản"], loai_van_ban: ["Loại văn bản", "Document type", "Văn bản"],
   trich_yeu: ["Trích yếu", "Summary", "Văn bản", true], quyen_han_ky_thay: ["Quyền hạn ký", "Signing authority", "Ký duyệt"],
   chuc_vu_nguoi_ky: ["Chức vụ người ký", "Signatory title", "Ký duyệt"], nguoi_ky: ["Người ký", "Signatory", "Ký duyệt"],
-  ma_luu_tru: ["Mã lưu trữ", "Archive code", "Hồ sơ"], co_quan_luu_tru: ["Cơ quan lưu trữ", "Archive authority", "Hồ sơ"],
-  nhiem_ky: ["Nhiệm kỳ", "Term", "Hồ sơ"], tieu_de_ho_so: ["Tiêu đề hồ sơ", "File title", "Hồ sơ", true], hop_so: ["Hộp số", "Box", "Hồ sơ"],
+  ma_luu_tru: ["Mã lưu trữ", "Archive code", "Hồ sơ"], co_quan_luu_tru: ["Cơ quan lưu trữ", "Archive authority", "Hồ sơ", true],
+  khoa: ["Khóa", "Term number", "Hồ sơ"], nhiem_ky: ["Nhiệm kỳ", "Term", "Hồ sơ"], tieu_de_ho_so: ["Tiêu đề hồ sơ", "File title", "Hồ sơ", true],
   phong_so: ["Phông số", "Fonds", "Hồ sơ"], muc_luc_so: ["Mục lục số", "Inventory", "Hồ sơ"], bat_dau: ["Bắt đầu", "Start", "Thời hạn"],
   ho_so_dvbq: ["Hồ sơ ĐVBQ", "Retention file", "Hồ sơ"], ket_thuc: ["Kết thúc", "End", "Thời hạn"], so_tai_lieu: ["Số tài liệu", "Documents", "Thống kê"],
   thoi_han_bao_quan: ["Thời hạn bảo quản", "Retention", "Thời hạn"], so_trang: ["Số trang", "Page count", "Thống kê"], document_type: ["Loại tài liệu", "Document type", "Văn bản"],
@@ -155,7 +155,7 @@ export default function ReviewWorkspace({ jobId, document, terminal, initialPage
           return <div className={`field-card ${selectedField === name ? "selected" : ""}`} key={name} onClick={() => select(name, data)}><label><span><b>{fieldLabel(name)}</b><small>{data.value == null ? (language() === "vi" ? "Chưa nhận dạng" : "Not recognized") : confidence} · {editable ? "" : text("readOnly")}</small></span>{editable ? fieldMeta[name]?.[3] ? <textarea placeholder={language() === "vi" ? "Chưa nhận dạng" : "Not recognized"} value={value} onFocus={() => select(name, data)} onChange={(event) => edit(name, data, event.target.value)} /> : <input placeholder={language() === "vi" ? "Chưa nhận dạng" : "Not recognized"} value={value} onFocus={() => select(name, data)} onChange={(event) => edit(name, data, event.target.value)} /> : <pre>{display(data.value)}</pre>}</label>
             <div className="field-provenance">{data.method && <small>{text("source")}: {data.method}</small>}<small>{text("pageOf", { page: data.page_index + 1, pages: pages.length })}</small>{data.source_text && <small title={data.source_text}>{data.source_text}</small>}{data.review_reason && <small className="error">{data.review_reason}</small>}{data.evidence_url ? <button className="evidence-thumb" onClick={(event) => { event.stopPropagation(); setEvidenceUrl(data.evidence_url!); }}><img src={data.evidence_url} alt={text("evidence")} />{text("evidence")}</button> : <small>{text("evidence")}: {text("unavailable")}</small>}</div>
             {suggested && suggested !== value && <div className="field-suggestion"><small>{text("suggestion")}: {suggested}{data.suggestion_source ? ` · ${data.suggestion_source}` : ""}{typeof data.suggestion_confidence === "number" ? ` · ${Math.round(data.suggestion_confidence * 100)}%` : ""}{data.suggestion_reason ? ` · ${data.suggestion_reason}` : ""}</small>{editable && <button className="text-button" onClick={(event) => { event.stopPropagation(); edit(name, data, suggested); }}>{text("applySuggestion")}</button>}</div>}
-            {data.ocr_value !== undefined && display(data.ocr_value) !== display(data.value) && <div className="field-diff"><small>{text("originalValue")}: {display(data.ocr_value) || text("emptyValue")}</small><small>{text("newValue")}: {display(data.value) || text("emptyValue")}</small></div>}</div>;
+            {(data.method === "manual" || data.corrected_at) && display(data.ocr_value) !== display(data.value) && <div className="field-diff"><small>{text("originalValue")}: {display(data.ocr_value) || text("emptyValue")}</small><small>{text("newValue")}: {display(data.value) || text("emptyValue")}</small></div>}</div>;
         })}</section>)}</div>
         {terminal && <div className="approve-bar"><span>{Object.keys(drafts).length ? text("selectedFiles", { count: Object.keys(drafts).length }) : document.review_status === "approved" && document.approved_at ? text("approvedAt", { date: new Date(document.approved_at).toLocaleString(language()) }) : ""}</span>{!(document.review_status === "approved" && !Object.keys(drafts).length) && <button className="button primary" disabled={saving} onClick={save}>{Object.keys(drafts).length ? text("saveApprove") : text("approve")}</button>}</div>}
         <section className="evidence-section"><div className="workspace-head"><div><p className="eyebrow">{text("cropEvidence")}</p><h3>{selectedField ? fieldLabel(selectedField) : text("selectField")}</h3></div><button className="button secondary" disabled={!terminal || !selectedField || !page || imageFailed} onClick={() => { setRect(null); setCropOpen(true); }}>{text("createCrop")}</button></div>

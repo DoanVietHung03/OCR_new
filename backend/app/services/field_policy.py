@@ -12,7 +12,7 @@ ADMIN_FIELDS = (
     "chuc_vu_nguoi_ky", "nguoi_ky", "ma_luu_tru",
 )
 COVER_FIELDS = (
-    "co_quan_luu_tru", "nhiem_ky", "tieu_de_ho_so", "hop_so", "phong_so",
+    "co_quan_luu_tru", "khoa", "nhiem_ky", "tieu_de_ho_so", "phong_so",
     "muc_luc_so", "ma_luu_tru", "bat_dau", "ket_thuc", "ho_so_dvbq",
     "so_tai_lieu", "thoi_han_bao_quan", "so_trang",
 )

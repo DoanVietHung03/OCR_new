@@ -113,6 +113,14 @@ def test_runner_accepts_partial_metadata_and_markdown_json():
     assert invalid_bbox["fields"]["so_van_ban"]["bbox"] == []
     assert invalid_bbox["fields"]["so_van_ban"]["needs_review"]
     assert invalid_bbox["warnings"] == ["invalid_field_value"]
+    conflict = validate_result({"fields": {"so_tai_lieu": {
+        "value": 23, "confidence": 0.9, "bbox": [0.2, 0.8, 0.4, 0.85],
+    }}}, expected_fields=COVER_FIELDS, ocr_text="Số tài liệu: ...33...")
+    assert conflict["fields"]["so_tai_lieu"]["source_text"] == "Số tài liệu: ...33..."
+    assert conflict["fields"]["so_tai_lieu"]["bbox"] == []
+    assert conflict["fields"]["so_tai_lieu"]["needs_review"]
+    assert conflict["fields"]["so_tai_lieu"]["review_reason"] == "validation_warning"
+    assert conflict["warnings"] == ["invalid_field_value"]
     assert parse_json_object('```json\n{"fields": {}}\n```') == {"fields": {}}
     assert message_text({"choices": [{"message": {"content": [{"type": "text", "text": "A"}, {"type": "text", "text": "B"}]}}]}) == "A\nB"
     with pytest.raises(ValueError, match="invalid_model_json"):
@@ -171,11 +179,23 @@ def test_dossier_approval_requires_confirmed_segmentation(tmp_path, pdf_bytes):
 
 
 def test_cover_prompt_and_parser_share_the_policy_allowlist():
-    body = request_body(b"image", "model", expected_fields=COVER_FIELDS)
+    body = request_body(
+        b"image", "model", expected_fields=COVER_FIELDS,
+        ocr_text="Phông số: 14\nSố tài liệu: 33",
+    )
     assert set(body) == {"model", "temperature", "messages"}
     prompt = body["messages"][0]["content"][0]["text"]
     assert all(name in prompt for name in COVER_FIELDS)
+    assert "khoa" in COVER_FIELDS
+    assert "hop_so" not in COVER_FIELDS
     assert "co_quan_ban_hanh" not in prompt
+    assert "all consecutive bold organization" in prompt
+    assert "separate from nhiem_ky" in prompt
+    assert "only the value after the printed label Phông số" in prompt
+    assert "Phông số: 14" in prompt
+    assert "Số tài liệu: 33" in prompt
+    assert "printed label and its visible value" in prompt
+    assert "use bbox []" in prompt
     result = validate_result({"fields": {"co_quan_luu_tru": "A", "so_van_ban": "ignored"}}, expected_fields=COVER_FIELDS)
     assert set(result["fields"]) == {"co_quan_luu_tru"}
     assert result["warnings"] == ["unknown_field"]

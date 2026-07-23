@@ -220,6 +220,8 @@ sách suggestion/evidence; workspace hiển thị source, confidence và reason 
 - Mọi field có bbox hợp lệ dùng thumbnail crop evidence do worker tạo và mở
   native `<dialog>` Fit/100%; client không tự crop và không dùng bbox làm seed
   cho Manual crop.
+- Chỉ hiện “OCR gốc/Giá trị mới” khi field thật sự có correction; `ocr_value=null`
+  mặc định của field chưa sửa không được tạo diff giả.
 - Job mới từ fixture phải có cùng UX evidence như job legacy có data tương ứng;
   artifact thiếu chỉ làm block cục bộ unavailable.
 - Chưa thêm debug timeline, retry variants, layout/result side-by-side hoặc
@@ -235,6 +237,8 @@ sách suggestion/evidence; workspace hiển thị source, confidence và reason 
 - Hai schema là văn bản hành chính 11 field và Bìa 13 field. Browser không dùng
   `fields.document_type` legacy để suy `logical_document_type` hoặc hard-code
   field order; unknown/non-scalar legacy field vẫn visible read-only.
+- Schema Bìa render `khoa` với nhãn “Khóa” và không tạo field `hop_so`; thứ tự
+  vẫn lấy từ `expected_fields` backend.
 - Gửi missing field với `old_value=null`; giữ draft/conflict/discard guard và copy
   **Lưu và duyệt**. Unknown/non-scalar legacy field vẫn visible read-only.
 - Gate: reviewer thêm `ngay_ban_hanh`/`nguoi_ky` hoặc field bìa bị thiếu, reload
@@ -399,7 +403,8 @@ và Review page; URL thiếu page/field reset về default, còn dirty confirmat
   reload/restart; Cancel chuyển terminal rồi mới cho Delete.
 - Mỗi page hiển thị `page_index` trong logical document và
   `source_page_index` trong PDF khi khác nhau. Excluded page vẫn visible/audited;
-  evidence dùng page artifact, không tự crop từ OCR `bbox`.
+  frontend dùng field-evidence crop do worker persist dưới đúng logical document,
+  không tự tính crop hoặc bbox.
 - P0 chỉ yêu cầu tree/segmentation/review trong Job Detail. Global Manage triage,
   cross-job dossier filter và artifact explorer nâng cao vẫn thuộc `FE-X13` P1.
 - Gate: fixture rõ proposal khớp ground truth; fixture khó sửa được boundary bằng

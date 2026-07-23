@@ -12,7 +12,7 @@ function fixtureJob(status = "completed", document: Record<string, unknown> = fi
   return { id, status, created_at: now, updated_at: now, started_at: now, completed_at: now, ocr_method: "qwen", provider: "qwen", provider_profile_id: "qwen", model: "test-model", prompt_version: "3", endpoint_external: false, cloud_data_confirmed: false, expected_files: 1, uploaded_files: 1, upload_name: "smoke.pdf", documents: [document], logs: [{ timestamp: now, severity: "info", category: "lifecycle", code: "job_created", job_id: id, message: "sanitized operation log", warning_codes: [] }], page_count: 1, failed_pages: 0, correction_count: 0, vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0, report_url: `/api/jobs/${id}/artifacts/report.json` };
 }
 function fixtureDocument() {
-  return { id: "smoke", file_name: "smoke.pdf", status: "completed", review_status: null as string | null, fields: { so_van_ban: { value: "OLD", ocr_value: "OLD", confidence: .91, bbox: [0, 0, 10, 10], page_index: 0, evidence_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` } }, pages: [{ page_index: 0, image_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }], crop_evidence: [] as Record<string, unknown>[] };
+  return { id: "smoke", file_name: "smoke.pdf", status: "completed", review_status: null as string | null, fields: { so_van_ban: { value: "OLD", ocr_value: null, confidence: .91, bbox: [0, 0, 10, 10], page_index: 0, evidence_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` } }, pages: [{ page_index: 0, image_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }], crop_evidence: [] as Record<string, unknown>[] };
 }
 const state = (jobs: ReturnType<typeof fixtureJob>[], external = false) => ({ server_mode: true, jobs, documents: [], logs: [], metrics: { total_jobs: jobs.length, active_jobs: jobs.filter((job) => ["starting", "queued", "running", "cancelling"].includes(job.status)).length, completed_jobs: jobs.filter((job) => ["completed", "completed_with_warnings"].includes(job.status)).length, documents: jobs.reduce((count, job) => count + job.documents.length, 0), pages: jobs.length, correction_count: 0, error_jobs: 0 }, ocr_methods: [{ id: "qwen", label: "Qwen", status: "configured", external }], limits: { max_files_per_job: 15, max_job_upload_bytes: 209715200 }, pagination: { page: 1, page_size: 25, pages: 1, total: jobs.length } });
 
@@ -52,6 +52,7 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
   await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`));
   await expect(page.locator(".field-card input").first()).toHaveValue("OLD");
+  await expect(page.locator(".field-diff")).toHaveCount(0);
   await page.locator(".evidence-thumb").click(); await expect(page.locator(".evidence-modal[open] img")).toBeVisible(); await page.locator(".evidence-modal[open] .modal-actions").getByRole("button", { name: /đóng|close/i }).click();
   await page.locator(".field-card input").first().fill("NEW");
   await page.getByRole("button", { name: /lưu và duyệt|save and approve/i }).click();
@@ -417,7 +418,7 @@ test("rerun keeps the snapshot and exposes both segmentation choices", async ({ 
 
 test("missing canonical fields keep drafts until atomic approval succeeds", async ({ page }) => {
   const document: any = fixtureDocument();
-  document.expected_fields = ["co_quan_ban_hanh", "so_van_ban", "ngay_ban_hanh", "trich_yeu", "nguoi_ky"];
+  document.expected_fields = ["co_quan_ban_hanh", "so_van_ban", "ngay_ban_hanh", "trich_yeu", "nguoi_ky", "khoa"];
   document.required_fields = document.expected_fields.slice(0, 4);
   document.fields = { co_quan_ban_hanh: { value: "A" }, so_van_ban: { value: "1" }, trich_yeu: { value: "T" }, document_type: { value: "legacy" } };
   document.approval_blockers = [{ code: "missing_required_field", field: "ngay_ban_hanh" }]; document.review_risks = []; document.review_risk_count = 0;
@@ -434,6 +435,7 @@ test("missing canonical fields keep drafts until atomic approval succeeds", asyn
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
   await page.goto(`/jobs/${id}`);
+  await expect(page.locator(".field-card").filter({ hasText: /^Khóa/ })).toBeVisible();
   await expect(page.locator(".field-card").filter({ hasText: "Loại tài liệu" }).locator("input, textarea")).toHaveCount(0);
   await page.getByLabel(/người ký|signatory/i).fill("B"); await page.getByRole("button", { name: /lưu và duyệt|save and approve/i }).click();
   await expect(page.getByLabel(/người ký|signatory/i)).toHaveValue("B");

@@ -25,6 +25,10 @@ eager-task/fake-provider; không thay thế lần chạy `63-btc.pdf` qua provid
 - với fixture `box_3/Hộp 3/05`, xác nhận `ma_luu_tru` lấy đúng mã lưu trữ
   (`A.30.15.03.05.xxx`) dù nằm ở vị trí nào, không lấy dòng `Lưu: ...`, và mọi
   field có bbox hợp lệ đều có thumbnail crop đúng vùng;
+- với Bìa `box_3/Hộp 3/04/Scan_0000.pdf`, xác nhận `co_quan_luu_tru` giữ đủ hai
+  dòng cơ quan, `khoa=V`, không có `hop_so`, `phong_so=14`,
+  `so_tai_lieu=33`; labeled-value conflict phải mất confidence/bbox và mọi crop
+  còn available phải chứa đúng nhãn + giá trị;
 - chạy cùng payload OpenAI-compatible tối thiểu với cấu hình hiện tại và một Qwen
   VLM; xác nhận readiness, metadata, full OCR và segmentation đều trả JSON hợp lệ;
 - ghi bằng chứng đã khử nhạy cảm vào `implementation_plan.md#be-c-evidence`.

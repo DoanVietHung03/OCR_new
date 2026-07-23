@@ -99,8 +99,11 @@ revision conflict, and Continue in the browser gate.
   `/start` and `/continue` without losing uploaded or confirmed state.
 - Backend owns ordered expected/required field policy, typed blockers/risks, and
   prompt/write allowlists. New administrative documents use 11 fields; Bìa uses
-  the approved 13-field schema. Legacy `fields.document_type` stays read-only;
-  system metadata uses `logical_document_type`.
+  the approved 13-field schema with `khoa` and without `hop_so`. Keep
+  `co_quan_luu_tru` as all visible organization/archive-authority lines and keep
+  `khoa`, `nhiem_ky`, `phong_so`, and `ho_so_dvbq` distinct. Legacy
+  `fields.document_type` stays read-only; system metadata uses
+  `logical_document_type`.
 - `quyen_han_ky_thay` stores the complete visible signing-authority line, for
   example `KT. BỘ TRƯỞNG`; do not reduce it to the leading abbreviation or mix
   in the signer's own title from `chuc_vu_nguoi_ky`.
@@ -126,9 +129,12 @@ revision conflict, and Continue in the browser gate.
   and approve”; do not invent an unapproved saved-correction state. Unknown or
   non-scalar legacy fields remain visible but read-only.
 - New provider `bbox` is normalized `[left, top, right, bottom]` in `0..1` and
-  the worker creates a tight automatic evidence crop for every returned field.
-  Legacy/invalid bbox remains unavailable; it never seeds Manual crop, which
-  still starts from a user-drawn natural-pixel rectangle.
+  encloses the field label plus value. The worker creates an automatic evidence
+  crop for every returned field with a valid bbox. When a labeled metadata value
+  conflicts with an available independent full-OCR line, clear its bbox and
+  confidence, mark it for review, and do not publish a misleading crop.
+  Legacy/invalid bbox remains unavailable; it never seeds Manual crop, which still
+  starts from a user-drawn natural-pixel rectangle.
 - Preserve valid VI/EN UTF-8, Vietnamese default, and
   `localStorage["intellidoc.language"]`. The approved follow-up is responsive
   desktop-first: visual/functional anchors at `1440×900` and `1366×768`; at

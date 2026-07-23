@@ -32,15 +32,17 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     calls = []
 
     async def fake_request(_: bytes, **options):
-        calls.append((options["model"], options["task"], options["page_index"]))
+        calls.append((options["model"], options["task"], options["page_index"], options.get("ocr_text", "")))
         if options["task"] == "full_ocr":
-            return {"text": "OCR text", "fields": {}, "warnings": []}
+            return {"text": "Số văn bản: 1\nTrích yếu: Tóm tắt", "fields": {}, "warnings": []}
         return {"fields": {
             "so_van_ban": {
-                "value": "1", "confidence": 0.9, "bbox": [0.1, 0.2, 0.4, 0.3], "page_index": 0,
+                "value": "1", "source_text": "Số văn bản: 1",
+                "confidence": 0.9, "bbox": [0.1, 0.2, 0.4, 0.3], "page_index": 0,
             },
             "trich_yeu": {
-                "value": "Tóm tắt", "confidence": 0.8, "bbox": [0.2, 0.4, 0.8, 0.5], "page_index": 0,
+                "value": "Tóm tắt", "source_text": "Trích yếu: Tóm tắt",
+                "confidence": 0.8, "bbox": [0.2, 0.4, 0.8, 0.5], "page_index": 0,
             },
         }, "warnings": []}
 
@@ -52,14 +54,17 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     assert result["page_count"] == 1
     assert result["started_at"]
     assert result["completed_at"]
-    assert calls == [("snapshot-model", "full_ocr", 0), ("snapshot-model", "metadata", 0)]
+    assert calls == [
+        ("snapshot-model", "full_ocr", 0, ""),
+        ("snapshot-model", "metadata", 0, "Số văn bản: 1\nTrích yếu: Tóm tắt"),
+    ]
     assert result["documents"][0]["pages"][0] == {
         "page_index": 0, "image_url": f"/api/jobs/{job['id']}/artifacts/document/page-1.png",
         "ocr_scope": "full_ocr+metadata", "status": "completed", "error": "",
-        "text": "OCR text", "ocr_line_count": 1, "warnings": [],
+        "text": "Số văn bản: 1\nTrích yếu: Tóm tắt", "ocr_line_count": 2, "warnings": [],
         "source_pdf_id": "document", "source_page_index": 0,
     }
-    assert result["documents"][0]["fields"]["so_van_ban"]["source_text"] == "1"
+    assert result["documents"][0]["fields"]["so_van_ban"]["source_text"] == "Số văn bản: 1"
     page_pixmap = fitz.Pixmap(store.path(job["id"]) / "artifacts" / "document" / "page-1.png")
     for name in ("so_van_ban", "trich_yeu"):
         evidence_name = f"field-{name}-page-1.png"

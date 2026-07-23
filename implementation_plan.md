@@ -128,16 +128,17 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
   khi backend không còn approval blocker; warning mềm không mặc định là blocker.
 - Manual crop là append-only evidence, không tự thay OCR value. Với job prompt
   mới, provider `bbox` dùng tọa độ chuẩn hóa `0..1` và worker tạo ảnh evidence
-  sát vùng giá trị cho mọi field trả về; bbox legacy/invalid không được dùng và
-  không seed Manual crop.
+  chứa nhãn + giá trị cho mọi field trả về. Khi metadata có nhãn mâu thuẫn với
+  OCR toàn văn sẵn có, backend xóa bbox/confidence, đánh dấu review và không tạo
+  crop sai; bbox legacy/invalid không được dùng và không seed Manual crop.
 - Backend công bố ordered `expected_fields`, `required_fields`, typed
   `approval_blockers`/`review_risks` và `review_risk_count` trên từng logical
   document; frontend không hard-code hoặc suy lại policy.
 - Schema văn bản có 11 field: `co_quan_ban_hanh`, `so_van_ban`,
   `quoc_hieu_tieu_ngu`, `dia_diem_ban_hanh`, `ngay_ban_hanh`, `loai_van_ban`,
   `trich_yeu`, `quyen_han_ky_thay`, `chuc_vu_nguoi_ky`, `nguoi_ky`,
-  `ma_luu_tru`. Schema Bìa có `co_quan_luu_tru`, `nhiem_ky`,
-  `tieu_de_ho_so`, `hop_so`, `phong_so`, `muc_luc_so`, `ma_luu_tru`, `bat_dau`,
+  `ma_luu_tru`. Schema Bìa có `co_quan_luu_tru`, `khoa`, `nhiem_ky`,
+  `tieu_de_ho_so`, `phong_so`, `muc_luc_so`, `ma_luu_tru`, `bat_dau`,
   `ket_thuc`, `ho_so_dvbq`, `so_tai_lieu`, `thoi_han_bao_quan`, `so_trang`.
   `fields.document_type` chỉ là legacy read-only; metadata hệ thống mới dùng
   `logical_document_type`.
@@ -277,8 +278,9 @@ giữ lại, provenance luôn do backend gán `provider`, và OpenAPI sinh scala
 review-reason/nested suggestion-evidence types thay vì `unknown` payload.
 
 - Chuẩn hóa contract nhỏ: `source_text`, `page_index`, confidence nullable,
-  typed review reason, suggestion có provenance và `evidence_url` trỏ ảnh trang.
-  Không tự sinh field crop hoặc gán contract pixel/normalized cho OCR `bbox`.
+  typed review reason, suggestion có provenance và `evidence_url` trỏ crop do
+  worker tạo từ bbox normalized. Bbox phải bao nhãn + giá trị; bbox thiếu,
+  invalid hoặc mâu thuẫn OCR toàn văn là unavailable.
 - Worker sinh và persist các dữ liệu trên cho job mới. Normalizer/validation
   dùng rule domain nhỏ, deterministic và test được; không copy nguyên pipeline,
   subprocess runner, retry variants hoặc layout artifact của dự án cũ.
@@ -298,6 +300,10 @@ review-reason/nested suggestion-evidence types thay vì `unknown` payload.
   bị bỏ với `unknown_field`, còn reader giữ legacy/unknown sẵn có read-only.
 - Mỗi document trả ordered `expected_fields` và `required_fields`; prompt yêu cầu
   đúng expected subset. `fields.document_type` không còn nằm trong prompt mới.
+- Bìa dùng `khoa`, không dùng `hop_so`; `co_quan_luu_tru` giữ đủ các dòng cơ
+  quan in đậm, còn `khoa`, `nhiem_ky`, `phong_so`, `ho_so_dvbq` bám đúng nhãn.
+  Khi đã chạy full OCR, metadata nhận transcription làm ngữ cảnh và labeled-value
+  conflict trở thành `validation_warning`, không được giữ confidence/bbox giả.
 - `apply_review` cho tạo field canonical còn thiếu với `old_value=null`, scalar
   value và provenance `manual`; field lạ/non-scalar vẫn bị từ chối hoặc read-only.
 - Audit internal-pilot ghi original null, corrected value,

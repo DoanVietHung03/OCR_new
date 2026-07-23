@@ -261,13 +261,13 @@ async def process_job_async(job_id: str) -> dict:
                         page_index=index,
                         task=pass_task,
                         expected_fields=tuple(document.get("expected_fields", ())),
+                        ocr_text=state.get("text", "") if pass_task == "metadata" else "",
                     )
                     if pass_task == "full_ocr":
                         state["text"] = result["text"]
                         state["ocr_line_count"] = len(result["text"].splitlines())
                     else:
                         for name, field in result["fields"].items():
-                            field.setdefault("source_text", str(field.get("value", "")))
                             evidence_name = f"field-{name}-page-{index + 1}.png"
                             if crop_field_evidence(pages[index], field.get("bbox", []), pages[index].with_name(evidence_name)):
                                 field.update(
@@ -276,7 +276,7 @@ async def process_job_async(job_id: str) -> dict:
                                     evidence_status="available",
                                 )
                             else:
-                                field["needs_review"] = True
+                                field.update(needs_review=True, evidence_status="unavailable")
                             if field.get("needs_review"):
                                 field.setdefault("review_reason", "missing_evidence")
                             current = document["fields"].get(name)

@@ -66,7 +66,8 @@ provider production-like thật.
   an toàn không bao giờ được lưu.
 - Backend công bố ordered expected/required fields, typed blockers/risks và
   `logical_document_type`. Văn bản mới dùng schema 11 field, Bìa dùng schema 13
-  field; dữ liệu legacy vẫn đọc được nhưng không bị áp policy mới hoặc rewrite.
+  field với `khoa` và không có `hop_so`; dữ liệu legacy vẫn đọc được nhưng không
+  bị áp policy mới hoặc rewrite.
 - Nội dung chỉnh sửa, phê duyệt, audit bất biến và bằng chứng crop thủ công được
   lưu bền vững. Approval độc lập từng logical document. Rerun tạo job sạch và
   explicit reuse hoặc chạy lại segmentation; job nguồn luôn bất biến.
