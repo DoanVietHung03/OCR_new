@@ -186,6 +186,18 @@ def test_cover_prompt_and_parser_share_the_policy_allowlist():
     assert {issue["field"] for issue in cover["review_risks"] if issue["code"] == "invalid_optional_value"} == {"so_tai_lieu"}
 
 
+def test_administrative_prompt_defines_signing_authority_prefixes():
+    prompt = request_body(b"image", "model", expected_fields=ADMIN_FIELDS)["messages"][0]["content"][0]["text"]
+    assert all(prefix in prompt for prefix in ("TM.", "Q.", "KT.", "TL.", "TUQ."))
+    assert "empty string" in prompt
+    assert "after Số: or Văn bản số" in prompt
+    assert "archive/file code" in prompt
+
+    cover_prompt = request_body(b"image", "model", expected_fields=COVER_FIELDS)["messages"][0]["content"][0]["text"]
+    assert "dossier cover" in cover_prompt
+    assert "so_van_ban is" not in cover_prompt
+
+
 def test_review_policy_includes_validation_warning_and_segmentation_blocker():
     document = annotate({
         "logical_document_type": "administrative_document",

@@ -41,11 +41,26 @@ FIELD_ALIASES = {
     "nguoi_ky_ten": "nguoi_ky", "ten_nguoi_ky": "nguoi_ky",
 }
 def metadata_prompt(fields: tuple[str, ...]) -> str:
+    document_number = (
+        " so_van_ban is the document identifier printed after Số: or Văn bản số; never use an archive/file code."
+        if "so_van_ban" in fields else ""
+    )
+    archive_code = (
+        " ma_luu_tru is the archive/file code, commonly the general code printed on a dossier cover; never use the document number."
+        if "ma_luu_tru" in fields else ""
+    )
+    signing_authority = (
+        " quyen_han_ky_thay is only the visible signing-authority prefix above the signer title: "
+        "TM. (thay mặt), Q. (quyền), KT. (ký thay), TL. (thừa lệnh), or TUQ. (thừa ủy quyền). "
+        "Return only that exact prefix; use an empty string when the signer has direct authority and no prefix is printed. "
+        "Do not put the signer title in quyen_han_ky_thay."
+        if "quyen_han_ky_thay" in fields else ""
+    )
     return (
         "Return one JSON object only, with no Markdown or explanation. Its only top-level key is fields. "
         "Each fields entry uses an existing archival field name and has value (string), confidence "
         "(number 0..1), bbox ([left, top, right, bottom]), and page_index (integer). "
-        f"Extract every visible field from this schema: {', '.join(fields)}. "
+        f"Extract every visible field from this schema: {', '.join(fields)}.{document_number}{archive_code}{signing_authority} "
         "Do not invent fields. Use {\"fields\": {}} when nothing is found."
     )
 
