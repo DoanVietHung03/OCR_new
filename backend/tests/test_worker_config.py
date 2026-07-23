@@ -56,7 +56,7 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     assert result["completed_at"]
     assert calls == [
         ("snapshot-model", "full_ocr", 0, ""),
-        ("snapshot-model", "metadata", 0, "Số văn bản: 1\nTrích yếu: Tóm tắt"),
+        ("snapshot-model", "metadata", 0, ""),
     ]
     assert result["documents"][0]["pages"][0] == {
         "page_index": 0, "image_url": f"/api/jobs/{job['id']}/artifacts/document/page-1.png",

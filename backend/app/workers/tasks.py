@@ -261,7 +261,6 @@ async def process_job_async(job_id: str) -> dict:
                         page_index=index,
                         task=pass_task,
                         expected_fields=tuple(document.get("expected_fields", ())),
-                        ocr_text=state.get("text", "") if pass_task == "metadata" else "",
                     )
                     if pass_task == "full_ocr":
                         state["text"] = result["text"]
