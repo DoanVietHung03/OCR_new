@@ -160,6 +160,13 @@ def test_provider_retries_429_once_but_not_read_timeout(monkeypatch):
 def test_provider_probe_distinguishes_reachability_from_readiness(monkeypatch):
     import app.services.ocr_runner as runner
 
+    fitz.TOOLS.reset_mupdf_warnings()
+    with fitz.open(stream=runner.PROBE_PNG, filetype="png") as image:
+        pixmap = image[0].get_pixmap()
+    assert not fitz.TOOLS.mupdf_warnings()
+    assert tuple(int.from_bytes(runner.PROBE_PNG[offset:offset + 4]) for offset in (16, 20)) == (256, 256)
+    assert pixmap.n == 3
+
     real_client = httpx.AsyncClient
 
     def use(handler):
