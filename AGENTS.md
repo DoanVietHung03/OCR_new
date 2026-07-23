@@ -101,6 +101,9 @@ revision conflict, and Continue in the browser gate.
   prompt/write allowlists. New administrative documents use 11 fields; Bìa uses
   the approved 13-field schema. Legacy `fields.document_type` stays read-only;
   system metadata uses `logical_document_type`.
+- `quyen_han_ky_thay` stores the complete visible signing-authority line, for
+  example `KT. BỘ TRƯỞNG`; do not reduce it to the leading abbreviation or mix
+  in the signer's own title from `chuc_vu_nguoi_ky`.
 - Persist corrections with original OCR value and immutable audit. Manual crop
   is evidence only. `/corrections` saves and approves atomically only when typed
   blockers are empty; dossier approval may be `partially_approved`.

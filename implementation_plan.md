@@ -139,6 +139,9 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
   `ket_thuc`, `ho_so_dvbq`, `so_tai_lieu`, `thoi_han_bao_quan`, `so_trang`.
   `fields.document_type` chỉ là legacy read-only; metadata hệ thống mới dùng
   `logical_document_type`.
+- `quyen_han_ky_thay` lấy trọn dòng quyền hạn ký nhìn thấy, ví dụ
+  `KT. BỘ TRƯỞNG`, không chỉ lấy `KT.`; chức vụ riêng của người ký như
+  `THỨ TRƯỞNG` vẫn thuộc `chuc_vu_nguoi_ky`.
 - Required văn bản: `co_quan_ban_hanh`, `so_van_ban`, `ngay_ban_hanh`,
   `trich_yeu`. Required Bìa: `co_quan_luu_tru`, `tieu_de_ho_so`, `ma_luu_tru`,
   `bat_dau`, `ket_thuc`. Missing optional là warning; failed planned page chỉ

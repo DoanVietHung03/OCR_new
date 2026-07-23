@@ -11,7 +11,7 @@ import httpx
 from .field_policy import ADMIN_FIELDS
 from .jobs import FIELDS
 
-PROMPT_VERSION = "3"
+PROMPT_VERSION = "4"
 PROBE_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAACuklEQVR4nO3TMQEA"
     "AAiAMPuX1hgebAl4mIWw+Q6ATwYgzQCkGYA0A5BmANIMQJoBSDMAaQYgzQCkGYA0"
@@ -50,10 +50,11 @@ def metadata_prompt(fields: tuple[str, ...]) -> str:
         if "ma_luu_tru" in fields else ""
     )
     signing_authority = (
-        " quyen_han_ky_thay is only the visible signing-authority prefix above the signer title: "
+        " quyen_han_ky_thay is the complete visible signing-authority line above the signer title: "
         "TM. (thay mặt), Q. (quyền), KT. (ký thay), TL. (thừa lệnh), or TUQ. (thừa ủy quyền). "
-        "Return only that exact prefix; use an empty string when the signer has direct authority and no prefix is printed. "
-        "Do not put the signer title in quyen_han_ky_thay."
+        "Keep the authority named on that same line, for example KT. BỘ TRƯỞNG; do not reduce it to KT. alone. "
+        "Use an empty string when the signer has direct authority and no signing-authority line is printed. "
+        "Keep the signer's own title, such as THỨ TRƯỞNG, in chuc_vu_nguoi_ky."
         if "quyen_han_ky_thay" in fields else ""
     )
     return (

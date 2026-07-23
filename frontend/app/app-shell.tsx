@@ -18,6 +18,7 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
   const [updated, setUpdated] = useState<Date | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => { const sync = () => setMonitorOpen(new URLSearchParams(location.search).get("monitor") === "1"); sync(); window.addEventListener("popstate", sync); return () => window.removeEventListener("popstate", sync); }, []);
@@ -48,13 +49,15 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
   ];
   const operationStates = metrics?.operations?.states || {};
   const updateMonitor = (open: boolean) => { const query = new URLSearchParams(location.search); if (open) query.set("monitor", "1"); else query.delete("monitor"); history[open ? "pushState" : "replaceState"](null, "", `${location.pathname}${query.size ? `?${query}` : ""}`); setMonitorOpen(open); };
+  const sidebarLabel = sidebarCollapsed ? (locale === "vi" ? "Mở rộng thanh bên" : "Expand sidebar") : (locale === "vi" ? "Thu gọn thanh bên" : "Collapse sidebar");
 
-  return <div className="app-shell" data-locale={locale}>
+  return <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-locale={locale}>
     <aside className="sidebar">
       <Link className="brand" href="/" aria-label={text("title")} onClick={onJobs}><span className="brand-mark">ID</span><span>IntelliDoc<small>OCR</small></span></Link>
+      <button className="sidebar-collapse nav-link" aria-label={sidebarLabel} aria-pressed={sidebarCollapsed} title={sidebarLabel} onClick={() => setSidebarCollapsed((value) => !value)}>{sidebarCollapsed ? "»" : "«"} <span>{sidebarLabel}</span></button>
       <button className="menu-toggle" aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen((value) => !value)}>☰</button>
       <nav id="primary-navigation" className={menuOpen ? "open" : ""} aria-label={text("jobs")}>
-        {nav.map(([href, icon, label]) => <Link className={active(href) ? "nav-link active" : "nav-link"} href={href} key={href} onClick={(event) => { setMenuOpen(false); if (href === "/upload" && onNew) { event.preventDefault(); onNew(); } else onJobs?.(event); }}>{icon} <span>{label}</span></Link>)}
+        {nav.map(([href, icon, label]) => <Link className={active(href) ? "nav-link active" : "nav-link"} href={href} key={href} aria-label={label} title={sidebarCollapsed ? label : undefined} onClick={(event) => { setMenuOpen(false); if (href === "/upload" && onNew) { event.preventDefault(); onNew(); } else onJobs?.(event); }}>{icon} <span>{label}</span></Link>)}
       </nav>
       <div className="sidebar-tools">
         <button className="nav-link" aria-label={text("systemMonitor")} onClick={() => updateMonitor(true)}>◫ <span>{text("systemMonitor")}</span></button>

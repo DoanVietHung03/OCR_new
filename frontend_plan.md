@@ -360,6 +360,9 @@ Counterpart: [`BE-X15`](implementation_plan.md#be-x15).
 - Sau khi có dữ liệu thật: thu gọn bảy dashboard metric thành bốn metric vận hành
   chính, giảm whitespace/H1 tại 1366×768, group artifact/report nhất quán. Không
   copy CSS cũ hoặc lấy số dòng CSS làm mục tiêu.
+- Shell desktop có sidebar thu gọn native; button có hover/press/focus rõ, Review
+  phân biệt viewer/editor/field group bằng tương phản vừa đủ và field dài xuống
+  dòng thay vì tạo cảm giác bị cắt ở mép phải.
 - Hoàn thiện VI/EN cho `pages/min`, `Runtime`, `physical`, `OCR operations`, Code
   group IDs và `prompt`; giữ ID kỹ thuật khi cần kèm label dịch được.
 - Utility không dependency: Ctrl/Cmd+S và Enter chỉ lưu đúng ngữ cảnh, Esc cancel,

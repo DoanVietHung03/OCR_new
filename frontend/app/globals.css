@@ -9,13 +9,15 @@
 html { min-width: 320px; }
 body { margin: 0; min-width: 320px; }
 button, input, select, textarea { color: inherit; font: inherit; }
-button { cursor: pointer; }
+button { cursor: pointer; transition: transform .12s ease, filter .12s ease; }
 button:disabled { cursor: not-allowed; opacity: .5; }
+button:not(:disabled):hover { filter: brightness(.96); }
 a { color: inherit; }
 h1, h2, h3, p { margin: 0; }
 :focus-visible { outline: 3px solid #7eb5ff; outline-offset: 2px; }
 
-.app-shell { display: grid; grid-template-columns: 296px minmax(0, 1fr); min-height: 100vh; }
+.app-shell { display: grid; grid-template-columns: 296px minmax(0, 1fr); min-height: 100vh; transition: grid-template-columns .18s ease; }
+.app-shell.sidebar-collapsed { grid-template-columns: 88px minmax(0, 1fr); }
 .sidebar { position: sticky; top: 0; display: flex; height: 100vh; flex-direction: column; padding: 26px 18px 20px; color: #dce7f8; background: #0c1f3c; }
 .brand { display: flex; align-items: center; gap: 12px; padding: 0 8px 28px; color: #fff; font-size: 1.08rem; font-weight: 750; text-decoration: none; }
 .brand-mark { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 11px; color: #102745; background: #f1b947; font-weight: 900; }
@@ -24,6 +26,11 @@ h1, h2, h3, p { margin: 0; }
 .menu-toggle { display: none; border: 0; border-radius: 8px; padding: 8px 11px; color: #fff; background: #17365f; font-size: 1.2rem; }
 .nav-link { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 12px; border: 0; border-radius: 9px; padding: 10px 12px; color: #b8c9df; background: transparent; text-align: left; text-decoration: none; }
 .nav-link:hover, .nav-link.active { color: #fff; background: #17365f; }
+.sidebar-collapse { margin-bottom: 14px; }
+.sidebar-collapsed .brand { justify-content: center; padding-inline: 0; }
+.sidebar-collapsed .brand > span:last-child, .sidebar-collapsed .nav-link span { display: none; }
+.sidebar-collapsed .nav-link { justify-content: center; gap: 0; padding-inline: 8px; font-size: 1.1rem; }
+.sidebar-collapsed .language-switch { grid-template-columns: 1fr; }
 .sidebar-tools { display: grid; gap: 12px; margin-top: auto; }
 .language-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 9px; background: #08182e; }
 .language-switch button { border: 0; border-radius: 6px; padding: 7px; color: #9db0ca; background: transparent; }
@@ -37,17 +44,21 @@ h1 { margin: 5px 0 7px; color: #10213d; font-size: clamp(2rem, 3.4vw, 3rem); let
 h2 { color: #152743; font-size: 1.18rem; }
 h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: uppercase; }
 .eyebrow { color: #567098; font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.panel { border: 1px solid #d6deea; border-radius: 13px; background: #fff; box-shadow: 0 8px 22px rgb(24 46 79 / 5%); }
-.button { display: inline-flex; min-height: 39px; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 8px; padding: 8px 13px; font-weight: 700; text-decoration: none; }
+.panel { border: 1px solid #cbd7e6; border-radius: 13px; background: #fff; box-shadow: 0 9px 24px rgb(24 46 79 / 8%); }
+.button { display: inline-flex; min-height: 39px; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 8px; padding: 8px 13px; font-weight: 700; text-decoration: none; transition: transform .12s ease, border-color .12s ease, background-color .12s ease, box-shadow .12s ease; }
 .primary { color: #fff; background: #1768d4; }
-.primary:hover { background: #1156b2; }
+.primary:hover { background: #1156b2; box-shadow: 0 5px 12px rgb(17 86 178 / 24%); }
 .secondary { border-color: #c6d1df; color: #243a59; background: #fff; }
+.secondary:hover { border-color: #7fa6d6; background: #f2f7ff; box-shadow: 0 4px 10px rgb(35 71 117 / 10%); }
 .danger { border-color: #f1b7b2; color: #b1271b; background: #fff0ef; }
+.danger:hover { border-color: #d46b62; background: #ffe5e2; }
 .danger.ghost { border-color: transparent; background: transparent; }
 .text-button, .icon-button { border: 0; color: #526782; background: transparent; }
 .text-button { padding: 7px; color: #1768d4; font-weight: 700; }
+.text-button:hover { color: #0e4f9f; background: #edf5ff; }
 .icon-button { display: grid; min-width: 36px; min-height: 36px; place-items: center; border-radius: 50%; font-size: 1.45rem; }
 .icon-button:hover { background: #edf2f8; }
+.button:not([aria-disabled="true"]):active, button:not(:disabled):active { transform: translateY(1px) scale(.98); }
 
 .upload-panel { margin-bottom: 20px; padding: 22px; }
 .upload-panel .section-head p:last-child { margin-top: 5px; color: #60718a; }
@@ -152,16 +163,21 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 }
 
 @media (max-width: 760px) {
-  .app-shell { grid-template-columns: 1fr; }
+  .app-shell, .app-shell.sidebar-collapsed { grid-template-columns: 1fr; }
   .sidebar { position: static; display: grid; height: auto; grid-template-columns: 1fr auto; padding: 12px; }
+  .sidebar-collapse { display: none; }
   .menu-toggle { display: block; grid-column: 2; grid-row: 1; }
   .brand { padding: 0; }
+  .sidebar-collapsed .brand { justify-content: flex-start; }
+  .sidebar-collapsed .brand > span:last-child { display: block; }
   .brand small { display: none; }
   .sidebar nav { display: none; grid-column: 1 / -1; grid-row: 2; margin-top: 10px; }
   .sidebar nav.open { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sidebar-collapsed .sidebar nav .nav-link { justify-content: flex-start; gap: 12px; font-size: inherit; }
+  .sidebar-collapsed .sidebar nav .nav-link span { display: inline; }
   .sidebar-tools { display: flex; align-items: center; margin: 0; }
   .sidebar-tools .nav-link span { display: none; }
-  .language-switch { min-width: 92px; }
+  .language-switch, .sidebar-collapsed .language-switch { min-width: 92px; grid-template-columns: 1fr 1fr; }
   .main-content { padding: 24px 14px 48px; }
   .page-header, .job-header { align-items: flex-start; flex-direction: column; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }

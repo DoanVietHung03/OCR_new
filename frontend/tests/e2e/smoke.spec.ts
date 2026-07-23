@@ -325,6 +325,8 @@ test("app routes deep-link and Code Catalog CRUD survives reload", async ({ page
   });
 
   await page.goto("/"); const nav = page.locator("#primary-navigation");
+  const shell = page.locator(".app-shell"), collapse = page.getByRole("button", { name: /thu gọn|collapse sidebar/i });
+  await collapse.click(); await expect(shell).toHaveClass(/sidebar-collapsed/); await page.getByRole("button", { name: /mở rộng|expand sidebar/i }).click(); await expect(shell).not.toHaveClass(/sidebar-collapsed/);
   await nav.getByRole("link", { name: /tải pdf|upload pdf/i }).click(); await expect(page).toHaveURL(/\/upload$/);
   await nav.getByRole("link", { name: /quản lý|manage/i }).click(); await expect(page).toHaveURL(/\/documents$/); await expect(page.getByLabel(/lọc rà soát|review filter/i)).toContainText(/1/); await expect(page.getByRole("link", { name: /mở|open/i }).last()).toHaveAttribute("href", new RegExp(`document=smoke&view=review&page=0&field=so_van_ban`));
   await page.getByLabel(/lọc rà soát|review filter/i).selectOption("blocker"); await expect(page).toHaveURL(/triage=blocker/);

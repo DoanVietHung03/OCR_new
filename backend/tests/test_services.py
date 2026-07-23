@@ -181,9 +181,12 @@ def test_cover_prompt_and_parser_share_the_policy_allowlist():
     assert {issue["field"] for issue in cover["review_risks"] if issue["code"] == "invalid_optional_value"} == {"so_tai_lieu"}
 
 
-def test_administrative_prompt_defines_signing_authority_prefixes():
+def test_administrative_prompt_requires_complete_signing_authority_line():
     prompt = request_body(b"image", "model", expected_fields=ADMIN_FIELDS)["messages"][0]["content"][0]["text"]
     assert all(prefix in prompt for prefix in ("TM.", "Q.", "KT.", "TL.", "TUQ."))
+    assert "KT. BỘ TRƯỞNG" in prompt
+    assert "do not reduce it to KT. alone" in prompt
+    assert "THỨ TRƯỞNG" in prompt
     assert "empty string" in prompt
     assert "after Số: or Văn bản số" in prompt
     assert "archive/file code" in prompt

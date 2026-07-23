@@ -10,7 +10,7 @@ const legacyFieldOrder = [
   "hop_so", "phong_so", "muc_luc_so", "bat_dau", "ho_so_dvbq", "ket_thuc", "so_tai_lieu", "thoi_han_bao_quan", "so_trang", "document_type",
 ] as const;
 const fieldMeta: Record<string, [string, string, string, boolean?]> = {
-  co_quan_ban_hanh: ["Cơ quan ban hành", "Issuing authority", "Văn bản"], quoc_hieu_tieu_ngu: ["Quốc hiệu, tiêu ngữ", "National header", "Văn bản"],
+  co_quan_ban_hanh: ["Cơ quan ban hành", "Issuing authority", "Văn bản"], quoc_hieu_tieu_ngu: ["Quốc hiệu, tiêu ngữ", "National header", "Văn bản", true],
   so_van_ban: ["Số văn bản", "Document number", "Văn bản"], dia_diem_ban_hanh: ["Địa điểm ban hành", "Issue place", "Văn bản"],
   ngay_ban_hanh: ["Ngày ban hành", "Issue date", "Văn bản"], loai_van_ban: ["Loại văn bản", "Document type", "Văn bản"],
   trich_yeu: ["Trích yếu", "Summary", "Văn bản", true], quyen_han_ky_thay: ["Quyền hạn ký", "Signing authority", "Ký duyệt"],
