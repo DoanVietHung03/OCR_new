@@ -2,7 +2,7 @@
 
 File này chỉ giữ những việc còn phụ thuộc dữ liệu, hạ tầng hoặc quyết định vận
 hành bên ngoài repository. Các contract và kiểm thử local đã hoàn thành vẫn được
-theo dõi trong `implementation_plan.md` và `legacy_browser_recreated.md`.
+theo dõi trong `implementation_plan.md` và `frontend_plan.md`.
 
 ## 1. X7 — Field evidence trên bốn fixture thật
 
@@ -38,8 +38,8 @@ boundary, inline validation, revision conflict và Continue; các điều kiện
   PDF theo revision, sau đó extraction thành công;
 - Bìa và từng văn bản được review, sửa missing field và approve độc lập; trạng
   thái cùng artifact sống qua reload/restart;
-- kiểm tra terminal job đọc được qua runtime legacy, job X16 đang chạy trở thành
-  `interrupted` khi rollback và không bị resume chéo phiên bản.
+- kiểm tra terminal job cũ vẫn đọc được mà không rewrite; job X16 đang chạy trở
+  thành `interrupted` khi worker restart và không tự resume.
 
 ## 3. X14 — Benchmark tương thích
 
@@ -70,11 +70,10 @@ URL state, page jump, monitor deep-link, phím tắt, copy ID và select-all ter
 Máy hiện tại không có đủ stack và bằng chứng live để ký gate. Điều kiện hoàn
 thành:
 
-- tạm dừng upload, drain/stop legacy, backup `OCR_DATA_DIR` kèm size/checksum;
+- tạm dừng upload, drain worker, backup `OCR_DATA_DIR` kèm size/checksum;
 - chạy Nginx → FastAPI → Redis → Celery → provider thật; xác nhận task đăng ký,
   `--concurrency=1`, `--prefetch-multiplier=1`, artifact/report và bốn fixture;
-- diễn tập restart/interrupted, persistence, cross-version round-trip và rollback;
-- ghi toàn bộ bằng chứng sanitized vào `BE-C-EVIDENCE`, giữ `src/ocr/` và `web/`
-  trong cửa sổ rollback một ngày, không chạy hai worker trên cùng data directory;
+- diễn tập restart/interrupted, persistence, đọc job cũ và rollback image/deployment;
+- ghi toàn bộ bằng chứng sanitized vào `BE-C-EVIDENCE`;
 - việc bỏ auth anonymous hoặc nâng lên customer production là một yêu cầu kiến
   trúc riêng, không thuộc gate pilot hiện tại.

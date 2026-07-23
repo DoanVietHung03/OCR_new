@@ -1,4 +1,4 @@
-# Kế hoạch frontend Legacy+ Browser
+# Kế hoạch frontend Next.js
 
 Đây là nguồn chuẩn duy nhất cho frontend Next.js, workflow người dùng, visual
 parity và browser evidence. Backend contract, worker, cutover và Milestone C nằm
@@ -43,21 +43,13 @@ ghi duy nhất trong `BE-C-EVIDENCE`.
 
 ## Phạm vi và nguồn chuẩn
 
-**Legacy Reference Browser** là browser trong
-`C:\HProjecT\OCR_paper\Web\src`, dùng tham chiếu layout, mật độ thông tin và
-workflow; không phải nguồn chuẩn security, public API hoặc persistence.
-
-**Legacy+ Browser** là browser Next.js hiện tại: phục hồi tiện ích vận hành bằng
-typed API, dữ liệu thật, durable state và accessibility tốt hơn.
-
 Thứ tự ưu tiên khi có mâu thuẫn:
 
 1. Invariant và public contract trong `implementation_plan.md`.
 2. OpenAPI do FastAPI sinh.
 3. File này cho workflow/visual frontend.
-4. `OCR_paper/Web/src/app.js`, `styles.css`, `i18n.js` để tham khảo.
 
-Browser cũ dùng dữ liệu giả thì Legacy+ phải dùng dữ liệu thật hoặc hiển thị
+Frontend phải dùng dữ liệu thật hoặc hiển thị
 “không có dữ liệu”. Cấm URL/key/header provider, raw response, stack trace,
 filesystem path, progress/quality/benchmark giả và unredacted payload.
 
@@ -106,11 +98,10 @@ terminal dừng polling và stale refresh giữ snapshot gần nhất kèm cản
 | Artifacts/events | Manifest/download typed, Safe Events sanitized; missing cục bộ không crash |
 | Codes/Monitor | `_codes.json` revision-safe; allowlisted CPU/RAM/disk/runtime/GPU/operation metrics |
 | VI/EN/a11y/responsive | Vietnamese mặc định, language persistence, semantic/keyboard/reduced-motion, ba viewport |
-| Schema/data | Generated OpenAPI types, durable reload, two-way legacy readability và rollback |
+| Schema/data | Generated OpenAPI types, durable reload và đọc job cũ không rewrite |
 
-Legacy+ hiện tốt hơn browser cũ về durability, correction conflict, API typing,
-accessibility và data safety. Vì vậy ưu tiên dữ liệu worker/contract trước CSS;
-không gọi những baseline trên là gap hoặc dựng lại UI lần nữa.
+Frontend hiện dùng durable state, correction conflict, API typing, accessibility
+và data safety. Ưu tiên dữ liệu worker/contract trước CSS; không dựng lại baseline.
 
 ## Kế hoạch đang mở
 
@@ -133,8 +124,6 @@ không gọi những baseline trên là gap hoặc dựng lại UI lần nữa.
 Browser eager-task/fake-provider là local contract evidence. Kết quả từ
 `63-btc.pdf`/provider production-like vẫn là external evidence, không được gộp
 vào nhãn `PASS LOCAL CONTRACT`.
-
-UI/task reference cũ: `OCR_paper/Web/src/app.js:1696-1720,3466-3479,4083-4092`.
 
 ### FE-X2
 
@@ -215,8 +204,6 @@ client-side quality aggregate, raw diagnostics, UI kit, state manager hoặc ch�
 năng chỉ tồn tại trong state browser. Giữ PDF picker/drag-drop và API durable hiện
 có. Mọi thay đổi phạm vi cần yêu cầu riêng, không được lẫn vào parity work.
 
-Reference cũ: `OCR_paper/Web/src/app.js:1724-1747,3111-3133,3492-3503`.
-
 ### FE-X7
 
 **P0 — Field evidence tối thiểu cho job mới — IN PROGRESS 2026-07-22.** Counterpart:
@@ -237,8 +224,6 @@ sách suggestion/evidence; workspace hiển thị source, confidence và reason 
 - Chưa thêm debug timeline, retry variants, layout/result side-by-side hoặc
   paper-like preview cho tới khi backend persist dữ liệu thật và fixture cần.
 
-Reference cũ: `OCR_paper/Web/src/app.js:1960-2255`.
-
 ### FE-X8
 
 **P0 — Expected/missing field workflow — PASS LOCAL 2026-07-22.** Counterpart:
@@ -253,8 +238,6 @@ Reference cũ: `OCR_paper/Web/src/app.js:1960-2255`.
   **Lưu và duyệt**. Unknown/non-scalar legacy field vẫn visible read-only.
 - Gate: reviewer thêm `ngay_ban_hanh`/`nguoi_ky` hoặc field bìa bị thiếu, reload
   thấy audit/value; không cần sửa JSON thủ công.
-
-Reference cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
 
 ### FE-X9
 
@@ -326,8 +309,6 @@ Counterpart: [`BE-X12`](implementation_plan.md#be-x12).
 - Gate: timeline/progress còn đúng sau reload/restart, terminal dừng polling và
   job detail cũng dừng interval khi tab hidden.
 
-Reference cũ: `OCR_paper/Web/src/app.js:1495-1532,2529-2587`.
-
 ### FE-X13
 
 **P1 — Manage triage, field context và artifact explorer — PASS LOCAL 2026-07-22.** Counterpart:
@@ -343,8 +324,6 @@ Reference cũ: `OCR_paper/Web/src/app.js:1495-1532,2529-2587`.
   và paper-like overview là P2 có dữ liệu, không phải gate của mục này.
 - Gate: mọi quick filter dùng aggregate typed, refresh giữ target và artifact
   missing không làm sập workspace.
-
-Reference cũ: `OCR_paper/Web/src/app.js:1893-2255`.
 
 ### FE-X14
 
@@ -366,8 +345,6 @@ Reference cũ: `OCR_paper/Web/src/app.js:1893-2255`.
 được ẩn, corrected JSON xuất hiện trong Artifacts sau reload và tab Report trùng
 lặp đã bỏ. Benchmark có fingerprint thật còn theo
 [`incomlpeted.md`](incomlpeted.md).
-
-Reference cũ: `OCR_paper/Web/src/app.js:1440-1475,2655-2837`.
 
 ### FE-X15
 
@@ -422,8 +399,6 @@ và Review page; URL thiếu page/field reset về default, còn dirty confirmat
 - Gate: fixture rõ proposal khớp ground truth; fixture khó sửa được boundary bằng
   pointer/keyboard-safe UI rồi extraction, missing-field correction và approval
   độc lập sống qua reload.
-
-Reference cũ: `OCR_paper/Web/src/app.js:588-617,1987-1996,2489-2503`.
 
 Upload đã có ba mode; Job Detail đã có source thumbnails, segment list, đổi type,
 tách/gộp native tại boundary bất kỳ, inline validation, confirm theo revision và
@@ -482,8 +457,7 @@ khi đóng.
 
 Không dùng lại con số `18/19` cho trạng thái hiện tại cho đến khi các gate còn lại
 đã pass. Repair Gate ngày 2026-07-22 là baseline hiện hành: backend `28 passed`;
-suite mở rộng hiện tại `47 passed`,
-legacy compatibility `10 passed`, browser `17 passed`, `1 skipped`, gồm task/page retry
+suite mở rộng hiện tại `48 passed`, browser `17 passed`, gồm task/page retry
 và partial review, typecheck/build/OpenAPI/compile/diff đều pass.
 
 ## UI evidence hiện có
@@ -492,10 +466,8 @@ Các ảnh sanitized được giữ trong `docs/ui-parity/`:
 
 | Ảnh | State/viewport |
 |---|---|
-| `legacy-dashboard.png` | Legacy dashboard, 1440×900 |
-| `legacy-dashboard-1366x768.png` | Legacy dashboard, 1366×768 |
-| `recreated-dashboard.png` | Legacy+ cùng fixture, 1440×900 |
-| `recreated-dashboard-1366x768.png` | Legacy+ cùng fixture, 1366×768 |
+| `dashboard.png` | Dashboard, 1440×900 |
+| `dashboard-1366x768.png` | Dashboard, 1366×768 |
 | `review-workspace.png` | Review workspace, 1440×900 |
 | `crop-modal.png` | Natural-pixel crop, 1366×768 |
 | `mobile-upload-390x844.png` | Mobile PDF-only safety state |
@@ -509,18 +481,16 @@ dùng ảnh cũ thay cho interaction evidence.
 
 ```powershell
 uv run --project backend pytest backend/tests -q
-$env:PYTHONPATH = "src"
-python -m unittest discover -s tests -v
 pnpm --dir frontend typecheck
 pnpm --dir frontend build
 pnpm --dir frontend e2e:smoke
 pnpm api:check
-python -m compileall -q src backend/app
+python -m compileall -q backend/app
 git diff --check
 ```
 
-Legacy+ chỉ đạt Milestone C **internal production-like pilot** khi Repair Gate vẫn
+Frontend chỉ đạt Milestone C **internal production-like pilot** khi Repair Gate vẫn
 pass, nhóm P0 `FE-X7`–`FE-X11`/`FE-X16` và counterpart backend pass,
-`BE-C-EVIDENCE` được ký bằng runtime thật, và cửa sổ rollback một ngày kết thúc.
+`BE-C-EVIDENCE` được ký bằng runtime thật.
 Không gọi đây là customer-production-ready; phần P1/P2 còn lại được liệt kê trong
-`incomlpeted.md` và không xóa legacy runtime trong kế hoạch frontend.
+`incomlpeted.md`.

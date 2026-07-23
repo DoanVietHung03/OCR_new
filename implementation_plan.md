@@ -2,7 +2,7 @@
 
 Đây là nguồn chuẩn duy nhất cho backend, public contract, durable state, worker,
 cutover và bằng chứng Milestone C. Kế hoạch frontend nằm trong
-[`legacy_browser_recreated.md`](legacy_browser_recreated.md).
+[`frontend_plan.md`](frontend_plan.md).
 
 **Trạng thái 2026-07-22:** Repair Gate `BE-X1`–`BE-X3` và `FE-X1`–`FE-X3` đã pass
 local. `X8`–`X13` và phần local của `X15` đã pass; `X14` đã có corrected export,
@@ -10,8 +10,8 @@ timing/report thật nhưng còn chờ benchmark fingerprint. `X7` và `X16` cò
 bốn fixture, provider/restart thật. Phần chưa thể đóng được tập trung tại
 [`incomlpeted.md`](incomlpeted.md). Milestone C là
 **internal production-like pilot**, không phải customer-production-ready; chỉ ký
-sau local contract gate và evidence strong-server. `src/ocr/` và `web/` vẫn là
-runtime rollback.
+sau local contract gate và evidence strong-server. Runtime được vận hành duy nhất
+bởi stack Next.js/FastAPI/Celery.
 
 ## Cách dùng hai kế hoạch
 
@@ -27,29 +27,28 @@ runtime rollback.
 
 | Mã | Backend sở hữu | Frontend counterpart | Joint gate |
 |---|---|---|---|
-| `X1` | Task, page planner, validation | [`FE-X1`](legacy_browser_recreated.md#fe-x1) | UI input đi xuyên suốt tới đúng provider pass/page set |
-| `X2` | Parser, page status, safe error | [`FE-X2`](legacy_browser_recreated.md#fe-x2) | Partial result vẫn review được và trang lỗi được định vị |
-| `X3` | Pydantic/OpenAPI | [`FE-X3`](legacy_browser_recreated.md#fe-x3) | Generated types không drift, không có DTO viết tay |
-| `X4` | Durable review/report/artifact data | [`FE-X4`](legacy_browser_recreated.md#fe-x4) | Workflow dùng dữ liệu thật và reload được |
-| `X5` | Runtime/cutover/evidence | [`FE-X5`](legacy_browser_recreated.md#fe-x5) | Browser pass qua Nginx/FastAPI/Celery/provider thật |
-| `X6` | Biên parity PDF-only | [`FE-X6`](legacy_browser_recreated.md#fe-x6) | Không port ZIP/ảnh/folder và hạ tầng cũ |
-| `X7` | Field evidence do worker sinh | [`FE-X7`](legacy_browser_recreated.md#fe-x7) | Job mới có evidence tối thiểu dùng được khi review |
-| `X8` | Expected/missing field và prompt | [`FE-X8`](legacy_browser_recreated.md#fe-x8) | Field canonical bị bỏ sót vẫn nhập, audit và reload được |
-| `X9` | Approval blocker/risk | [`FE-X9`](legacy_browser_recreated.md#fe-x9) | Blocker ngăn approve; warning mềm không ngăn |
-| `X10` | Rerun snapshot | [`FE-X10`](legacy_browser_recreated.md#fe-x10) | Rerun không đổi ngầm profile/task/page scope |
-| `X11` | Provider readiness | [`FE-X11`](legacy_browser_recreated.md#fe-x11) | Configured và ready/reachable được phân biệt an toàn |
-| `X12` | Progress, failure và timeline | [`FE-X12`](legacy_browser_recreated.md#fe-x12) | UI chỉ hiện progress/diagnostic/event đã persist |
-| `X13` | Document triage và evidence index | [`FE-X13`](legacy_browser_recreated.md#fe-x13) | Quick filter/deep-link dùng aggregate backend |
-| `X14` | Benchmark, report và export | [`FE-X14`](legacy_browser_recreated.md#fe-x14) | Không placeholder; output đã duyệt tải được |
-| `X15` | Native URL/interaction support | [`FE-X15`](legacy_browser_recreated.md#fe-x15) | Public data hỗ trợ state/utility thật, không dependency mới |
-| `X16` | Source PDF và logical documents | [`FE-X16`](legacy_browser_recreated.md#fe-x16) | Hồ sơ gộp được phân đoạn, xác nhận và review bền vững |
+| `X1` | Task, page planner, validation | [`FE-X1`](frontend_plan.md#fe-x1) | UI input đi xuyên suốt tới đúng provider pass/page set |
+| `X2` | Parser, page status, safe error | [`FE-X2`](frontend_plan.md#fe-x2) | Partial result vẫn review được và trang lỗi được định vị |
+| `X3` | Pydantic/OpenAPI | [`FE-X3`](frontend_plan.md#fe-x3) | Generated types không drift, không có DTO viết tay |
+| `X4` | Durable review/report/artifact data | [`FE-X4`](frontend_plan.md#fe-x4) | Workflow dùng dữ liệu thật và reload được |
+| `X5` | Runtime/cutover/evidence | [`FE-X5`](frontend_plan.md#fe-x5) | Browser pass qua Nginx/FastAPI/Celery/provider thật |
+| `X6` | Biên parity PDF-only | [`FE-X6`](frontend_plan.md#fe-x6) | Không port ZIP/ảnh/folder và hạ tầng cũ |
+| `X7` | Field evidence do worker sinh | [`FE-X7`](frontend_plan.md#fe-x7) | Job mới có evidence tối thiểu dùng được khi review |
+| `X8` | Expected/missing field và prompt | [`FE-X8`](frontend_plan.md#fe-x8) | Field canonical bị bỏ sót vẫn nhập, audit và reload được |
+| `X9` | Approval blocker/risk | [`FE-X9`](frontend_plan.md#fe-x9) | Blocker ngăn approve; warning mềm không ngăn |
+| `X10` | Rerun snapshot | [`FE-X10`](frontend_plan.md#fe-x10) | Rerun không đổi ngầm profile/task/page scope |
+| `X11` | Provider readiness | [`FE-X11`](frontend_plan.md#fe-x11) | Configured và ready/reachable được phân biệt an toàn |
+| `X12` | Progress, failure và timeline | [`FE-X12`](frontend_plan.md#fe-x12) | UI chỉ hiện progress/diagnostic/event đã persist |
+| `X13` | Document triage và evidence index | [`FE-X13`](frontend_plan.md#fe-x13) | Quick filter/deep-link dùng aggregate backend |
+| `X14` | Benchmark, report và export | [`FE-X14`](frontend_plan.md#fe-x14) | Không placeholder; output đã duyệt tải được |
+| `X15` | Native URL/interaction support | [`FE-X15`](frontend_plan.md#fe-x15) | Public data hỗ trợ state/utility thật, không dependency mới |
+| `X16` | Source PDF và logical documents | [`FE-X16`](frontend_plan.md#fe-x16) | Hồ sơ gộp được phân đoạn, xác nhận và review bền vững |
 
 ## Domain contract
 
 | Thuật ngữ | Nghĩa chuẩn |
 |---|---|
-| Legacy Reference Browser | Browser trong `C:\HProjecT\OCR_paper\Web\src`, chỉ dùng tham chiếu visual/workflow |
-| Legacy+ Browser | Browser Next.js hiện tại dùng typed API, dữ liệu thật và durable state |
+| Frontend | Browser Next.js hiện tại dùng typed API, dữ liệu thật và durable state |
 | Provider Profile | Lựa chọn OCR do server định nghĩa; public contract chỉ có ID, nhãn, capability và readiness an toàn |
 | Processing Mode | Lựa chọn cấp job: `administrative_document`, `dossier_cover` hoặc `combined_dossier`; độc lập với Provider Profile |
 | OCR Job | Source PDFs, lifecycle, documents, artifacts, audit và safe events được lưu trong job JSON/artifacts |
@@ -158,7 +157,7 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
 
 ### BE-X1
 
-**Task và page planner — PASS LOCAL CONTRACT 2026-07-22; LIVE REPRO PENDING.** Counterpart: [`FE-X1`](legacy_browser_recreated.md#fe-x1).
+**Task và page planner — PASS LOCAL CONTRACT 2026-07-22; LIVE REPRO PENDING.** Counterpart: [`FE-X1`](frontend_plan.md#fe-x1).
 
 - `vlm_task`, `vlm_pages`, `vlm_max_pages` được validate/persist và worker thực thi
   bằng một planner trung tâm.
@@ -180,13 +179,9 @@ fake-provider. Repro `63-btc.pdf` ở trên là evidence external, được theo
 `incomlpeted.md#1-x7--field-evidence-trên-bốn-fixture-thật`; chưa có evidence này
 thì không được diễn giải `BE-X1` là provider/runtime production-like đã pass.
 
-Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/vlm_pages.py:24-151`,
-`vlm_runner.py:37-95`, `Qwen/run_api.py:1046-1064,1126-1160`. Chỉ port semantics;
-không copy subprocess runner hoặc kiến trúc store cũ.
-
 ### BE-X2
 
-**Parser và partial result — PASS LOCAL 2026-07-22.** Counterpart: [`FE-X2`](legacy_browser_recreated.md#fe-x2).
+**Parser và partial result — PASS LOCAL 2026-07-22.** Counterpart: [`FE-X2`](frontend_plan.md#fe-x2).
 
 - Parse JSON object từ content string/text blocks/Markdown; canonicalize alias;
   nhận field scalar hoặc object; chỉ giữ allowlist.
@@ -207,13 +202,10 @@ không copy subprocess runner hoặc kiến trúc store cũ.
 - Test content blocks, fenced JSON, alias, field lạ xen field tốt, thiếu evidence
   và page-indexed safe error. Không retry invalid JSON và không persist raw data.
 
-Nguồn đối chiếu cũ: `OCR_paper/Qwen/run_api.py:244-370,839-872`,
-`src/ocr_poc/vlm_runner.py:157-175` và `vlm_report.py:1533-1639`.
-
 ### BE-X3
 
 **Generated contract — PASS LOCAL 2026-07-22.** Counterpart:
-[`FE-X3`](legacy_browser_recreated.md#fe-x3).
+[`FE-X3`](frontend_plan.md#fe-x3).
 
 - Pydantic v2/OpenAPI là nguồn chuẩn public fields. Page/pass/error fields mới
   phải optional hoặc có migration-safe default để job cũ vẫn đọc được.
@@ -229,7 +221,7 @@ Nguồn đối chiếu cũ: `OCR_paper/Qwen/run_api.py:244-370,839-872`,
 ### BE-X4
 
 **Durable workflow regression — PROTECT.** Counterpart:
-[`FE-X4`](legacy_browser_recreated.md#fe-x4).
+[`FE-X4`](frontend_plan.md#fe-x4).
 
 - Giữ corrections/approval/crop, Documents index, artifact manifest, Safe Events,
   reports, Code Catalog và safe telemetry đã pass local.
@@ -245,7 +237,7 @@ Nguồn đối chiếu cũ: `OCR_paper/Qwen/run_api.py:244-370,839-872`,
 ### BE-X5
 
 **Strong-server acceptance — BLOCKED bởi P0, evidence PENDING.** Counterpart:
-[`FE-X5`](legacy_browser_recreated.md#fe-x5).
+[`FE-X5`](frontend_plan.md#fe-x5).
 
 Chỉ bắt đầu sign-off internal pilot sau khi `X7`–`X11` và `X16` pass local; chỉ
 đóng khi có Nginx/Redis/Celery/provider thật, bốn fixture cố định, restart,
@@ -254,7 +246,7 @@ compatibility và rollback evidence trong [`BE-C-EVIDENCE`](#be-c-evidence).
 ### BE-X6
 
 **Biên parity — OUT OF SCOPE, PROTECT.** Counterpart:
-[`FE-X6`](legacy_browser_recreated.md#fe-x6).
+[`FE-X6`](frontend_plan.md#fe-x6).
 
 Không port ZIP, ảnh, folder/directory tree, client-side PDF mutable, raw
 diagnostics, tự retry/resume cả job, client aggregate quality, database, Redis
@@ -263,12 +255,10 @@ subprocess/store/pipeline cũ. Backend tiếp tục nhận tối đa 15 PDF qua 
 và giữ Celery + filesystem durable truth. Mọi thay đổi phạm vi này cần yêu cầu
 kiến trúc riêng; không nằm trong parity plan.
 
-Tham chiếu cũ: `OCR_paper/Web/src/app.js:1724-1747,3111-3133,3492-3503`.
-
 ### BE-X7
 
 **P0 — Field evidence tối thiểu cho job mới — IN PROGRESS 2026-07-22.** Counterpart:
-[`FE-X7`](legacy_browser_recreated.md#fe-x7).
+[`FE-X7`](frontend_plan.md#fe-x7).
 
 Contract typed, worker persistence, provenance trang và coverage aggregate đã
 pass local; gate bốn fixture/reload/restart thật chưa có evidence.
@@ -288,14 +278,10 @@ review-reason/nested suggestion-evidence types thay vì `unknown` payload.
 - Gate: bốn fixture có field evidence thật, reload/restart giữ nguyên, không chứa
   document text trong log; report coverage phản ánh missing thay vì dựng số.
 
-Nguồn đối chiếu cũ: `src/ocr_poc/extraction/`, `field_normalizers.py`,
-`validation.py`, `visual_features.py`, `document_knowledge.py`, `review.py` và
-`suggestion_utils.py` trong `OCR_paper`.
-
 ### BE-X8
 
 **P0 — Expected field, missing field và prompt — PASS LOCAL 2026-07-22.** Counterpart:
-[`FE-X8`](legacy_browser_recreated.md#fe-x8).
+[`FE-X8`](frontend_plan.md#fe-x8).
 
 - Dùng một policy backend làm nguồn chung cho schema, prompt, write allowlist và
   review. `administrative_document` dùng 11 field hiện hành; `dossier_cover` dùng
@@ -313,12 +299,10 @@ Nguồn đối chiếu cũ: `src/ocr_poc/extraction/`, `field_normalizers.py`,
 - Gate: fixture bỏ sót ít nhất một field vẫn hiển thị expected field, nhập/sửa,
   Lưu và duyệt, reload và đọc từ legacy/new được; OpenAPI/types được regenerate.
 
-Nguồn đối chiếu cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
-
 ### BE-X9
 
 **P0 — Approval blocker và review risk — PASS LOCAL 2026-07-22.** Counterpart:
-[`FE-X9`](legacy_browser_recreated.md#fe-x9).
+[`FE-X9`](frontend_plan.md#fe-x9).
 
 - Tính `approval_blockers`/`review_risks` dạng `{code, field?, page_index?}` và
   `review_risk_count` tại một service backend duy nhất. Code P0 gồm
@@ -338,12 +322,10 @@ Nguồn đối chiếu cũ: `OCR_paper/Web/src/app.js:547-575,2363-2388`.
 - Gate: missing required field/page blocker ngăn approve với lý do an toàn; warning
   mềm approve; approve không correction vẫn hoạt động khi blocker rỗng.
 
-Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_corrections.py:374-388`.
-
 ### BE-X10
 
 **P0 — Rerun giữ snapshot xử lý — PASS LOCAL 2026-07-22.** Counterpart:
-[`FE-X10`](legacy_browser_recreated.md#fe-x10).
+[`FE-X10`](frontend_plan.md#fe-x10).
 
 - Mặc định copy `processing_mode`, `provider_profile_id`, `vlm_task`, `vlm_pages`,
   `vlm_max_pages`, external status/consent requirement và source PDFs; snapshot
@@ -356,15 +338,13 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_corrections.py:374-388`.
 - Gate: rerun `metadata/first,last` và `full_ocr/all` giữ đúng provider-call/page
   plan; source job bất biến; chi phí/phạm vi không đổi ngầm.
 
-Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_queue.py:227-255`.
-
 Local gate đã pass cho snapshot mode/profile/task/page scope, source bất biến,
 safe conflict profile và hai nhánh reuse/resegment trên backend/browser.
 
 ### BE-X11
 
 **P0/P1 — Provider configuration và readiness thật — PASS LOCAL 2026-07-22.** Counterpart:
-[`FE-X11`](legacy_browser_recreated.md#fe-x11).
+[`FE-X11`](frontend_plan.md#fe-x11).
 
 - Giữ một profile và gọi đúng là “Cấu hình OCR hiện tại”; readiness phân biệt
   `configured`, `reachable` và `ready`. `ready` cần authenticated request tối
@@ -380,8 +360,6 @@ safe conflict profile và hai nhánh reuse/resegment trên backend/browser.
 - Gate: URL unreachable, credential/model/runtime lỗi cho safe status khác
   configured; không có secret trong API/log.
 
-Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_readiness.py:43-83,133-225`.
-
 Probe ảnh tổng hợp authenticated phân biệt `not_configured`, `unreachable`,
 `reachable` và `ready`; Start/Continue giữ nguyên durable state khi probe fail.
 Provider production-like thật vẫn thuộc ledger Milestone C, không phải local gate.
@@ -390,7 +368,7 @@ Provider production-like thật vẫn thuộc ledger Milestone C, không phải 
 
 **P1 — Progress, failure recovery và durable timeline — PASS LOCAL 2026-07-22;
 X16 kéo một phần tối thiểu vào P0.** Counterpart:
-[`FE-X12`](legacy_browser_recreated.md#fe-x12).
+[`FE-X12`](frontend_plan.md#fe-x12).
 
 - P0 của `X16` chỉ persist `segmentation_completed_pages`,
   `segmentation_total_pages` và safe events `segmentation_proposed`,
@@ -413,12 +391,10 @@ X16 kéo một phần tối thiểu vào P0.** Counterpart:
 - Gate: progress tăng đơn điệu theo persisted work, terminal snapshot ổn định,
   timeline sống qua reload/restart và không chứa raw payload/document text.
 
-Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_jobs.py:66-232`.
-
 ### BE-X13
 
 **P1 — Document triage và evidence index — PASS LOCAL 2026-07-22.** Counterpart:
-[`FE-X13`](legacy_browser_recreated.md#fe-x13).
+[`FE-X13`](frontend_plan.md#fe-x13).
 
 - `/documents` công bố aggregate typed `needs_review`, `has_blocker`, `has_risk`,
   `low_confidence`, `has_suggestion`, `has_manual_crop`, count tương ứng và target
@@ -432,12 +408,10 @@ Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_jobs.py:66-232`.
 - Gate: quick-filter count khớp index, deep-link target còn đúng sau reload và
   missing artifact không làm hỏng document response.
 
-Nguồn đối chiếu cũ: `OCR_paper/Web/src/app.js:1893-2255`.
-
 ### BE-X14
 
 **P1/P2 — Benchmark, report và corrected export — PARTIAL LOCAL 2026-07-22.** Counterpart:
-[`FE-X14`](legacy_browser_recreated.md#fe-x14).
+[`FE-X14`](frontend_plan.md#fe-x14).
 
 - P1: persist timing tối thiểu theo job/pass và fingerprint gồm fixture + Provider
   Profile + task + page scope + DPI/config version; chỉ aggregate sample tương
@@ -458,13 +432,10 @@ atomic corrected JSON và Artifact Manifest tải được; bỏ self-link `repo
 Fingerprint/sample thật và các mục P2 còn lại theo
 [`incomlpeted.md`](incomlpeted.md).
 
-Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web_benchmark.py:97-255`,
-`web_corrections.py:391-427,504-608`.
-
 ### BE-X15
 
 **P2 — Hỗ trợ URL state và tiện ích native — N/A BACKEND / PASS LOCAL FRONTEND 2026-07-22.** Counterpart:
-[`FE-X15`](legacy_browser_recreated.md#fe-x15).
+[`FE-X15`](frontend_plan.md#fe-x15).
 
 - Chỉ bổ sung public aggregate thật sự thiếu cho frontend: safe log download và
   `total_bytes` trong delete preview nếu vận hành xác nhận cần. Copy ID,
@@ -479,7 +450,7 @@ hoàn thành; phần cần dữ liệu/usability hoặc xác nhận operator n�
 ### BE-X16
 
 **P0 — Source PDF, Bìa và logical-document segmentation — IN PROGRESS 2026-07-22.** Counterpart:
-[`FE-X16`](legacy_browser_recreated.md#fe-x16).
+[`FE-X16`](frontend_plan.md#fe-x16).
 
 - Public `processing_mode` có ba ID `administrative_document`, `dossier_cover`,
   `combined_dossier`; mode mặc định là văn bản hành chính. Hai mode đơn tạo một
@@ -502,18 +473,16 @@ hoàn thành; phần cần dữ liệu/usability hoặc xác nhận operator n�
   chưa đặt performance SLA hoặc batching ở P0.
 - Segmentation bất biến khi extraction bắt đầu. Rerun reuse hoặc resegment tạo
   job mới; source job không đổi. `awaiting_segmentation_review` và
-  `segmentation_confirmed` sống qua restart; rollback về legacy chuyển mọi job
-  X16 chưa terminal thành `interrupted`, không cross-version resume.
+  `segmentation_confirmed` sống qua restart; active X16 trở thành `interrupted`
+  khi worker restart và không tự resume.
 - Counter `documents` vẫn gồm cả Bìa; backend bổ sung `source_pdf_count`,
   `dossier_cover_count`, `administrative_document_count`,
-  `excluded_page_count`. Terminal combined job phải đọc được từ cả hai runtime;
-  job legacy không bị rewrite hoặc áp schema mới.
+  `excluded_page_count`. Persisted job cũ và terminal combined job phải đọc được
+  mà không bị rewrite hoặc áp schema mới.
 - Gate local: parser/partial fallback, gap/overlap/excluded/unclassified,
   per-source revision, duplicate dispatch, restart, rerun modes, legacy read và
   generated contract. Gate live: fixture rõ auto-segment đúng ground truth;
   fixture khó sửa được về ground truth rồi extraction/review/approval thành công.
-
-Nguồn đối chiếu cũ: `OCR_paper/src/ocr_poc/web.py:286-348`.
 
 Đã triển khai local contract/runtime tối thiểu: ba Processing Mode, additive
 `source_pdfs[]`, phân loại toàn trang trong cùng task, proposal/revision/confirm,
@@ -522,7 +491,7 @@ counters/safe events, cancel/restart boundary và typed OpenAPI. Focused backend
 và browser mock đã pass; create/rerun từ chối profile chưa cấu hình hoặc capability
 không tương thích, hai waiting state sống qua worker restart, và browser gate kiểm
 tra boundary bất kỳ, inline validation, revision conflict cùng Continue. Mục này vẫn mở cho bốn fixture/ground truth, difficult
-manual-boundary flow, live provider và cross-version/rollback evidence.
+manual-boundary flow, live provider và deployment rollback evidence.
 
 ## Thứ tự triển khai parity
 
@@ -537,7 +506,7 @@ manual-boundary flow, live provider và cross-version/rollback evidence.
 4. **Giai đoạn 4 — đo lường có nhu cầu:** `X14` P1/P2; corrected export không
    chặn Milestone C và không triển khai chỉ vì dự án cũ có.
 
-## Milestone C: runbook và rollback
+## Milestone C: runbook và deployment rollback
 
 ### Điều kiện trước khi chạy
 
@@ -550,8 +519,7 @@ manual-boundary flow, live provider và cross-version/rollback evidence.
    Ghi SHA-256 của PDF, composition manifest và ground truth; không chép field
    value/document text vào ledger.
 3. `OCR_DATA_DIR` hiện tại là non-production test data nhưng vẫn phải dừng nhận
-   upload, drain/dừng legacy worker rồi backup có path, size và checksum. Không
-   chạy hai worker version trên cùng directory.
+   upload, drain worker rồi backup có path, size và checksum trước deployment.
 
 ### Khởi động và kiểm tra
 
@@ -574,12 +542,10 @@ approval và observed duration/call count; chưa đặt SLA.
 Sau đó restart backend/worker/Redis: terminal job và hai paused state segmentation
 vẫn đọc/tiếp tục được; active state thành `interrupted`, stale task không chạy lại.
 
-Dừng stack mới trước khi chạy legacy tuần tự trên cùng data để kiểm tra round-trip
-hai chiều và rollback route. Trước rollback, combined job chưa terminal thành
-`interrupted`; legacy không resume X16. Nếu thất bại, route về legacy; chỉ restore
-backup khi dữ liệu thực sự hỏng. Giữ legacy rollback-ready một ngày; cleanup là
-yêu cầu riêng. Gate này chỉ ký **internal pilot** với `actor="anonymous"`; auth,
-verified approver và customer-production gate là scope riêng.
+Diễn tập rollback bằng image/commit triển khai liền trước trên bản sao
+`OCR_DATA_DIR`; job cũ phải đọc được mà không rewrite. Chỉ restore backup khi dữ
+liệu thực sự hỏng. Gate này chỉ ký **internal pilot** với `actor="anonymous"`;
+auth, verified approver và customer-production gate là scope riêng.
 
 ## BE-C-EVIDENCE
 
@@ -599,10 +565,10 @@ Local test không thay thế được các mục dưới đây.
 ### Bảo vệ dữ liệu và worker cutover
 
 - Uploads paused: _pending_
-- Legacy queue drained và worker stopped: _pending_
+- Queue drained và worker stopped: _pending_
 - `OCR_DATA_DIR` resolved path: _pending_
 - Backup path, size, SHA-256: _pending_
-- Chỉ một worker version sử dụng directory: _pending_
+- Chỉ một worker sử dụng directory trong lúc cutover: _pending_
 
 ### Fixture cố định
 
@@ -634,14 +600,13 @@ Local test không thay thế được các mục dưới đây.
 - Independent document approval và dossier `partially_approved`: _pending_
 - Rerun reuse/resegment và source job bất biến: _pending_
 
-### Restart, compatibility và rollback
+### Restart, compatibility và deployment rollback
 
 - Terminal và paused segmentation sống qua backend/worker/Redis restart: _pending_
 - Active segmentation/extraction thành `interrupted`; stale task no-op: _pending_
-- New-to-legacy và legacy-to-new round-trip: _pending_
-- Terminal combined job đọc được từ legacy; X16 chưa terminal không resume: _pending_
-- New stack stopped trước khi legacy started: _pending_
-- Rollback route rehearsal: _pending_
+- Persisted old job đọc được mà không rewrite: _pending_
+- Image/commit trước đọc được terminal job trên bản sao dữ liệu: _pending_
+- Deployment rollback rehearsal: _pending_
 - Backup restore required: _pending (expected: no)_
 
 ### Lệnh và sign-off
@@ -654,19 +619,16 @@ pending
 
 - Internal-pilot gate result: **PENDING**
 - Approver/date: _pending_
-- One-day rollback window ends: _pending_
 
 ## Lệnh kiểm tra local
 
 ```powershell
 uv run --project backend pytest backend/tests -q
-$env:PYTHONPATH = "src"
-python -m unittest discover -s tests -v
 pnpm --dir frontend typecheck
 pnpm --dir frontend build
 pnpm --dir frontend e2e:smoke
 pnpm api:check
-python -m compileall -q src backend/app
+python -m compileall -q backend/app
 git diff --check
 ```
 

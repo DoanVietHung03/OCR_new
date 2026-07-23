@@ -5,26 +5,24 @@
 Milestones A and B are implemented and locally verified. The Next.js/FastAPI
 stack supports strict PDF upload, typed OpenAPI, one-shot Celery dispatch,
 durable job persistence, correction/approval/crop evidence, rerun, and the
-PDF-only VI/EN UI. Local coverage includes backend tests, legacy compatibility
-tests, mocked browser paths, and a real eager-task/fake-provider browser flow.
+PDF-only VI/EN UI. Local coverage includes backend old-job compatibility,
+mocked browser paths, and a real eager-task/fake-provider browser flow.
 
 Milestone C is not complete. It is an internal production-like pilot gate, not
 customer-production approval. Do not claim even that pilot until the overall P0
 `X7`–`X11` and `X16` gates close and the `BE-C-EVIDENCE` ledger in
 `implementation_plan.md` contains real Nginx/Redis/Celery/provider, four-fixture,
-restart, cross-version, and rollback evidence. Keep `src/ocr/` and `web/` as the
-rollback runtime until the one-day rollback window closes.
+restart, persistence, and deployment rollback evidence.
 
-Legacy+ v2 was implemented and locally verified on 2026-07-21: visual/workflow
-parity with `OCR_paper` except ZIP/image/folder upload, safe Provider Profiles,
+The Next.js browser was locally verified on 2026-07-21 with safe Provider Profiles,
 durable Codes, rich typed evidence/reports/artifacts/events, and allowlisted
 telemetry.
 
 The 2026-07-22 Repair Gate passed 28 backend tests, 10 legacy compatibility
 tests, focused browser coverage for task/page retry and partial review, typecheck,
 build, generated OpenAPI/types, and diff checks. These are the protected baseline.
-The current suite has 47 backend tests and 17 passing browser checks (plus one
-sanitized-capture skip). The local contracts for `X7`–`X13`, `X16`, and the
+The current suite has 48 backend tests and 17 passing browser checks. The local
+contracts for `X7`–`X13`, `X16`, and the
 locally actionable `X15` scope pass. `X7`/`X16` remain IN PROGRESS at the overall
 gate only because fixture/live acceptance is missing; `X14` still needs real
 benchmark fingerprints. `incomlpeted.md` lists every external condition still
@@ -44,10 +42,9 @@ revision conflict, and Continue in the browser gate.
 - `backend/app/workers/`: Celery ownership of render/provider work.
 - `backend/tests/`: local contract, lifecycle, persistence, and worker checks.
 - `data/jobs/`: durable offline state; Redis is disposable.
-- `src/ocr/`, `web/`, `tests/`: legacy rollback runtime.
 - `implementation_plan.md`: canonical backend contract, Repair Gate, cutover
   runbook, and sole Milestone C evidence ledger.
-- `legacy_browser_recreated.md`: canonical frontend workflow, counterpart gates,
+- `frontend_plan.md`: canonical frontend workflow, counterpart gates,
   regression checks, and UI evidence mapping.
 - `incomlpeted.md`: external fixture/infrastructure/operator dependencies and
   their completion conditions.
@@ -62,8 +59,8 @@ revision conflict, and Continue in the browser gate.
 - `data/jobs/` JSON and artifacts are durable truth. Do not add a database,
   Redis AOF, or a Redis volume.
 - Preserve `/api/*`, artifact URLs, filesystem layout, safe error codes, and
-  two-way legacy/new readability through rollback. Legacy extras remain
-  readable and reading an old job must not rewrite it.
+  compatibility with persisted old jobs. Unknown extras remain readable and
+  reading an old job must not rewrite it.
 - New jobs expose job-level `processing_mode`: `administrative_document`,
   `dossier_cover`, or `combined_dossier`. It is independent from server-defined
   Provider Profile capability; legacy jobs missing it stay legacy/null.
@@ -90,7 +87,7 @@ revision conflict, and Continue in the browser gate.
   again after terminal. Cancel creates a marker; do not add distributed locks.
 - Snapshot provider/model/prompt/external status without URL, key, or headers.
   `OCR_ENDPOINT_EXTERNAL` defaults to `true` and requires per-job consent.
-- Legacy+ may expose server-defined Provider Profile IDs, labels, capabilities,
+- The frontend may expose server-defined Provider Profile IDs, labels, capabilities,
   and safe readiness. The browser must never receive or submit arbitrary provider
   URLs, keys, headers, or models.
 - Readiness distinguishes configured/reachable/ready using a sanitized synthetic
@@ -115,7 +112,7 @@ revision conflict, and Continue in the browser gate.
   Do not add free-form spoofable identity or auth; verified approver/customer
   production is a separate architecture request.
 - The primary UI persona is an operations reviewer completing upload → monitor
-  → review/correct/approve. Legacy+ restores permanent Jobs, Upload, Manage,
+  → review/correct/approve. The frontend provides permanent Jobs, Upload, Manage,
   Logs, Report, and Codes navigation with real routes and data; System Monitor
   remains a global dialog/deep-linkable state.
 - `/corrections` saves and approves in one call. UI with drafts must say “Save
@@ -129,7 +126,7 @@ revision conflict, and Continue in the browser gate.
   desktop-first: visual/functional anchors at `1440×900` and `1366×768`; at
   `390×844` require only no horizontal overflow, no broken layout, and closable
   modals.
-- System telemetry describes the environment visible to the backend. Legacy+
+- System telemetry describes the environment visible to the backend. The frontend
   may add sanitized CPU/runtime details, memory, the disk containing
   `OCR_DATA_DIR`, best-effort GPU details, and persisted OCR operation samples.
   It must not expose hostname, IP, usernames, paths, processes, environment
@@ -140,7 +137,6 @@ revision conflict, and Continue in the browser gate.
 
 ## Runtime contract
 
-- Legacy: `62472`.
 - Direct backend: `50177`.
 - Direct frontend and Compose frontend: `54846`.
 - Compose also publishes Nginx on `52409`; backend and Redis stay internal on
@@ -152,13 +148,13 @@ revision conflict, and Continue in the browser gate.
 ## Working procedure
 
 1. Read `implementation_plan.md` before backend, migration, or cutover work. For
-   frontend work, read `legacy_browser_recreated.md`. Follow the matching
+   frontend work, read `frontend_plan.md`. Follow the matching
    `BE-Xn`/`FE-Xn` backlink and do not close one side without its counterpart.
 2. Before editing code, use the CodeGraph MCP against `C:\HProjecT\OCR` to
    inspect the target symbols, callers, routes, and blast radius. Do not infer
    flow from filenames or query `.codegraph/codegraph.db` directly.
 3. Reuse existing modules and native platform features; keep changes minimal.
-4. Preserve unrelated worktree changes. Do not delete legacy code.
+4. Preserve unrelated worktree changes.
 5. Add focused checks for non-trivial branches and persistence behavior.
 6. Regenerate OpenAPI/types whenever public schemas change.
 7. Keep `README.md`, this file, and both canonical plans aligned when
@@ -175,15 +171,14 @@ revision conflict, and Continue in the browser gate.
    conflict handling, and inline report.
 5. Replace coordinate inputs with pointer/keyboard visual crop and verify
    natural-image coordinate conversion.
-6. Add conditional legacy logs, the real System Monitor, desktop/accessibility
+6. Add typed logs, the real System Monitor, desktop/accessibility
    parity, and aligned documentation.
 
-Legacy+ then added full routes/sidebar, Provider Profile selection, Documents,
+The frontend then added full routes/sidebar, Provider Profile selection, Documents,
 rich review evidence/suggestions, artifact manifest/Safe Events, typed reports,
 durable Codes and expanded safe telemetry. Preserve these regression contracts,
 and keep task/page execution and partial-result rendering under the paired Repair
-Gate regression checks. This plan does not authorize automatic commits or
-deleting the legacy runtime.
+Gate regression checks. This plan does not authorize automatic commits.
 
 ## Required local checks
 
@@ -191,13 +186,11 @@ Run from the repository root:
 
 ```powershell
 uv run --project backend pytest backend/tests -q
-$env:PYTHONPATH = "src"
-python -m unittest discover -s tests -v
 pnpm --dir frontend typecheck
 pnpm --dir frontend build
 pnpm --dir frontend e2e:smoke
 pnpm api:check
-python -m compileall -q src backend/app
+python -m compileall -q backend/app
 git diff --check
 ```
 
@@ -211,14 +204,10 @@ are mandatory contract evidence, not proof of OCR quality or live runtime.
   separator, and one difficult combined dossier. Record PDF/manifest/ground-truth
   SHA-256 without document text in the ledger.
 - The current `OCR_DATA_DIR` is non-production test data, but still pause uploads,
-  drain and stop legacy, then back it up with size/checksum before the new worker
-  touches it.
-- Never run both worker versions against the same directory.
+  drain the worker, then back it up with size/checksum before deployment changes.
 - Verify Nginx health, registered task, concurrency/prefetch, artifacts/report,
   field evidence, segmentation/confirmation, manual boundaries, blockers,
-  independent approval, restart/interrupted behavior, cross-version round-trip,
-  and rollback rehearsal.
+  independent approval, restart/interrupted behavior, persisted-job compatibility,
+  and deployment rollback rehearsal.
 - Record sanitized evidence only in `implementation_plan.md#be-c-evidence`. Do
   not replace live evidence with mock/unit-test claims.
-- Delete `src/`, `web/`, legacy packaging, or tests only in a separate cleanup
-  request after the rollback window.

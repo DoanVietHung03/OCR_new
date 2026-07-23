@@ -4,18 +4,16 @@ Hệ thống OCR tài liệu hành chính tiếng Việt, chỉ nhận PDF. Stac
 dụng Next.js, FastAPI, Celery, Redis và một endpoint OCR tương thích OpenAI do
 máy chủ cấu hình.
 
-Milestone A, B, browser baseline v1 và **Legacy+ v2** đã có closure local ngày
-2026-07-21. Legacy+ phục hồi browser tham chiếu trong `OCR_paper`, chỉ loại trừ
-ZIP/ảnh/folder upload. Repair Gate đã pass local ngày 2026-07-22; contract local
+Milestone A, B và frontend Next.js đã có closure local ngày 2026-07-21.
+Repair Gate đã pass local ngày 2026-07-22; contract local
 của `X7`–`X13`, `X16` và phần local của `X15` đã pass. `X7`/`X16` vẫn IN PROGRESS
 ở gate tổng thể vì còn thiếu fixture/provider live; `X14` còn benchmark thật.
 Điều kiện hoàn thành các phần phụ thuộc bên ngoài nằm trong
 [`incomlpeted.md`](incomlpeted.md).
 Milestone C chỉ là internal production-like pilot,
-không phải customer-production approval. Cho đến khi Gate C đạt, `src/ocr/` và
-`web/` vẫn là runtime rollback.
+không phải customer-production approval.
 
-Giao diện Next.js Legacy+ có route Jobs, Upload, Manage/Documents, Logs, Reports,
+Giao diện Next.js có route Jobs, Upload, Manage/Documents, Logs, Reports,
 Codes và job workspace. Dữ liệu giàu gồm Provider Profile, OCR text/quality/
 evidence/suggestion, artifact manifest, Safe Events, report/benchmark nullable,
 Code Catalog `_codes.json` và System Monitor allowlist. Mọi số liệu đều lấy từ
@@ -31,7 +29,7 @@ atomic approval, typed blocker/risk/error/Safe Events, field evidence, Processin
 Mode, review segmentation theo revision, Continue, rerun reuse/resegment,
 readiness probe, durable progress/failure/timeline và triage. Create/rerun từ chối
 Provider Profile chưa cấu hình hoặc không hỗ trợ mode/task/page scope đã chọn.
-Bộ backend đạt 47 tests; browser `17 passed`, `1 skipped` và eager
+Bộ backend đạt 48 tests; browser `17 passed` và eager
 Celery/fake-provider pass. Đây chưa phải bằng chứng bốn fixture, restart hoặc
 provider production-like thật.
 
@@ -41,10 +39,9 @@ provider production-like thật.
 - `backend/`: FastAPI, kho job bền vững, Celery task và các bài kiểm tra.
 - `nginx/`: định tuyến deployment trên cùng một domain.
 - `data/jobs/`: JSON, PDF và artifact bền vững của job; không lưu trong Redis.
-- `src/ocr/`, `web/`, `tests/`: runtime rollback legacy và các bài kiểm tra.
 - `implementation_plan.md`: nguồn chuẩn backend, Repair Gate, cutover và ledger
   bằng chứng Milestone C.
-- `legacy_browser_recreated.md`: nguồn chuẩn frontend, workflow, regression gate
+- `frontend_plan.md`: nguồn chuẩn frontend, workflow, regression gate
   và mapping ảnh parity.
 - `incomlpeted.md`: các việc còn phụ thuộc fixture, provider, strong server hoặc
   xác nhận operator, kèm điều kiện nghiệm thu.
@@ -130,13 +127,11 @@ thật và vẫn bắt buộc trước strong-server gate:
 
 ```powershell
 uv run --project backend pytest backend/tests -q
-$env:PYTHONPATH = "src"
-python -m unittest discover -s tests -v
 pnpm --dir frontend typecheck
 pnpm --dir frontend build
 pnpm --dir frontend e2e:smoke
 pnpm api:check
-python -m compileall -q src backend/app
+python -m compileall -q backend/app
 git diff --check
 ```
 
@@ -168,23 +163,10 @@ curl -fsS http://127.0.0.1:54846/api/state > /dev/null
 ```
 
 Không dùng Compose với `OCR_DATA_DIR` thật cho đến khi đã dừng nhận upload,
-drain và dừng worker legacy, đồng thời tạo bản sao lưu có checksum. Không bao
-giờ chạy worker legacy và worker mới trên cùng một thư mục job.
-
-## Runtime rollback legacy
-
-```powershell
-python -m pip install -e .
-$env:PYTHONPATH = "src"
-python -m ocr
-```
-
-Giữ runtime này sẵn sàng cho đến khi Milestone C internal pilot đạt và cửa sổ
-rollback một ngày kết thúc.
+drain worker và tạo bản sao lưu có checksum.
 
 ## Cổng và dữ liệu
 
-- Runtime legacy: `62472`.
 - FastAPI chạy trực tiếp: `50177`.
 - Next.js chạy trực tiếp hoặc frontend Compose: `54846`.
 - Điểm truy cập Compose: `52409`.
@@ -196,5 +178,5 @@ hỗ trợ — backend luôn lắng nghe tại `50177`.
 
 Xem [implementation_plan.md](implementation_plan.md) cho backend, Repair Gate,
 cutover và evidence Milestone C; xem
-[legacy_browser_recreated.md](legacy_browser_recreated.md) cho frontend và các
+[frontend_plan.md](frontend_plan.md) cho frontend và các
 counterpart `FE-X1`–`FE-X16`.

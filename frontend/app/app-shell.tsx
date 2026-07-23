@@ -9,7 +9,7 @@ import { text, useLanguage } from "../lib/i18n";
 const percent = (value: number) => `${Math.round(value)}%`;
 const bytes = (value: number) => `${(value / 1024 ** 3).toFixed(1)} GB`;
 
-export default function LegacyShell({ children, onNew, onJobs }: { children: ReactNode; detail?: boolean; onNew?: () => void; onJobs?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
+export default function AppShell({ children, onNew, onJobs }: { children: ReactNode; detail?: boolean; onNew?: () => void; onJobs?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
   const pathname = usePathname();
   const [locale, changeLanguage] = useLanguage();
   const [monitorOpen, setMonitorOpen] = useState(false);

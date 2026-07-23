@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, Documents, getDocuments } from "../../lib/api";
 import { language, safeError, statusText, text, useLanguage } from "../../lib/i18n";
-import LegacyShell from "../legacy-shell";
+import AppShell from "../app-shell";
 
 const empty: Documents = { items: [], pagination: { page: 1, page_size: 25, total: 0, pages: 1 }, triage_counts: { all: 0, needs_review: 0, blocker: 0, risk: 0, low_confidence: 0, suggestion: 0, manual_crop: 0 } };
 const triageLabel = (value: string) => ({
@@ -23,7 +23,7 @@ export default function DocumentsPage() {
   useEffect(() => { if (urlReady) void load(); }, [load, urlReady]);
   useEffect(() => { if (!urlReady) return; const params = new URLSearchParams(); if (query) params.set("q", query); if (review !== "all") params.set("review", review); if (triage !== "all") params.set("triage", triage); if (sort !== "updated_desc") params.set("sort", sort); if (page > 1) params.set("page", String(page)); const next = `/documents${params.size ? `?${params}` : ""}`; if (`${location.pathname}${location.search}` !== next) history.pushState(null, "", next); }, [query, review, triage, sort, page, urlReady]);
 
-  return <LegacyShell>
+  return <AppShell>
     <header className="page-header"><div><p className="eyebrow">{text("documents")}</p><h1>{text("manage")}</h1><p>{text("documentsSubtitle")}</p></div><Link className="button primary" href="/upload">＋ {text("newOcr")}</Link></header>
     {error && <div className="notice error" role="alert">{error}<button className="button secondary" onClick={load}>{text("retry")}</button></div>}
     <section className="panel data-panel">
@@ -35,5 +35,5 @@ export default function DocumentsPage() {
       {!data.items.length && <p className="empty">{loading ? text("loading") : text("noDocuments")}</p>}
       <nav className="pagination"><button className="button secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>{text("previous")}</button><span>{text("pageOf", { page: data.pagination.page, pages: data.pagination.pages })}</span><button className="button secondary" disabled={page >= data.pagination.pages} onClick={() => setPage(page + 1)}>{text("next")}</button></nav>
     </section>
-  </LegacyShell>;
+  </AppShell>;
 }

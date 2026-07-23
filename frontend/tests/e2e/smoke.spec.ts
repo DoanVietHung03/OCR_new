@@ -1,5 +1,4 @@
 import { expect, test, type Page } from "@playwright/test";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 const id = "11111111-1111-4111-8111-111111111111";
@@ -10,7 +9,7 @@ const now = "2026-07-21T10:00:00Z";
 const cleanCapture = async (page: Page) => page.locator("nextjs-portal").evaluateAll((nodes) => nodes.forEach((node) => node.remove())).catch(() => {});
 
 function fixtureJob(status = "completed", document: Record<string, unknown> = fixtureDocument()) {
-  return { id, status, created_at: now, updated_at: now, started_at: now, completed_at: now, ocr_method: "qwen", provider: "qwen", provider_profile_id: "qwen", model: "test-model", prompt_version: "3", endpoint_external: false, cloud_data_confirmed: false, expected_files: 1, uploaded_files: 1, upload_name: "smoke.pdf", documents: [document], logs: [{ timestamp: now, severity: "info", category: "lifecycle", code: "job_created", job_id: id, message: "sanitized legacy log", warning_codes: [] }], page_count: 1, failed_pages: 0, correction_count: 0, vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0, report_url: `/api/jobs/${id}/artifacts/report.json` };
+  return { id, status, created_at: now, updated_at: now, started_at: now, completed_at: now, ocr_method: "qwen", provider: "qwen", provider_profile_id: "qwen", model: "test-model", prompt_version: "3", endpoint_external: false, cloud_data_confirmed: false, expected_files: 1, uploaded_files: 1, upload_name: "smoke.pdf", documents: [document], logs: [{ timestamp: now, severity: "info", category: "lifecycle", code: "job_created", job_id: id, message: "sanitized operation log", warning_codes: [] }], page_count: 1, failed_pages: 0, correction_count: 0, vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0, report_url: `/api/jobs/${id}/artifacts/report.json` };
 }
 function fixtureDocument() {
   return { id: "smoke", file_name: "smoke.pdf", status: "completed", review_status: null as string | null, fields: { so_van_ban: { value: "OLD", ocr_value: "OLD", confidence: .91, bbox: [0, 0, 10, 10], page_index: 0, evidence_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` } }, pages: [{ page_index: 0, image_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }], crop_evidence: [] as Record<string, unknown>[] };
@@ -72,9 +71,9 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/review-workspace.png") }); }
   await page.getByRole("button", { name: /vẽ crop|draw crop/i }).click(); const smallBox = await page.locator(".crop-canvas img").boundingBox(); await page.mouse.move(smallBox!.x + 10, smallBox!.y + 10); await page.mouse.down(); await page.mouse.move(smallBox!.x + 11, smallBox!.y + 11); await page.mouse.up(); await page.getByRole("button", { name: /lưu crop|save crop/i }).click(); await expect(page.locator(".notice.error")).toContainText("Vùng crop không hợp lệ"); expect(cropCalls).toBe(1); await page.locator(".crop-modal .modal-actions").getByRole("button", { name: /đóng|close/i }).click();
   await page.locator(".detail-tabs").getByRole("button", { name: /artifacts/i }).click(); await expect(page.locator(".artifact-section")).toContainText("page-1.png"); await expect(page.locator(".artifact-section")).toContainText("200 B"); await expect(page.locator(".artifact-section")).toContainText("missing-crop.png"); await page.locator(".artifact-item").filter({ hasText: "page-1.png" }).click(); await expect(page.locator(".evidence-modal[open] img")).toBeVisible(); await page.locator(".evidence-modal[open] .modal-actions").getByRole("button", { name: /đóng|close/i }).click();
-  await page.locator(".detail-tabs").getByRole("button", { name: /nhật ký|logs/i }).click(); await expect(page.locator(".logs-section")).toContainText("sanitized legacy log");
+  await page.locator(".detail-tabs").getByRole("button", { name: /nhật ký|logs/i }).click(); await expect(page.locator(".logs-section")).toContainText("sanitized operation log");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]); await page.locator(".logs-section").getByRole("button", { name: /sao chép|copy/i }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("sanitized legacy log");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("sanitized operation log");
   const download = page.waitForEvent("download"); await page.getByRole("button", { name: /tải xuống|download/i }).click(); expect((await download).suggestedFilename()).toContain("logs.txt");
 
   await page.getByRole("button", { name: /giám sát hệ thống|system monitor/i }).click();
@@ -82,7 +81,7 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   await expect(page.locator(".monitor-modal")).toContainText("load 0.1/0.2/0.3");
   await page.locator(".monitor-modal").getByRole("button", { name: /đóng|close/i }).click();
   await page.getByRole("link", { name: /công việc|jobs/i }).first().click(); await expect(page).toHaveURL(/\/$/);
-  if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/recreated-dashboard.png") }); await page.setViewportSize({ width: 1366, height: 768 }); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/recreated-dashboard-1366x768.png") }); await page.setViewportSize({ width: 1440, height: 900 }); }
+  if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/dashboard.png") }); await page.setViewportSize({ width: 1366, height: 768 }); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/dashboard-1366x768.png") }); await page.setViewportSize({ width: 1440, height: 900 }); }
   await page.locator(".job-row").filter({ hasText: "smoke.pdf" }).getByRole("button", { name: /xóa|delete/i }).click();
   await page.getByRole("button", { name: /xóa vĩnh viễn|delete permanently/i }).click();
   await expect(page.locator(".job-row").filter({ hasText: "smoke.pdf" })).toHaveCount(0);
@@ -310,7 +309,7 @@ test("terminal detail renders persisted progress, safe failure and timeline", as
   const terminalReads = reads; await page.waitForTimeout(2_200); expect(reads).toBe(terminalReads);
 });
 
-test("Legacy+ routes deep-link and Code Catalog CRUD survives reload", async ({ page }) => {
+test("app routes deep-link and Code Catalog CRUD survives reload", async ({ page }) => {
   let catalog = { revision: 0, items: [] as any[] }; let eventsQuery = "";
   await page.route("**/api/**", async (route) => {
     const request = route.request(), apiPath = new URL(request.url()).pathname;
@@ -439,26 +438,4 @@ test("missing canonical fields keep drafts until atomic approval succeeds", asyn
   await expect(page.locator(".editor-panel .notice.error")).toContainText(/trích yếu|summary/i);
   await page.getByLabel(/ngày ban hành|issue date/i).fill("2026-07-22"); await page.keyboard.press("Control+s");
   expect(body.corrections).toEqual(expect.arrayContaining([{ field: "ngay_ban_hanh", old_value: null, new_value: "2026-07-22" }, { field: "nguoi_ky", old_value: null, new_value: "B" }]));
-});
-
-test("capture sanitized populated legacy dashboard", async ({ page }) => {
-  test.skip(process.env.UPDATE_UI_BASELINE !== "1", "baseline capture only");
-  const root = path.resolve(process.cwd(), "..");
-  await page.addInitScript((data) => { (window as any).INTELLIDOC_DATA = data; }, {
-    server_mode: true,
-    app: { title: "IntelliDoc OCR" },
-    metrics: { total_jobs: 1, pages: 2, correction_count: 1, error_jobs: 0 },
-    ocr_methods: [{ id: "qwen", label: "Qwen", status: "configured" }],
-    jobs: [{ ...fixtureJob("completed"), upload_name: "sanitized-record.pdf", page_count: 2, correction_count: 1 }],
-    documents: [], logs: [],
-  });
-  await page.route("http://legacy.local/**", async (route) => {
-    const pathname = new URL(route.request().url()).pathname;
-    const file = pathname === "/" ? "web/index.html" : pathname.replace(/^\//, "");
-    const type = file.endsWith(".css") ? "text/css" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".svg") ? "image/svg+xml" : "text/html";
-    try { await route.fulfill({ body: await readFile(path.join(root, file)), contentType: type }); } catch { await route.fulfill({ status: 404, body: "" }); }
-  });
-  await page.goto("http://legacy.local/"); await expect(page.locator("body")).toContainText("11111111-1111-4111-8111");
-  await page.screenshot({ path: path.join(root, "docs/ui-parity/legacy-dashboard.png") });
-  await page.setViewportSize({ width: 1366, height: 768 }); await page.screenshot({ path: path.join(root, "docs/ui-parity/legacy-dashboard-1366x768.png") });
 });

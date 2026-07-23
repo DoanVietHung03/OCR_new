@@ -1,6 +1,4 @@
 import json
-import importlib.util
-from pathlib import Path
 
 import pytest
 
@@ -79,21 +77,17 @@ def test_approval_without_correction_is_audited(tmp_path, pdf_bytes):
 
 
 def test_legacy_and_new_store_preserve_unknown_fields(tmp_path, pdf_bytes):
-    source = Path(__file__).parents[2] / "src" / "ocr" / "jobs.py"
-    spec = importlib.util.spec_from_file_location("legacy_jobs", source)
-    assert spec and spec.loader
-    legacy_jobs = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(legacy_jobs)
+    store = JobStore(tmp_path)
+    job = store.create({"file_count": 1, "provider": "qwen"})
+    store.add_pdf(job["id"], "document.pdf", pdf_bytes)
+    path = store.path(job["id"]) / "job.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload.update(future_field={"kept": True}, legacy_field="also-kept")
+    path.write_text(json.dumps(payload), encoding="utf-8")
 
-    new_store = JobStore(tmp_path)
-    job = new_store.create({"file_count": 1, "provider": "qwen"})
-    new_store.add_pdf(job["id"], "document.pdf", pdf_bytes)
-    new_store.update(job["id"], future_field={"kept": True})
-    legacy_jobs.JobStore(tmp_path).update(job["id"], legacy_field="also-kept")
-
-    before = (new_store.path(job["id"]) / "job.json").read_bytes()
-    restored = new_store.read(job["id"])
-    assert (new_store.path(job["id"]) / "job.json").read_bytes() == before
+    before = path.read_bytes()
+    restored = store.read(job["id"])
+    assert path.read_bytes() == before
     assert restored["future_field"] == {"kept": True}
     assert restored["legacy_field"] == "also-kept"
 

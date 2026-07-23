@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MouseEvent, useEffect, useRef, useState } from "react";
 import { ACTIVE_JOB_STATUSES, ApiError, Artifact, Artifacts, bulkDelete, cancelJob, DELETABLE_JOB_STATUSES, deletePreview, Document, getArtifacts, getJob, Job, rerunJob, TERMINAL_JOB_STATUSES } from "../../../lib/api";
 import { language, safeError, statusText, text, useLanguage } from "../../../lib/i18n";
-import LegacyShell from "../../legacy-shell";
+import AppShell from "../../app-shell";
 import ReviewWorkspace from "./review-workspace";
 import SegmentationReview from "./segmentation-review";
 import "./review.css";
@@ -110,7 +110,7 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
       setAction(null); setActionConsent(false);
     } catch (reason) { setError(message(reason)); } finally { setBusy(false); }
   }
-  if (!job) return <LegacyShell detail onNew={() => router.push("/upload")}><Link className="button secondary" href="/">← {text("back")}</Link><p className="empty">{error || text("loading")}</p></LegacyShell>;
+  if (!job) return <AppShell detail onNew={() => router.push("/upload")}><Link className="button secondary" href="/">← {text("back")}</Link><p className="empty">{error || text("loading")}</p></AppShell>;
   const logs = job.logs || [];
   const logText = logs.map((item) => JSON.stringify(item, null, 2)).join("\n");
   const diagnostics = job.failure ? JSON.stringify({ job_id: job.id, code: job.failure.code, timestamp: job.updated_at, provider_profile_id: job.provider_profile_id, page_index: job.failure.page_index }, null, 2) : "";
@@ -137,7 +137,7 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
     (groups[key] ||= []).push(item as Artifact); return groups;
   }, {}));
 
-  return <LegacyShell detail onNew={goNew} onJobs={guardedLink}>
+  return <AppShell detail onNew={goNew} onJobs={guardedLink}>
     <Link className="back-link" href="/" onClick={guardedLink}>← {text("back")}</Link>
     <header className="job-header"><div><p className="eyebrow">{job.id} <button className="text-button" onClick={() => navigator.clipboard.writeText(job.id)}>{text("copyId")}</button></p><h1>{job.upload_name || text("job")}</h1><p>{text("jobSummary", { pages: job.page_count, corrections: job.correction_count })} · {scopeSummary}</p></div><span className={`status ${job.status}`}>{statusText(job.status)}</span></header>
     <section className="job-facts panel"><div><span>{text("provider")}</span><b>{job.provider_profile_id || job.provider || job.ocr_method || "—"}</b><small>{job.model || "—"} · prompt {job.prompt_version || "—"}</small></div><div><span>{text("documents")}</span><b>{documents.length}</b><small>{job.uploaded_files}/{job.expected_files} PDF</small></div><div><span>{text("pdfPages")}</span><b>{job.page_count}</b><small>{scopeSummary} · {job.failed_pages} failed</small></div><div><span>{text("updated")}</span><b>{new Date(job.updated_at).toLocaleDateString(language())}</b><small>{text("created")}: {new Date(job.created_at).toLocaleString(language())}<br />{job.started_at ? `${statusText("starting")}: ${new Date(job.started_at).toLocaleString(language())}` : ""}{job.completed_at ? <><br />{statusText("completed")}: {new Date(job.completed_at).toLocaleString(language())}</> : null}</small></div><div className="job-actions">{active && <button className="button danger" disabled={busy || job.status === "cancelling"} onClick={() => setAction("cancel")}>{text("cancel")}</button>}{terminal && <button className="button secondary" disabled={busy} onClick={() => setAction("rerun")}>{text("rerun")}</button>}{DELETABLE_JOB_STATUSES.has(job.status) && <button className="button danger ghost" disabled={busy} onClick={requestDelete}>{text("delete")}</button>}</div></section>
@@ -168,5 +168,5 @@ export default function JobPage({ params }: { params: Promise<{ jobId: string }>
         {action === "rerun" && <><p><b>{job.processing_mode || "legacy"}</b> · {job.provider_profile_id} · {job.vlm_task} · {job.vlm_pages}{job.vlm_max_pages ? ` · max ${job.vlm_max_pages}` : ""}</p>{job.processing_mode === "combined_dossier" && <label><span>{language() === "vi" ? "Phân đoạn" : "Segmentation"}</span><select value={rerunMode} onChange={(event) => setRerunMode(event.target.value as typeof rerunMode)}><option value="reuse_segmentation">{language() === "vi" ? "Dùng lại và xác nhận lại" : "Reuse and reconfirm"}</option><option value="resegment">{language() === "vi" ? "Phân đoạn lại" : "Resegment"}</option></select></label>}</>}
         <footer className="modal-actions"><button className="button secondary" onClick={() => setAction(null)}>{text("close")}</button><button className={action === "delete" || action === "cancel" ? "button danger" : "button primary"} disabled={busy || (action === "delete" && !deleteAllowed) || (action === "rerun" && job.endpoint_external && !actionConsent)} onClick={confirmAction}>{text(action === "delete" ? "confirmDelete" : "confirm")}</button></footer></>}
     </dialog>
-  </LegacyShell>;
+  </AppShell>;
 }
