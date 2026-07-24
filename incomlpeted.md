@@ -60,22 +60,7 @@ Benchmark thật còn thiếu vì chưa có sample có fingerprint. Điều ki�
   page scope, DPI và config version;
 - chạy lặp lại các fixture đại diện trên cùng cấu hình, lưu timing/resource mẫu
   đã khử nhạy cảm và chứng minh sample khác fingerprint không bị trộn;
-- chỉ mở field-quality sâu, resource drilldown hoặc HTML/PDF offline report khi
-  có workflow đo lường/bàn giao được operator xác nhận.
-
-## 4. X15 — Polish phụ thuộc dữ liệu và nhu cầu operator
-
-URL state, page jump, monitor deep-link, phím tắt, copy ID và select-all terminal
-đã hoàn thành local. Các việc sau chỉ làm khi có đầu vào thật:
-
-- chốt bốn dashboard metric và mật độ 1366×768 sau usability review với dữ liệu
-  vận hành đại diện;
-- safe server-log download và `total_bytes` cho delete preview hiện giữ `N/A` vì
-  chưa có nhu cầu operator; chỉ mở lại khi có xác nhận, rồi đi qua
-  OpenAPI/generated types và kiểm thử không lộ dữ liệu nhạy cảm;
-- retry-specific timeline chỉ mở khi X7 đã persist metadata retry thật.
-
-## 5. Milestone C — internal production-like pilot
+## 4. Milestone C — internal production-like pilot
 
 Máy hiện tại không có đủ stack và bằng chứng live để ký gate. Điều kiện hoàn
 thành:
