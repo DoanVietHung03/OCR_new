@@ -410,10 +410,9 @@ test("combined dossier keeps revisioned segmentation review in the job detail", 
     if (apiPath.includes("/artifacts/") && apiPath.endsWith(".png")) return route.fulfill({ status: 200, contentType: "image/svg+xml", body: svg });
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
-  await page.goto(`/jobs/${id}`); await expect(page.getByRole("heading", { name: /xác nhận phân đoạn|confirm segmentation/i })).toBeVisible();
+  await page.goto(`/jobs/${id}`); await expect(page.getByRole("heading", { name: /xác nhận cấu trúc hồ sơ|confirm document structure/i })).toBeVisible();
   const types = page.getByLabel(/loại phân đoạn|segment type/i), confirm = page.getByRole("button", { name: /xác nhận PDF này|confirm this PDF/i });
   await types.nth(1).selectOption("excluded"); await expect(confirm).toBeEnabled();
-  await types.nth(1).selectOption("unclassified"); await expect(confirm).toBeDisabled(); await expect(page.locator(".segmentation-review [role=alert]")).toBeVisible();
   await types.nth(1).selectOption("administrative_document");
   await page.getByLabel(/tách trước trang|split before page/i).selectOption("2");
   await page.getByLabel(/loại phân đoạn|segment type/i).nth(2).selectOption("excluded");
@@ -422,6 +421,31 @@ test("combined dossier keeps revisioned segmentation review in the job detail", 
   await page.getByRole("button", { name: /xác nhận PDF này|confirm this PDF/i }).click();
   expect(bodies.map((body) => body.revision)).toEqual([1, 2]); expect(bodies[1].segments[2].logical_document_type).toBe("excluded");
   await page.getByRole("button", { name: /tiếp tục trích xuất|continue extraction/i }).click(); expect(continued).toBeTruthy();
+});
+
+test("multi-PDF dossier can confirm the whole document structure at once", async ({ page }) => {
+  const source = (id: string, file_name: string, logical_document_type: "dossier_cover" | "administrative_document") => ({
+    id, file_name, page_count: 1, revision: 1, confirmed: false, confirmed_segments: [],
+    pages: [{ source_page_index: 0, classification: logical_document_type === "dossier_cover" ? "cover" : "document_start", error: "", image_url: `/api/jobs/${id}/artifacts/${id}/page-1.png` }],
+    proposal: [{ id: "segment-1", logical_document_type, start_page: 0, end_page: 0 }],
+  });
+  const sources = [source("source-1", "Scan_0000.pdf", "dossier_cover"), source("source-2", "Scan_0001.pdf", "administrative_document")];
+  const job = { ...fixtureJob("awaiting_segmentation_review"), processing_mode: "combined_dossier", documents: [], source_pdfs: sources, segmentation_completed_pages: 2, segmentation_total_pages: 2 } as any;
+  const confirmed: string[] = [];
+  await page.route("**/api/**", async (route) => {
+    const request = route.request(), apiPath = new URL(request.url()).pathname;
+    if (apiPath === `/api/jobs/${id}`) return route.fulfill({ json: job });
+    if (apiPath.endsWith("/segmentation/confirm")) {
+      confirmed.push(apiPath.split("/")[5]);
+      return route.fulfill({ json: { ...job, status: confirmed.length === 2 ? "segmentation_confirmed" : "awaiting_segmentation_review" } });
+    }
+    if (apiPath.includes("/artifacts/")) return route.fulfill({ status: 200, contentType: "image/svg+xml", body: svg });
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.goto(`/jobs/${id}`);
+  await expect(page.getByLabel(/loại phân đoạn|segment type/i).first().locator("option")).toHaveCount(2);
+  await page.getByRole("button", { name: /xác nhận tất cả PDF|confirm all PDFs/i }).click();
+  expect(confirmed).toEqual(["source-1", "source-2"]);
 });
 
 test("rerun keeps the snapshot and exposes both segmentation choices", async ({ page }) => {

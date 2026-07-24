@@ -51,6 +51,19 @@ export default function SegmentationReview({ job, onJob, onError }: Props) {
     }
     finally { setBusy(false); }
   }
+  async function confirmAll() {
+    setBusy(true); onError("");
+    try {
+      let latest = job;
+      for (const source of job.source_pdfs || []) {
+        if (!source.confirmed) latest = await confirmSegmentation(job.id, source.id, revisions[source.id] ?? source.revision, drafts[source.id] || []);
+      }
+      onJob(latest);
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.code === "segmentation_conflict") onError(label("Một PDF đã được cập nhật ở nơi khác. Hãy tải lại trước khi xác nhận tất cả.", "A PDF was updated elsewhere. Reload before confirming all."));
+      else onError(reason instanceof Error ? reason.message : String(reason));
+    } finally { setBusy(false); }
+  }
   async function resolveConflict(sourceId: string, keepDraft: boolean) {
     setBusy(true); onError("");
     try {
@@ -66,14 +79,18 @@ export default function SegmentationReview({ job, onJob, onError }: Props) {
   }
 
   return <section className="panel segmentation-review">
-    <div className="section-head"><div><p className="eyebrow">PDF → {label("Bìa → Văn bản", "Cover → Documents")}</p><h2>{label("Xác nhận phân đoạn", "Confirm segmentation")}</h2></div>{job.segmentation_total_pages > 0 && <span>{job.segmentation_completed_pages}/{job.segmentation_total_pages}</span>}</div>
+    <div className="section-head"><div><p className="eyebrow">PDF → {label("Bìa → Văn bản", "Cover → Documents")}</p><h2>{label("Xác nhận cấu trúc hồ sơ", "Confirm document structure")}</h2></div>{job.segmentation_total_pages > 0 && <span>{job.segmentation_completed_pages}/{job.segmentation_total_pages}</span>}</div>
+    {(job.source_pdfs || []).length === 1 && <p>{label("Loại trừ dùng cho trang trắng/phân cách. Trang chưa phân loại phải được đổi thành Bìa, Văn bản hoặc Loại trừ.", "Excluded is for blank/separator pages. Unclassified pages must be changed to Cover, Document, or Excluded.")}</p>}
+    {(job.source_pdfs || []).length > 1 && (job.source_pdfs || []).some((source) => !source.confirmed) && <button className="button primary" disabled={busy || (job.source_pdfs || []).some((source) => !source.confirmed && Boolean(segmentationError(drafts[source.id] || [], source.page_count)))} onClick={confirmAll}>{label("Xác nhận tất cả PDF", "Confirm all PDFs")}</button>}
     {(job.source_pdfs || []).map((source) => <article key={`${source.id}-${source.revision}`}>
       <h3>{source.file_name}</h3>
       <div className="source-pages">{(source.pages || []).map((page) => <a href={page.image_url} target="_blank" rel="noreferrer" key={page.source_page_index}><img src={page.image_url} alt={`${source.file_name} · ${page.source_page_index + 1}`} /><small>{page.source_page_index + 1} · {page.classification}</small></a>)}</div>
       <div className="segment-list">{(drafts[source.id] || []).map((segment, index) => <div key={segment.id || index}>
         <b>{segment.start_page + 1}–{segment.end_page + 1}</b>
         <select aria-label={label("Loại phân đoạn", "Segment type")} value={segment.logical_document_type} disabled={busy || source.confirmed} onChange={(event) => setType(source.id, index, event.target.value as Segment["logical_document_type"])}>
-          <option value="dossier_cover">{label("Bìa", "Cover")}</option><option value="administrative_document">{label("Văn bản", "Document")}</option><option value="excluded">{label("Loại trừ", "Excluded")}</option><option value="unclassified">{label("Chưa phân loại", "Unclassified")}</option>
+          <option value="dossier_cover">{label("Bìa", "Cover")}</option><option value="administrative_document">{label("Văn bản", "Document")}</option>
+          {(job.source_pdfs || []).length === 1 && <option value="excluded">{label("Loại trừ", "Excluded")}</option>}
+          {segment.logical_document_type === "unclassified" && <option value="unclassified" disabled>{label("Chưa phân loại — cần sửa", "Unclassified — must change")}</option>}
         </select>
         {segment.start_page > 0 && <button className="text-button" disabled={busy || source.confirmed} onClick={() => merge(source.id, index)}>{label("Gộp phần trước", "Merge previous")}</button>}
         {segment.end_page > segment.start_page && <select aria-label={label("Tách trước trang", "Split before page")} value="" disabled={busy || source.confirmed} onChange={(event) => split(source.id, index, Number(event.target.value))}>

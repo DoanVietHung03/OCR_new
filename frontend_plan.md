@@ -212,6 +212,10 @@ lặp đã bỏ. Benchmark có fingerprint thật còn theo
   chặn gap, overlap hoặc còn `unclassified`; backend kiểm tra toàn job có đúng
   một Bìa và ít nhất một văn bản khi xác nhận source cuối. Conflict
   `409 segmentation_conflict` giữ local draft và cho reload/discard.
+- Với nhiều source, “Xác nhận tất cả PDF” gọi tuần tự endpoint revision hiện có
+  cho mọi source hợp lệ chưa xác nhận; không thêm bulk API hoặc bỏ qua conflict.
+  Selector nhiều source chỉ có Bìa/Văn bản. Một source có thể chọn Excluded cho
+  trang trắng/phân cách; Unclassified chỉ hiện như trạng thái bắt buộc sửa.
 - Sau khi mọi source confirmed, happy path tiếp tục OCR; provider unavailable giữ
   durable `segmentation_confirmed` và hiện action Continue. State chờ sống qua
   reload/restart; Cancel chuyển terminal rồi mới cho Delete.

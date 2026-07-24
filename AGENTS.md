@@ -132,6 +132,11 @@ revision conflict, and Continue in the browser gate.
 - `/corrections` saves and approves in one call. UI with drafts must say “Save
   and approve”; do not invent an unapproved saved-correction state. Unknown or
   non-scalar legacy fields remain visible but read-only.
+- Multi-PDF structure review may confirm every valid unconfirmed source
+  sequentially through the existing per-source revision endpoint; do not add a
+  bulk API or bypass revision validation. Its type selector exposes only Cover
+  and Document. A single combined PDF may also expose Excluded; Unclassified is
+  a provider-error state to resolve, not a user-selectable target.
 - New provider `bbox` is normalized `[left, top, right, bottom]` in `0..1` and
   encloses the field label plus value. The worker creates an automatic evidence
   crop for every returned field with a valid bbox. When a labeled metadata value

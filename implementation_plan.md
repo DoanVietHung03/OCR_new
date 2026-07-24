@@ -285,6 +285,9 @@ Fingerprint/sample thật còn lại được theo dõi tại
   `unclassified`. Với nhiều PDF, proposal lấy trực tiếp từ thứ tự/ranh giới file.
   Reviewer xác nhận từng PDF bằng optimistic revision qua
   `POST /api/jobs/{job_id}/source-pdfs/{source_pdf_id}/segmentation/confirm`.
+  UI có thể xác nhận tất cả bằng cách gọi tuần tự endpoint này; backend không có
+  bulk-confirm và vẫn kiểm tra revision cho từng source. Folder nhiều PDF chỉ
+  cho chọn Bìa/Văn bản; Excluded và Unclassified vẫn thuộc contract một PDF gộp.
   Khi tất cả source confirmed, `/continue` hoặc happy-path confirm chuyển nguyên
   tử `segmentation_confirmed → extraction_starting` và dispatch đúng một lần.
 - `vlm_pages`/`vlm_max_pages` áp dụng riêng cho mỗi logical document sau

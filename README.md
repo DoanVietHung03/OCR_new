@@ -63,7 +63,10 @@ provider production-like thật.
 - Với `combined_dossier` nhiều PDF, worker sắp theo tên file: PDF đầu là một Bìa
   trọn vẹn, mỗi PDF sau là một văn bản trọn vẹn và không gọi provider để phân
   đoạn. Nếu chỉ có một PDF gộp, worker vẫn phân đoạn từng trang bằng provider.
-  Reviewer xác nhận từng PDF bằng revision rồi mới dispatch extraction.
+  Reviewer có thể xác nhận từng PDF hoặc xác nhận tất cả PDF hợp lệ; hệ thống
+  vẫn gửi tuần tự từng revision rồi mới dispatch extraction. Folder nhiều PDF
+  chỉ cho chọn Bìa/Văn bản; `excluded` chỉ dành cho trang trắng/phân cách trong
+  một PDF gộp, còn `unclassified` là trạng thái lỗi cần sửa chứ không phải lựa chọn.
 - `/start` chỉ dispatch một lần. Worker production dùng concurrency `1` và
   prefetch `1`; job không tự động retry hoặc resume.
 - Provider, model, phiên bản prompt và trạng thái endpoint bên ngoài được chụp
