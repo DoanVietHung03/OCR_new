@@ -112,7 +112,9 @@ và data safety. Ưu tiên dữ liệu worker/contract trước CSS; không dự
 - Giữ control Provider Profile, `metadata|full_ocr`, page scope và max pages hiện
   có; `full_ocr` khóa `all`/max `0`, metadata cho các scope server công bố.
 - Copy phải giải thích rõ metadata nhanh chỉ xử lý page plan, còn full OCR xử lý
-  toàn bộ trang; không hứa “nhanh” khi profile không hỗ trợ.
+  toàn bộ trang; không hứa “nhanh” khi profile không hỗ trợ. Lượt metadata của
+  full OCR vẫn dùng ảnh trực tiếp; browser không gửi hoặc hiển thị transcription
+  như context của provider.
 - Job detail phân biệt tổng **trang PDF** với số trang provider thực sự xử lý
   (`2/5 trang metadata` cho `first,last`) và đánh dấu page `skipped` trong navigation.
 - Browser chỉ gửi `provider_profile_id`, task/pages/max-pages và consent; không
@@ -220,7 +222,8 @@ sách suggestion/evidence; workspace hiển thị source, confidence và reason 
   provenance và page-level `evidence_url`; thiếu dữ liệu hiển thị unavailable.
 - Mọi field có bbox hợp lệ dùng thumbnail crop evidence do worker tạo và mở
   native `<dialog>` Fit/100%; client không tự crop và không dùng bbox làm seed
-  cho Manual crop.
+  cho Manual crop. `validation_warning` từ đối chiếu full-OCR cục bộ phải hiển
+  thị trạng thái cần rà soát và không được có crop gây hiểu nhầm.
 - Chỉ hiện “OCR gốc/Giá trị mới” khi field thật sự có correction; `ocr_value=null`
   mặc định của field chưa sửa không được tạo diff giả.
 - Job mới từ fixture phải có cùng UX evidence như job legacy có data tương ứng;

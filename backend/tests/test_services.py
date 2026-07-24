@@ -188,10 +188,7 @@ def test_dossier_approval_requires_confirmed_segmentation(tmp_path, pdf_bytes):
 
 
 def test_cover_prompt_and_parser_share_the_policy_allowlist():
-    body = request_body(
-        b"image", "model", expected_fields=COVER_FIELDS,
-        ocr_text="Phông số: 14\nSố tài liệu: 33",
-    )
+    body = request_body(b"image", "model", expected_fields=COVER_FIELDS)
     assert set(body) == {"model", "temperature", "messages"}
     prompt = body["messages"][0]["content"][0]["text"]
     assert all(name in prompt for name in COVER_FIELDS)
@@ -201,8 +198,6 @@ def test_cover_prompt_and_parser_share_the_policy_allowlist():
     assert "all consecutive bold organization" in prompt
     assert "separate from nhiem_ky" in prompt
     assert "only the value after the printed label Phông số" in prompt
-    assert "Phông số: 14" in prompt
-    assert "Số tài liệu: 33" in prompt
     assert "printed label and its visible value" in prompt
     assert "use bbox []" in prompt
     result = validate_result({"fields": {"co_quan_luu_tru": "A", "so_van_ban": "ignored"}}, expected_fields=COVER_FIELDS)

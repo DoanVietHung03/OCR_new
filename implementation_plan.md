@@ -173,7 +173,8 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
   bằng một planner trung tâm.
 - `full_ocr` phải OCR text trên mọi trang, persist text/status từng trang, rồi
   lấy metadata trên page plan phù hợp. `metadata` chỉ chạy metadata prompt trên
-  page plan đã chọn.
+  page plan đã chọn. Lượt metadata của cả hai task gửi cùng prompt image-only;
+  transcription của `full_ocr` không được gửi lại provider.
 - Dùng đúng một planner trung tâm: `all` lấy mọi trang; `first,last` lấy trang
   đầu/cuối; `auto` ban đầu lấy trang đầu và hai trang cuối; `max_pages` cắt ổn
   định sau khi loại trùng. Cue chữ ký/con dấu chỉ bật sau khi có fixture cố định.
@@ -303,8 +304,10 @@ review-reason/nested suggestion-evidence types thay vì `unknown` payload.
   đúng expected subset. `fields.document_type` không còn nằm trong prompt mới.
 - Bìa dùng `khoa`, không dùng `hop_so`; `co_quan_luu_tru` giữ đủ các dòng cơ
   quan in đậm, còn `khoa`, `nhiem_ky`, `phong_so`, `ho_so_dvbq` bám đúng nhãn.
-  Khi đã chạy full OCR, metadata nhận transcription làm ngữ cảnh và labeled-value
-  conflict trở thành `validation_warning`, không được giữ confidence/bbox giả.
+  Khi đã chạy full OCR, provider metadata vẫn chỉ nhận ảnh; worker chỉ dùng
+  transcription cục bộ sau response để labeled-value conflict trở thành
+  `validation_warning`, không được giữ confidence/bbox giả. Prompt image-only
+  này thuộc `PROMPT_VERSION=8`.
 - `apply_review` cho tạo field canonical còn thiếu với `old_value=null`, scalar
   value và provenance `manual`; field lạ/non-scalar vẫn bị từ chối hoặc read-only.
 - Audit internal-pilot ghi original null, corrected value,

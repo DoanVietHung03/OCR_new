@@ -133,6 +133,8 @@ revision conflict, and Continue in the browser gate.
   crop for every returned field with a valid bbox. When a labeled metadata value
   conflicts with an available independent full-OCR line, clear its bbox and
   confidence, mark it for review, and do not publish a misleading crop.
+  Never inject the full-OCR transcription into the metadata provider prompt;
+  use it only for this local post-response validation.
   Legacy/invalid bbox remains unavailable; it never seeds Manual crop, which still
   starts from a user-drawn natural-pixel rectangle.
 - Preserve valid VI/EN UTF-8, Vietnamese default, and

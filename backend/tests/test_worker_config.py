@@ -56,7 +56,7 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     assert result["completed_at"]
     assert calls == [
         ("snapshot-model", "full_ocr", 0, ""),
-        ("snapshot-model", "metadata", 0, ""),
+        ("snapshot-model", "metadata", 0, "Số văn bản: 1\nTrích yếu: Tóm tắt"),
     ]
     assert result["documents"][0]["pages"][0] == {
         "page_index": 0, "image_url": f"/api/jobs/{job['id']}/artifacts/document/page-1.png",
@@ -171,6 +171,32 @@ def test_provider_retries_429_once_but_not_read_timeout(monkeypatch):
 
     import app.workers.tasks as tasks
     assert tasks.safe_error(RuntimeError("raw provider secret")) == "ocr_failed"
+
+
+def test_metadata_uses_transcription_only_for_local_validation(monkeypatch):
+    import app.services.ocr_runner as runner
+
+    real_client = httpx.AsyncClient
+    request_prompt = ""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal request_prompt
+        request_prompt = request.read().decode()
+        return httpx.Response(200, json={"choices": [{"message": {"content": """{"fields":{"so_tai_lieu":{"value":23,"confidence":0.9,"bbox":[0.2,0.8,0.4,0.85]}}}"""}}]})
+
+    monkeypatch.setattr(
+        runner.httpx,
+        "AsyncClient",
+        lambda **options: real_client(transport=httpx.MockTransport(handler), **options),
+    )
+    result = asyncio.run(runner.request_page(
+        b"image", base_url="http://provider", api_key="x", model="m",
+        expected_fields=("so_tai_lieu",), ocr_text="Số tài liệu: ...33...",
+    ))
+
+    assert "Số tài liệu: ...33..." not in request_prompt
+    assert result["fields"]["so_tai_lieu"]["bbox"] == []
+    assert result["fields"]["so_tai_lieu"]["review_reason"] == "validation_warning"
 
 
 def test_provider_probe_distinguishes_reachability_from_readiness(monkeypatch):
