@@ -33,7 +33,7 @@ export default function Home() {
   const [search, setSearch] = useState(""); const [query, setQuery] = useState(""); const [status, setStatus] = useState("all"); const [method, setMethod] = useState("all"); const [sort, setSort] = useState("created_desc");
   const [page, setPage] = useState(1); const [selected, setSelected] = useState<string[]>([]); const [engineMessage, setEngineMessage] = useState("");
   const [consent, setConsent] = useState(false); const [progress, setProgress] = useState(""); const [action, setAction] = useState<Action>(null);
-  const [actionConsent, setActionConsent] = useState(false); const actionDialog = useRef<HTMLDialogElement>(null); const uploadPanel = useRef<HTMLElement>(null);
+  const [actionConsent, setActionConsent] = useState(false); const actionDialog = useRef<HTMLDialogElement>(null); const uploadPanel = useRef<HTMLElement>(null); const folderInput = useRef<HTMLInputElement>(null);
   const [rerunMode, setRerunMode] = useState<"reuse_segmentation" | "resegment">("reuse_segmentation");
   const [profiles, setProfiles] = useState<ProviderProfile[]>([]); const [profileId, setProfileId] = useState("");
   const [reports, setReports] = useState<Reports | null>(null);
@@ -144,6 +144,8 @@ export default function Home() {
         <input aria-label={text("pdfFiles")} type="file" accept="application/pdf,.pdf" multiple disabled={busy} onChange={(event) => choose(Array.from(event.target.files || []))} />
         <span className="drop-icon">⇧</span><strong>{text("chooseFiles")}</strong><small>{text("selectedFiles", { count: files.length })}</small>
       </label>
+      <input ref={(element) => { folderInput.current = element; element?.setAttribute("webkitdirectory", ""); }} hidden aria-label={language() === "vi" ? "Thư mục PDF" : "PDF folder"} type="file" accept="application/pdf,.pdf" multiple disabled={busy} onChange={(event) => choose(Array.from(event.target.files || []))} />
+      <button className="button secondary" disabled={busy} onClick={() => folderInput.current?.click()}>{language() === "vi" ? "Chọn thư mục PDF" : "Choose PDF folder"}</button>
       {!!files.length && <div className="file-list">{files.map((file) => <div key={file.name}><span><b>{file.name}</b><small>{size(file.size)}</small></span><button aria-label={text("removeFile", { name: file.name })} disabled={busy} onClick={() => choose(files.filter((item) => item !== file))}>×</button></div>)}<button className="text-button" disabled={busy} onClick={() => setFiles([])}>{text("clear")}</button></div>}
       {external && <label className="consent"><input type="checkbox" checked={consent} disabled={busy} onChange={(event) => setConsent(event.target.checked)} />{text("consent")}</label>}
       <div className="upload-actions"><div><span className={`status ${engine?.status || "not_configured"}`}>{statusText(engine?.status || "not_configured")}</span><small>{engineMessage || text("configuredHint")}</small></div><button className="button secondary" disabled={!engine || busy} onClick={() => engine && checkEngine(engine.id).then((result) => setEngineMessage(statusText(result.status))).catch((reason) => setEngineMessage(message(reason)))}>{text("checkEngine")}</button><button className="button primary" disabled={busy || !files.length || !configured || (external && !consent)} onClick={upload}>{progress || text("start")}</button></div>

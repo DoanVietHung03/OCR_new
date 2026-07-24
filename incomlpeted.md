@@ -56,8 +56,8 @@ boundary, inline validation, revision conflict và Continue; các điều kiện
 Corrected JSON, timing pass và report theo Provider Profile đã hoàn thành local.
 Benchmark thật còn thiếu vì chưa có sample có fingerprint. Điều kiện hoàn thành:
 
-- thống nhất fingerprint gồm fixture/manifest SHA-256, Provider Profile, task,
-  page scope, DPI và config version;
+- cung cấp manifest SHA-256 thật và config snapshot an toàn để tính fingerprint
+  theo thuật toán canonical đã khóa trong `implementation_plan.md#be-x14`;
 - chạy lặp lại các fixture đại diện trên cùng cấu hình, lưu timing/resource mẫu
   đã khử nhạy cảm và chứng minh sample khác fingerprint không bị trộn;
 ## 4. Milestone C — internal production-like pilot

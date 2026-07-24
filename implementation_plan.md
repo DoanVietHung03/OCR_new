@@ -33,7 +33,7 @@ bởi stack Next.js/FastAPI/Celery.
 | `X3` | Pydantic/OpenAPI | [`FE-X3`](frontend_plan.md#fe-x3) | Generated types không drift, không có DTO viết tay |
 | `X4` | Durable review/report/artifact data | [`FE-X4`](frontend_plan.md#fe-x4) | Workflow dùng dữ liệu thật và reload được |
 | `X5` | Runtime/cutover/evidence | [`FE-X5`](frontend_plan.md#fe-x5) | Browser pass qua Nginx/FastAPI/Celery/provider thật |
-| `X6` | Biên parity PDF-only | [`FE-X6`](frontend_plan.md#fe-x6) | Không port ZIP/ảnh/folder và hạ tầng cũ |
+| `X6` | Biên parity PDF-only | [`FE-X6`](frontend_plan.md#fe-x6) | Cho native folder selection; không port ZIP/ảnh/directory tree hay hạ tầng cũ |
 | `X7` | Field evidence do worker sinh | [`FE-X7`](frontend_plan.md#fe-x7) | Job mới có evidence tối thiểu dùng được khi review |
 | `X8` | Expected/missing field và prompt | [`FE-X8`](frontend_plan.md#fe-x8) | Field canonical bị bỏ sót vẫn nhập, audit và reload được |
 | `X9` | Approval blocker/risk | [`FE-X9`](frontend_plan.md#fe-x9) | Blocker ngăn approve; warning mềm không ngăn |
@@ -166,9 +166,12 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
 
 ## Kế hoạch đang mở
 
+Các bullet dưới đây là acceptance contract đã được bảo vệ local; phần còn mở
+được ghi ngay trong trạng thái của từng mục và đều cần fixture/runtime bên ngoài.
+
 ### BE-X1
 
-**Task và page planner — PASS LOCAL CONTRACT 2026-07-22; LIVE REPRO PENDING.** Counterpart: [`FE-X1`](frontend_plan.md#fe-x1).
+**Task và page planner — LOCAL COMPLETE; LIVE REPRO PENDING.** Counterpart: [`FE-X1`](frontend_plan.md#fe-x1).
 
 - `vlm_task`, `vlm_pages`, `vlm_max_pages` được validate/persist và worker thực thi
   bằng một planner trung tâm.
@@ -211,7 +214,7 @@ compatibility và rollback evidence trong [`BE-C-EVIDENCE`](#be-c-evidence).
 
 ### BE-X7
 
-**P0 — Field evidence tối thiểu cho job mới — IN PROGRESS 2026-07-22.** Counterpart:
+**P0 — Field evidence tối thiểu cho job mới — LOCAL COMPLETE; LIVE EVIDENCE PENDING.** Counterpart:
 [`FE-X7`](frontend_plan.md#fe-x7).
 
 Contract typed, worker persistence, provenance trang và coverage aggregate đã
@@ -242,6 +245,12 @@ review-reason/nested suggestion-evidence types thay vì `unknown` payload.
   Profile + task + page scope + DPI/config version; chỉ aggregate sample tương
   thích. Group report theo profile với success/failure, pages, duration/throughput,
   correction/risk/evidence coverage và recent safe errors.
+- Fingerprint đã khóa: SHA-256 chữ thường của UTF-8 canonical JSON
+  (`sort_keys=true`, separator `,`/`:`) chứa đúng
+  `manifest_sha256`, `provider_profile_id`, `task`, `page_scope`, `dpi=200` và
+  `config_version` (prompt/config snapshot an toàn, không chứa model URL/key).
+  Chỉ tạo/persist fingerprint khi có manifest SHA thật; không sinh sample từ job
+  thường hoặc fixture giả.
 - P1: cung cấp corrected JSON artifact sau approval với schema/version/job/document
   IDs, corrected values và audit-safe provenance; cấm secret/raw response. Bỏ
   `report_url` tự trỏ lại job page.
@@ -257,7 +266,7 @@ Fingerprint/sample thật còn lại được theo dõi tại
 
 ### BE-X16
 
-**P0 — Source PDF, Bìa và logical-document segmentation — IN PROGRESS 2026-07-22.** Counterpart:
+**P0 — Source PDF, Bìa và logical-document segmentation — LOCAL COMPLETE; LIVE EVIDENCE PENDING.** Counterpart:
 [`FE-X16`](frontend_plan.md#fe-x16).
 
 - Public `processing_mode` có ba ID `administrative_document`, `dossier_cover`,

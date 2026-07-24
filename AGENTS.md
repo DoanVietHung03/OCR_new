@@ -21,7 +21,7 @@ telemetry.
 The 2026-07-22 Repair Gate passed 28 backend tests, 10 legacy compatibility
 tests, focused browser coverage for task/page retry and partial review, typecheck,
 build, generated OpenAPI/types, and diff checks. These are the protected baseline.
-The current suite has 48 backend tests and 18 passing browser checks. The local
+The current suite has 49 backend tests and 19 passing browser checks. The local
 contracts for `X7`–`X13`, `X16`, and the
 locally actionable `X15` scope pass. `X7`/`X16` remain IN PROGRESS at the overall
 gate only because fixture/live acceptance is missing; `X14` still needs real
@@ -53,7 +53,8 @@ revision conflict, and Continue in the browser gate.
 ## Architecture invariants
 
 - Accept only PDFs: 15 files/job, 200 MiB/job, 100 pages/PDF, rendered at
-  200 DPI.
+  200 DPI. The browser may select those PDFs individually or through one native
+  folder picker; this does not authorize ZIP, images, or directory management.
 - FastAPI must not render PDFs or call the provider. Celery owns OCR; eager
   execution is test-only.
 - `data/jobs/` JSON and artifacts are durable truth. Do not add a database,

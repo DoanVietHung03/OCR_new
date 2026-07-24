@@ -29,7 +29,7 @@ ghi duy nhất trong `BE-C-EVIDENCE`.
 | `FE-X3` | [`BE-X3`](implementation_plan.md#be-x3) | Generated schema không drift |
 | `FE-X4` | [`BE-X4`](implementation_plan.md#be-x4) | Review/report/artifact dùng durable data thật |
 | `FE-X5` | [`BE-X5`](implementation_plan.md#be-x5) | Browser pass qua production-like stack thật |
-| `FE-X6` | [`BE-X6`](implementation_plan.md#be-x6) | Không port ZIP/ảnh/folder và kiến trúc cũ |
+| `FE-X6` | [`BE-X6`](implementation_plan.md#be-x6) | Native folder selection; không port ZIP/ảnh/directory tree hay kiến trúc cũ |
 | `FE-X7` | [`BE-X7`](implementation_plan.md#be-x7) | Job mới render evidence tối thiểu có provenance |
 | `FE-X8` | [`BE-X8`](implementation_plan.md#be-x8) | Expected field thiếu vẫn nhập/audit/reload được |
 | `FE-X9` | [`BE-X9`](implementation_plan.md#be-x9) | UI phản ánh blocker thật, không tự suy đoán risk |
@@ -53,8 +53,10 @@ Frontend phải dùng dữ liệu thật hoặc hiển thị
 “không có dữ liệu”. Cấm URL/key/header provider, raw response, stack trace,
 filesystem path, progress/quality/benchmark giả và unredacted payload.
 
-Upload vẫn PDF-only, tối đa 15 file/job, 200 MiB/job và 100 trang/PDF. ZIP, ảnh,
-folder/directory tree và mutable local-only PDF nằm ngoài parity plan tại `FE-X6`.
+Upload vẫn PDF-only, tối đa 15 file/job, 200 MiB/job và 100 trang/PDF. Browser
+cho chọn nhiều PDF hoặc chọn một thư mục chứa nhiều PDF bằng native directory
+picker rồi dùng nguyên flow upload tuần tự hiện có. ZIP, ảnh, directory tree
+management và mutable local-only PDF nằm ngoài parity plan tại `FE-X6`.
 
 ## Information architecture
 
@@ -105,9 +107,12 @@ và data safety. Ưu tiên dữ liệu worker/contract trước CSS; không dự
 
 ## Kế hoạch đang mở
 
+Các bullet dưới đây là acceptance contract đã được bảo vệ local; phần còn mở
+được ghi ngay trong trạng thái của từng mục và đều cần fixture/runtime bên ngoài.
+
 ### FE-X1
 
-**Task/page input — PASS LOCAL CONTRACT 2026-07-22; LIVE REPRO PENDING.** Counterpart: [`BE-X1`](implementation_plan.md#be-x1).
+**Task/page input — LOCAL COMPLETE; LIVE REPRO PENDING.** Counterpart: [`BE-X1`](implementation_plan.md#be-x1).
 
 - Giữ control Provider Profile, `metadata|full_ocr`, page scope và max pages hiện
   có; `full_ocr` khóa `all`/max `0`, metadata cho các scope server công bố.
@@ -150,7 +155,7 @@ evidence ledger thứ hai ở frontend.
 
 ### FE-X7
 
-**P0 — Field evidence tối thiểu cho job mới — IN PROGRESS 2026-07-22.** Counterpart:
+**P0 — Field evidence tối thiểu cho job mới — LOCAL COMPLETE; LIVE EVIDENCE PENDING.** Counterpart:
 [`BE-X7`](implementation_plan.md#be-x7).
 
 Provenance, trạng thái unavailable và native evidence dialog đã pass local;
@@ -193,7 +198,7 @@ lặp đã bỏ. Benchmark có fingerprint thật còn theo
 
 ### FE-X16
 
-**P0 — Source PDF, Bìa và logical-document workflow — IN PROGRESS 2026-07-22.** Counterpart:
+**P0 — Source PDF, Bìa và logical-document workflow — LOCAL COMPLETE; LIVE EVIDENCE PENDING.** Counterpart:
 [`BE-X16`](implementation_plan.md#be-x16).
 
 - Upload có ba Processing Mode với `administrative_document` mặc định. Browser
@@ -266,16 +271,16 @@ khi đóng.
 | Artifacts/timeline/logs | PASS LOCAL `X2` | Per-page safe diagnostics render đúng |
 | Reports/benchmark/Codes/Monitor | PROTECT | Nullable/unavailable và durable data vẫn đúng |
 | Generated API/compatibility | PASS LOCAL `X3` | OpenAPI check và legacy read pass |
-| Evidence/missing field/approval/rerun/readiness | `X8`–`X11` PASS LOCAL; `X7` IN PROGRESS | Nhóm P0 pass focused/local và fixture |
-| Segmentation/Bìa/logical documents | IN PROGRESS P0 `X16` | Bốn fixture, confirm/restart/review và legacy read pass |
+| Evidence/missing field/approval/rerun/readiness | `X7`–`X11` LOCAL COMPLETE; `X7` LIVE PENDING | Nhóm P0 giữ focused/local pass; X7 còn fixture |
+| Segmentation/Bìa/logical documents | `X16` LOCAL COMPLETE; LIVE PENDING | Bốn fixture, confirm/restart/review và legacy read pass |
 | Progress/timeline/triage | PASS LOCAL `X12`–`X13` | Persisted counters/failure/timeline, backend triage, deep-link và missing artifact pass |
-| Report/export/URL/polish | `X14` PARTIAL LOCAL; `X15` PASS LOCAL | Benchmark fingerprint thật; data-driven polish chỉ mở khi operator yêu cầu |
+| Report/export/URL | `X14` LOCAL COMPLETE; LIVE SAMPLE PENDING; `X15` PASS LOCAL | Benchmark fingerprint thật |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 
 Không dùng lại con số `18/19` cho trạng thái hiện tại cho đến khi các gate còn lại
 đã pass. Repair Gate ngày 2026-07-22 là baseline được bảo vệ; lần kiểm tra lại
-ngày 2026-07-24 có backend `49 passed`, browser `18 passed`, gồm task/page retry
+ngày 2026-07-24 có backend `49 passed`, browser `19 passed`, gồm task/page retry
 và partial review, typecheck/build/OpenAPI/compile/diff đều pass.
 
 ## UI evidence hiện có

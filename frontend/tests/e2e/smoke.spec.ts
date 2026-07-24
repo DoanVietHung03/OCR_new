@@ -48,7 +48,7 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   await expect(page.locator(".upload-options .option-value")).toContainText(/Cấu hình OCR hiện tại|Current OCR configuration/);
   await page.getByRole("button", { name: /sẵn sàng|readiness/i }).click();
   await expect(page.locator(".upload-actions")).toContainText(/sẵn sàng|ready/i);
-  await page.locator('input[type="file"]').setInputFiles({ name: "smoke.pdf", mimeType: "application/pdf", buffer: pdf });
+  await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles({ name: "smoke.pdf", mimeType: "application/pdf", buffer: pdf });
   await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
   await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`));
   await expect(page.locator(".field-card input").first()).toHaveValue("OLD");
@@ -90,7 +90,7 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
 
 test("real Next and FastAPI use eager Celery with a fake HTTP provider", async ({ page }) => {
   await page.goto("/upload");
-  await page.locator('input[type="file"]').setInputFiles({ name: "integration.pdf", mimeType: "application/pdf", buffer: pdf });
+  await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles({ name: "integration.pdf", mimeType: "application/pdf", buffer: pdf });
   await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
   await expect(page).toHaveURL(/\/jobs\//);
   const documentNumber = page.locator(".field-card").filter({ hasText: "Số văn bản" }).locator("input");
@@ -151,13 +151,13 @@ test("mobile English keeps PDF-only errors, instant language and closable monito
   });
   await page.goto("/upload"); await expect(page.locator("html")).toHaveAttribute("lang", "en"); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Upload PDF");
   await page.getByRole("button", { name: "VI", exact: true }).click(); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Tải PDF"); await page.getByRole("button", { name: "EN", exact: true }).click();
-  await expect(page.locator('input[type="file"]')).toHaveAttribute("accept", "application/pdf,.pdf"); expect((await page.request.get("/icon.svg")).ok()).toBeTruthy();
+  await expect(page.locator('input[type="file"]:not([webkitdirectory])')).toHaveAttribute("accept", "application/pdf,.pdf"); expect((await page.request.get("/icon.svg")).ok()).toBeTruthy();
   await page.getByLabel("VLM task").selectOption("metadata"); await page.getByLabel("Page scope").selectOption("first,last"); await page.getByLabel("Maximum pages").fill("2");
-  await page.locator('input[type="file"]').setInputFiles({ name: "bad.pdf", mimeType: "application/pdf", buffer: pdf }); await page.getByRole("button", { name: "Start OCR" }).click();
+  await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles({ name: "bad.pdf", mimeType: "application/pdf", buffer: pdf }); await page.getByRole("button", { name: "Start OCR" }).click();
   await expect(page.locator(".notice.error")).toContainText("Unsupported file"); uploadFails = false;
   await page.getByRole("button", { name: "Start OCR" }).click();
   await expect(page.locator(".notice.error")).toContainText("Worker unavailable");
-  await expect(page.locator('input[type="file"]')).toHaveValue(/bad\.pdf$/); await expect(page.getByLabel("VLM task")).toHaveValue("metadata"); await expect(page.getByLabel("Page scope")).toHaveValue("first,last"); await expect(page.getByLabel("Maximum pages")).toHaveValue("2");
+  await expect(page.locator('input[type="file"]:not([webkitdirectory])')).toHaveValue(/bad\.pdf$/); await expect(page.getByLabel("VLM task")).toHaveValue("metadata"); await expect(page.getByLabel("Page scope")).toHaveValue("first,last"); await expect(page.getByLabel("Maximum pages")).toHaveValue("2");
   await page.getByRole("button", { name: /system monitor/i }).click(); await expect(page.locator(".monitor-modal")).toBeVisible(); await page.locator(".monitor-modal").getByRole("button", { name: "Close" }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/mobile-upload-390x844.png") }); }
@@ -179,11 +179,27 @@ test("initial and stale state errors preserve only real snapshots", async ({ pag
 
 test("upload validates duplicate, limits and native drag-drop", async ({ page }) => {
   await page.route("**/api/state**", (route) => route.fulfill({ json: { ...state([]), limits: { max_files_per_job: 2, max_job_upload_bytes: 1024 } } }));
-  await page.goto("/upload"); const input = page.locator('input[type="file"]');
+  await page.goto("/upload"); const input = page.locator('input[type="file"]:not([webkitdirectory])');
   await page.locator(".dropzone").evaluate((element) => { const transfer = new DataTransfer(); transfer.items.add(new File(["%PDF"], "same.pdf")); transfer.items.add(new File(["%PDF"], "SAME.PDF")); element.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer })); }); await expect(page.locator(".notice.error")).toContainText("trùng");
   await input.setInputFiles([{ name: "a.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "b.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "c.pdf", mimeType: "application/pdf", buffer: pdf }]); await expect(page.locator(".notice.error")).toContainText("giới hạn");
   await page.locator(".dropzone").evaluate((element) => { const transfer = new DataTransfer(); transfer.items.add(new File(["%PDF-1.7"], "DROP.PDF", { type: "" })); element.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer })); });
   await expect(page.locator(".file-list")).toContainText("DROP.PDF");
+});
+
+test("folder picker selects only a PDF folder through the existing upload flow", async ({ page }) => {
+  await page.route("**/api/state**", (route) => route.fulfill({ json: state([]) }));
+  await page.goto("/upload");
+  const folder = page.getByLabel(/thư mục PDF|PDF folder/i);
+  await expect(folder).toHaveAttribute("webkitdirectory", "");
+  await folder.evaluate((element) => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File(["%PDF-1.7"], "first.pdf", { type: "application/pdf" }));
+    transfer.items.add(new File(["%PDF-1.7"], "second.pdf", { type: "application/pdf" }));
+    Object.defineProperty(element, "files", { configurable: true, value: transfer.files });
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(page.locator(".file-list")).toContainText("first.pdf");
+  await expect(page.locator(".file-list")).toContainText("second.pdf");
 });
 
 test("upload sends selected PDFs sequentially with a compact name", async ({ page }) => {
@@ -198,7 +214,7 @@ test("upload sends selected PDFs sequentially with a compact name", async ({ pag
     if (apiPath.endsWith(".png")) return route.fulfill({ contentType: "image/svg+xml", body: svg });
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
-  await page.goto("/upload"); await page.locator('input[type="file"]').setInputFiles([{ name: "first.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "second.pdf", mimeType: "application/pdf", buffer: pdf }]); await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
+  await page.goto("/upload"); await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles([{ name: "first.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "second.pdf", mimeType: "application/pdf", buffer: pdf }]); await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
   await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`)); expect(uploaded).toEqual(["first.pdf", "second.pdf"]); expect(createBody).toMatchObject({ upload_name: "first.pdf +1", vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0 });
 });
 

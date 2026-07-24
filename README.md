@@ -18,6 +18,8 @@ Codes và job workspace. Dữ liệu giàu gồm Provider Profile, OCR text/qual
 evidence/suggestion, artifact manifest, Safe Events, report/benchmark nullable,
 Code Catalog `_codes.json` và System Monitor allowlist. Mọi số liệu đều lấy từ
 API/dữ liệu bền vững hoặc hiển thị unavailable trung thực.
+Trang Upload cho chọn nhiều PDF trực tiếp hoặc chọn một thư mục chứa nhiều PDF
+bằng native browser picker; cả hai dùng cùng giới hạn và flow upload tuần tự.
 Closure audit còn kiểm chứng sort, job timing, document warnings, scoped Logs,
 report throughput/coverage và CPU load đều đi qua generated typed contract.
 
@@ -29,7 +31,7 @@ atomic approval, typed blocker/risk/error/Safe Events, field evidence, Processin
 Mode, review segmentation theo revision, Continue, rerun reuse/resegment,
 readiness probe, durable progress/failure/timeline và triage. Create/rerun từ chối
 Provider Profile chưa cấu hình hoặc không hỗ trợ mode/task/page scope đã chọn.
-Bộ backend đạt 48 tests; browser `17 passed` và eager
+Bộ backend đạt 49 tests; browser `19 passed` và eager
 Celery/fake-provider pass. Đây chưa phải bằng chứng bốn fixture, restart hoặc
 provider production-like thật.
 
@@ -50,6 +52,8 @@ provider production-like thật.
 ## Các ràng buộc đã khóa
 
 - Chỉ nhận PDF: tối đa 15 PDF và 200 MiB cho mỗi job; tối đa 100 trang mỗi PDF.
+- Có thể chọn các PDF riêng lẻ hoặc chọn một thư mục PDF; không hỗ trợ ZIP, ảnh
+  hay quản lý directory tree.
 - PDF được kiểm tra trước khi dispatch. PDF không hợp lệ, có mật khẩu hoặc vượt
   giới hạn sẽ làm toàn bộ job thất bại mà không gọi provider.
 - FastAPI chỉ xử lý request ngắn. Celery render trang ở 200 DPI và gọi provider.
