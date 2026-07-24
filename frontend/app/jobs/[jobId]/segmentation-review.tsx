@@ -13,10 +13,7 @@ const segmentationError = (segments: Segment[], pageCount: number) => {
     next = segment.end_page + 1;
   }
   if (next !== pageCount) return label("Phân đoạn phải phủ liên tục mọi trang.", "Segments must cover every page without gaps or overlaps.");
-  const types = segments.map((segment) => segment.logical_document_type);
-  if (types.filter((type) => type === "dossier_cover").length !== 1) return label("Mỗi PDF cần đúng một Bìa.", "Each PDF requires exactly one cover.");
-  if (!types.includes("administrative_document")) return label("Mỗi PDF cần ít nhất một văn bản.", "Each PDF requires at least one document.");
-  if (types.includes("unclassified")) return label("Hãy phân loại hoặc loại trừ mọi trang.", "Classify or exclude every page.");
+  if (segments.some((segment) => segment.logical_document_type === "unclassified")) return label("Hãy phân loại hoặc loại trừ mọi trang.", "Classify or exclude every page.");
   return "";
 };
 

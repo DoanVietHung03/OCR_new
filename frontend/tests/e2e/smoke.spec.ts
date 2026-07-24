@@ -412,7 +412,8 @@ test("combined dossier keeps revisioned segmentation review in the job detail", 
   });
   await page.goto(`/jobs/${id}`); await expect(page.getByRole("heading", { name: /xác nhận phân đoạn|confirm segmentation/i })).toBeVisible();
   const types = page.getByLabel(/loại phân đoạn|segment type/i), confirm = page.getByRole("button", { name: /xác nhận PDF này|confirm this PDF/i });
-  await types.nth(1).selectOption("excluded"); await expect(confirm).toBeDisabled(); await expect(page.locator(".segmentation-review [role=alert]")).toBeVisible();
+  await types.nth(1).selectOption("excluded"); await expect(confirm).toBeEnabled();
+  await types.nth(1).selectOption("unclassified"); await expect(confirm).toBeDisabled(); await expect(page.locator(".segmentation-review [role=alert]")).toBeVisible();
   await types.nth(1).selectOption("administrative_document");
   await page.getByLabel(/tách trước trang|split before page/i).selectOption("2");
   await page.getByLabel(/loại phân đoạn|segment type/i).nth(2).selectOption("excluded");

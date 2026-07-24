@@ -202,13 +202,15 @@ lặp đã bỏ. Benchmark có fingerprint thật còn theo
 [`BE-X16`](implementation_plan.md#be-x16).
 
 - Upload có ba Processing Mode với `administrative_document` mặc định. Browser
-  không auto-detect; `combined_dossier` giải thích mọi trang sẽ được segmentation
-  trước extraction và vẫn cho chọn `metadata|full_ocr` theo capability.
+  không auto-detect; `combined_dossier` giải thích nhiều PDF được sắp theo tên,
+  PDF đầu là Bìa và mỗi PDF sau là một văn bản; một PDF gộp mới cần provider
+  segmentation theo trang. Vẫn cho chọn `metadata|full_ocr` theo capability.
 - Trong Job Detail, render cây source PDF → Bìa → văn bản, source-page viewer và
   danh sách segment theo thứ tự. Dùng native action “Tách trước trang này”, “Gộp
   với phần trước”, đổi type, Exclude/Restore; không drag-and-drop.
-- Reviewer xác nhận từng source PDF kèm revision. Inline validation chặn gap,
-  overlap, thiếu đúng một Bìa, thiếu văn bản, hoặc còn `unclassified`; conflict
+- Reviewer xác nhận từng source PDF kèm revision. Inline validation từng source
+  chặn gap, overlap hoặc còn `unclassified`; backend kiểm tra toàn job có đúng
+  một Bìa và ít nhất một văn bản khi xác nhận source cuối. Conflict
   `409 segmentation_conflict` giữ local draft và cho reload/discard.
 - Sau khi mọi source confirmed, happy path tiếp tục OCR; provider unavailable giữ
   durable `segmentation_confirmed` và hiện action Continue. State chờ sống qua

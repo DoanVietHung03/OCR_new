@@ -131,6 +131,7 @@ async def segment_job(store: JobStore, job: dict) -> dict:
         rendered[source["id"]] = render_pdf(store.path(job["id"]) / "uploads" / source["file_name"], store.path(job["id"]) / "artifacts" / source["id"])
     total = sum(map(len, rendered.values()))
     completed = 0
+    first_source_id = min(sources, key=lambda item: item["file_name"].casefold())["id"] if len(sources) > 1 else None
     store.update(job["id"], segmentation_total_pages=total, total_pages=total, completed_pages=0)
     for source in sources:
         images = rendered[source["id"]]
@@ -144,6 +145,8 @@ async def segment_job(store: JobStore, job: dict) -> dict:
             segment = next((item for item in source.get("proposal", []) if item["start_page"] <= page_index <= item["end_page"]), None) if reused else None
             if segment:
                 classification = reused_classification(segment, page_index)
+            elif first_source_id:
+                classification = "cover" if source["id"] == first_source_id else "document_start" if page_index == 0 else "continuation"
             else:
                 try:
                     result = await request_page(

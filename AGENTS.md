@@ -72,8 +72,11 @@ revision conflict, and Continue in the browser gate.
   must consume generated types; do not add handwritten API DTOs.
 - `/start` atomically transitions `ready → starting` once. Publish uncertainty
   becomes `interrupted`; never auto-retry or resume a whole job.
-- `combined_dossier` segments every source page with the existing page retry
-  policy, then requires per-source revisioned confirmation before extraction.
+- `combined_dossier` with multiple PDFs sorts sources by file name: the first
+  PDF is one whole `dossier_cover`, and every later PDF is one whole
+  `administrative_document`; this path must not call provider segmentation.
+  A single combined PDF still segments every page with the existing page retry
+  policy. Both paths require per-source revisioned confirmation before extraction.
   Reuse the single `ocr.process_job` task with expected phase/revision; stale
   dispatches no-op. `unclassified` requires manual assignment; every page must
   belong to one contiguous document or be explicitly `excluded`.

@@ -136,7 +136,7 @@ def test_runner_accepts_partial_metadata_and_markdown_json():
         validate_result({"not_fields": {}})
 
 
-def test_segmentation_requires_complete_dossier_and_materializes_one_document_store():
+def test_segmentation_requires_complete_source_and_materializes_one_document_store():
     valid = [
         {"logical_document_type": "dossier_cover", "start_page": 0, "end_page": 0},
         {"logical_document_type": "administrative_document", "start_page": 1, "end_page": 2},
@@ -145,10 +145,31 @@ def test_segmentation_requires_complete_dossier_and_materializes_one_document_st
     validate_segments(4, valid)
     with pytest.raises(ValueError, match="invalid_segmentation"):
         validate_segments(4, valid[:2])
+    validate_segments(1, [{"logical_document_type": "dossier_cover", "start_page": 0, "end_page": 0}])
+    validate_segments(3, [{"logical_document_type": "administrative_document", "start_page": 0, "end_page": 2}])
     sources = [{"id": "source-1", "file_name": "dossier.pdf", "confirmed_segments": valid}]
     documents = materialize_documents("job-id", sources)
     assert [item["logical_document_type"] for item in documents] == ["dossier_cover", "administrative_document"]
     assert [page["source_page_index"] for page in documents[1]["pages"]] == [1, 2]
+
+
+def test_multi_pdf_dossier_is_validated_across_the_job(tmp_path, pdf_bytes):
+    store = JobStore(tmp_path)
+    job = store.create({"file_count": 2, "processing_mode": "combined_dossier"})
+    store.add_pdf(job["id"], "Scan_0000.pdf", pdf_bytes)
+    store.add_pdf(job["id"], "Scan_0001.pdf", pdf_bytes)
+    sources = store.read(job["id"])["source_pdfs"]
+    for source in sources:
+        source.update(page_count=1, revision=1)
+    store.update(job["id"], status="awaiting_segmentation_review", source_pdfs=sources)
+
+    cover = [{"logical_document_type": "dossier_cover", "start_page": 0, "end_page": 0}]
+    document = [{"logical_document_type": "administrative_document", "start_page": 0, "end_page": 0}]
+    waiting = store.confirm_segmentation(job["id"], sources[0]["id"], 1, cover)
+    assert waiting["status"] == "awaiting_segmentation_review"
+    confirmed = store.confirm_segmentation(job["id"], sources[1]["id"], 1, document)
+    assert confirmed["status"] == "segmentation_confirmed"
+    assert (confirmed["dossier_cover_count"], confirmed["administrative_document_count"]) == (1, 1)
 
 
 def test_new_document_policy_adds_missing_field_atomically(tmp_path, pdf_bytes):

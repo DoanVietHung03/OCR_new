@@ -43,7 +43,9 @@ Local gate đã bao phủ capability validation, paused-state restart, arbitrary
 boundary, inline validation, revision conflict và Continue; các điều kiện dưới
 đây vẫn cần dữ liệu/runtime bên ngoài repository.
 
-- fixture rõ phải auto-segment đúng ground truth;
+- fixture thư mục nhiều PDF phải tạo đúng một Bìa trọn file đầu và một văn bản
+  trọn vẹn cho mỗi file sau mà không gọi provider segmentation; fixture một PDF
+  gộp rõ vẫn phải auto-segment đúng ground truth;
 - fixture khó phải cho sửa boundary, loại/khôi phục trang và xác nhận từng source
   PDF theo revision, sau đó extraction thành công;
 - Bìa và từng văn bản được review, sửa missing field và approve độc lập; trạng

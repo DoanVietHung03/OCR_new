@@ -95,7 +95,7 @@ def validate_segments(page_count: int, segments: list[dict[str, Any]]) -> None:
     if any(item["end_page"] < item["start_page"] for item in ordered) or pages != list(range(page_count)):
         raise ValueError("invalid_segmentation")
     kinds = [item["logical_document_type"] for item in ordered]
-    if kinds.count("dossier_cover") != 1 or "administrative_document" not in kinds or "unclassified" in kinds:
+    if "unclassified" in kinds:
         raise ValueError("invalid_segmentation")
 
 
@@ -282,7 +282,11 @@ class JobStore:
             validate_segments(source.get("page_count", 0), segments)
             source.update(confirmed_segments=segments, confirmed=True, revision=revision + 1)
             if all(item.get("confirmed") for item in job.get("source_pdfs", [])):
-                job["documents"] = materialize_documents(job_id, job["source_pdfs"])
+                documents = materialize_documents(job_id, job["source_pdfs"])
+                kinds = [item["logical_document_type"] for item in documents]
+                if kinds.count("dossier_cover") != 1 or "administrative_document" not in kinds:
+                    raise ValueError("invalid_segmentation")
+                job["documents"] = documents
                 job["dossier_cover_count"] = sum(item["logical_document_type"] == "dossier_cover" for item in job["documents"])
                 job["administrative_document_count"] = len(job["documents"]) - job["dossier_cover_count"]
                 job["excluded_page_count"] = sum(

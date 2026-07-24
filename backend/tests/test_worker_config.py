@@ -299,3 +299,28 @@ def test_combined_dossier_segments_every_page_and_waits_for_confirmation(tmp_pat
     assert [item["logical_document_type"] for item in result["source_pdfs"][0]["proposal"]] == ["dossier_cover", "administrative_document"]
     assert result["segmentation_completed_pages"] == result["segmentation_total_pages"] == 3
     assert JobStore(tmp_path).read(job["id"])["status"] == "awaiting_segmentation_review"
+
+
+def test_multi_pdf_dossier_uses_file_boundaries_without_provider_segmentation(tmp_path, monkeypatch, pdf_bytes):
+    import app.workers.tasks as tasks
+
+    store = JobStore(tmp_path)
+    job = store.create({"file_count": 2, "provider": "qwen", "model": "test", "processing_mode": "combined_dossier"})
+    store.add_pdf(job["id"], "Scan_0001.pdf", pdf_bytes)
+    store.add_pdf(job["id"], "Scan_0000.pdf", pdf_bytes)
+    store.begin_start(job["id"])
+
+    async def unexpected_request(*_args, **_options):
+        raise AssertionError("provider segmentation must not run for multiple PDFs")
+
+    monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(tasks, "request_page", unexpected_request)
+    result = asyncio.run(tasks.process_job_async(job["id"]))
+    proposals = {
+        source["file_name"]: source["proposal"][0]["logical_document_type"]
+        for source in result["source_pdfs"]
+    }
+    assert proposals == {
+        "Scan_0000.pdf": "dossier_cover",
+        "Scan_0001.pdf": "administrative_document",
+    }

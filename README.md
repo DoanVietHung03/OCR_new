@@ -60,9 +60,10 @@ provider production-like thật.
 - Job mới chọn một `processing_mode`: `administrative_document`,
   `dossier_cover` hoặc `combined_dossier`. Mode chọn schema/prompt; Provider
   Profile chọn engine/model và capability, hai khái niệm không suy lẫn nhau.
-- Với `combined_dossier`, mỗi PDF là một bộ hồ sơ gồm đúng một Bìa, ít nhất một
-  văn bản logic và các trang `excluded` explicit. Worker segment toàn bộ trang,
-  reviewer xác nhận từng PDF bằng revision rồi mới dispatch extraction.
+- Với `combined_dossier` nhiều PDF, worker sắp theo tên file: PDF đầu là một Bìa
+  trọn vẹn, mỗi PDF sau là một văn bản trọn vẹn và không gọi provider để phân
+  đoạn. Nếu chỉ có một PDF gộp, worker vẫn phân đoạn từng trang bằng provider.
+  Reviewer xác nhận từng PDF bằng revision rồi mới dispatch extraction.
 - `/start` chỉ dispatch một lần. Worker production dùng concurrency `1` và
   prefetch `1`; job không tự động retry hoặc resume.
 - Provider, model, phiên bản prompt và trạng thái endpoint bên ngoài được chụp

@@ -53,7 +53,7 @@ bởi stack Next.js/FastAPI/Celery.
 | Provider Profile | Lựa chọn OCR do server định nghĩa; public contract chỉ có ID, nhãn, capability và readiness an toàn |
 | Processing Mode | Lựa chọn cấp job: `administrative_document`, `dossier_cover` hoặc `combined_dossier`; độc lập với Provider Profile |
 | OCR Job | Source PDFs, lifecycle, documents, artifacts, audit và safe events được lưu trong job JSON/artifacts |
-| Source PDF | Một PDF nguồn bất biến; trong `combined_dossier` tương ứng đúng một bộ hồ sơ và có page proposal/confirmation riêng |
+| Source PDF | Một PDF nguồn bất biến; trong `combined_dossier` nhiều PDF tương ứng đúng một logical document và có proposal/confirmation riêng |
 | Review Evidence | Source/confidence/crop/artifact có provenance do worker hoặc review flow ghi |
 | Approval Blocker | Safe code do backend tính; bắt buộc xử lý trước khi document được duyệt |
 | Review Risk | Aggregate typed phục vụ triage; không được client suy ra từ dữ liệu partial |
@@ -271,21 +271,24 @@ Fingerprint/sample thật còn lại được theo dõi tại
 
 - Public `processing_mode` có ba ID `administrative_document`, `dossier_cover`,
   `combined_dossier`; mode mặc định là văn bản hành chính. Hai mode đơn tạo một
-  logical document/PDF và bỏ qua segmentation. `combined_dossier` coi mỗi PDF là
-  đúng một bộ hồ sơ.
+  logical document/PDF và bỏ qua segmentation. Với `combined_dossier` nhiều PDF,
+  worker sắp source theo tên: PDF đầu là một Bìa trọn vẹn, mỗi PDF sau là một
+  văn bản trọn vẹn và không gọi provider segmentation. Một PDF gộp vẫn dùng
+  provider để phân đoạn theo trang.
 - `source_pdfs[]` giữ source pages/artifact, proposal, confirmation và revision.
   `documents[]` chỉ được tạo từ segmentation đã confirm: đúng một
   `dossier_cover`, ít nhất một `administrative_document`, ranges liên tục, có thứ
   tự, không overlap; mọi source page thuộc đúng một document hoặc `excluded`.
   Cover không bắt buộc ở trang 1.
-- Worker phân loại từng page thành `cover`, `document_start`, `continuation`,
-  `blank` hoặc `separator`; provider failure thành `unclassified`. Reviewer xác nhận từng PDF
-  bằng optimistic revision qua
+- Với một PDF gộp, worker phân loại từng page thành `cover`, `document_start`,
+  `continuation`, `blank` hoặc `separator`; provider failure thành
+  `unclassified`. Với nhiều PDF, proposal lấy trực tiếp từ thứ tự/ranh giới file.
+  Reviewer xác nhận từng PDF bằng optimistic revision qua
   `POST /api/jobs/{job_id}/source-pdfs/{source_pdf_id}/segmentation/confirm`.
   Khi tất cả source confirmed, `/continue` hoặc happy-path confirm chuyển nguyên
   tử `segmentation_confirmed → extraction_starting` và dispatch đúng một lần.
 - `vlm_pages`/`vlm_max_pages` áp dụng riêng cho mỗi logical document sau
-  segmentation; segmentation luôn đọc toàn bộ source PDF. `full_ocr` vẫn xử lý
+  segmentation; nhánh một PDF đọc toàn bộ source để phân đoạn. `full_ocr` vẫn xử lý
   toàn bộ trang. Persist counters đơn điệu và call count/duration làm evidence,
   chưa đặt performance SLA hoặc batching ở P0.
 - Segmentation bất biến khi extraction bắt đầu. Rerun reuse hoặc resegment tạo
