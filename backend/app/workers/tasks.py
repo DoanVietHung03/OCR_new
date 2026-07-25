@@ -9,7 +9,7 @@ from threading import Thread
 from celery import Celery
 from celery.signals import worker_ready
 
-from ..services.field_policy import annotate
+from ..services.field_policy import ADMIN_FIELDS, SIGNATURE_FIELDS, annotate
 from ..services.jobs import ACTIVE, MAX_PAGES, JobStore, failure, now
 from ..services.ocr_runner import request_page
 
@@ -64,7 +64,15 @@ def crop_field_evidence(image: Path, bbox: list[float], output: Path) -> bool:
         clip = fitz.IRect(max(0, x0 - pad_x), max(0, y0 - pad_y), min(source.width, x1 + pad_x), min(source.height, y1 + pad_y))
         if clip.width < 2 or clip.height < 2:
             return False
-        fitz.Pixmap(source, source.width, source.height, clip).save(output)
+        crop = fitz.Pixmap(source, source.width, source.height, clip)
+        channels = crop.n
+        dark = sum(
+            min(crop.samples[offset:offset + min(3, channels)]) < 210
+            for offset in range(0, len(crop.samples), channels)
+        )
+        if dark / (crop.width * crop.height) < 0.01:
+            return False
+        crop.save(output)
         return True
     except (OSError, RuntimeError, ValueError):
         return False
@@ -214,10 +222,16 @@ async def process_job_async(job_id: str) -> dict:
             work.append((document, images))
         store.update(job_id, source_pdfs=job.get("source_pdfs", []))
     task = job.get("vlm_task", "full_ocr")
+    page_mode = job.get("vlm_pages", "all")
+    max_pages = int(job.get("vlm_max_pages", 0) or 0)
     total = sum(
         (len(pages) if task == "full_ocr" else 0)
-        + len(plan_pages(len(pages), job.get("vlm_pages", "all"), int(job.get("vlm_max_pages", 0) or 0)))
-        for _, pages in work
+        + (
+            min(1, len(pages))
+            if document.get("logical_document_type") == "administrative_document" and page_mode == "auto"
+            else len(plan_pages(len(pages), page_mode, max_pages))
+        )
+        for document, pages in work
     )
     completed = 0
     store.update(job_id, completed_pages=0, total_pages=total)
@@ -238,16 +252,46 @@ async def process_job_async(job_id: str) -> dict:
                 }
                 for index in range(len(pages))
                 ]
-            selected = plan_pages(len(pages), job.get("vlm_pages", "all"), int(job.get("vlm_max_pages", 0) or 0))
-            if task == "metadata":
-                for index, state in enumerate(document["pages"]):
-                    if index not in selected:
-                        state["status"] = "skipped"
-            passes = [(index, "full_ocr") for index in range(len(pages))] if task == "full_ocr" else []
-            passes += [(index, "metadata") for index in selected]
-            for index, pass_task in passes:
+            adaptive = document.get("logical_document_type") == "administrative_document" and page_mode == "auto"
+
+            def apply_fields(index: int, fields: dict, allowed: tuple[str, ...] | None = None) -> None:
+                state = document["pages"][index]
+                for name, field in fields.items():
+                    if allowed is not None and name not in allowed:
+                        continue
+                    current = document["fields"].get(name)
+                    if current is not None and (field.get("confidence") or -1) <= (current.get("confidence") or -1):
+                        continue
+                    evidence_name = f"field-{name}-page-{index + 1}.png"
+                    if crop_field_evidence(pages[index], field.get("bbox", []), pages[index].with_name(evidence_name)):
+                        if current and current.get("evidence_url"):
+                            old_name = Path(current["evidence_url"]).name
+                            if old_name != evidence_name:
+                                (pages[index].parent / old_name).unlink(missing_ok=True)
+                        field.update(
+                            evidence_url=f"{state['image_url'].rsplit('/', 1)[0]}/{evidence_name}",
+                            evidence_source="provider_bbox",
+                            evidence_status="available",
+                        )
+                    else:
+                        field.update(
+                            confidence=None, raw_confidence=field.get("confidence"), bbox=[],
+                            needs_review=True, review_reason="missing_evidence",
+                            evidence_status="unavailable",
+                        )
+                        if current is not None:
+                            continue
+                    document["fields"][name] = field
+
+            async def run_pass(
+                index: int, pass_task: str, expected_fields: tuple[str, ...], *, extra: bool = False,
+            ) -> dict | None:
+                nonlocal completed, total
+                if extra:
+                    total += 1
+                    store.update(job_id, total_pages=total)
                 if cancelled(store, job_id):
-                    return store.update(job_id, documents=documents)
+                    return None
                 state = document["pages"][index]
                 state.setdefault("warnings", [])
                 state["ocr_scope"] = pass_task if state["ocr_scope"] == "none" else f'{state["ocr_scope"]}+{pass_task}'
@@ -263,28 +307,12 @@ async def process_job_async(job_id: str) -> dict:
                         timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "120")),
                         page_index=index,
                         task=pass_task,
-                        expected_fields=tuple(document.get("expected_fields", ())),
+                        expected_fields=expected_fields,
                         ocr_text=state.get("text", "") if pass_task == "metadata" else "",
                     )
                     if pass_task == "full_ocr":
                         state["text"] = result["text"]
                         state["ocr_line_count"] = len(result["text"].splitlines())
-                    else:
-                        for name, field in result["fields"].items():
-                            evidence_name = f"field-{name}-page-{index + 1}.png"
-                            if crop_field_evidence(pages[index], field.get("bbox", []), pages[index].with_name(evidence_name)):
-                                field.update(
-                                    evidence_url=f"{state['image_url'].rsplit('/', 1)[0]}/{evidence_name}",
-                                    evidence_source="provider_bbox",
-                                    evidence_status="available",
-                                )
-                            else:
-                                field.update(needs_review=True, evidence_status="unavailable")
-                            if field.get("needs_review"):
-                                field.setdefault("review_reason", "missing_evidence")
-                            current = document["fields"].get(name)
-                            if current is None or (field.get("confidence") or -1) > (current.get("confidence") or -1):
-                                document["fields"][name] = field
                     warning_codes = list(dict.fromkeys(
                         warning for warning in result.get("warnings", [])
                         if warning in {"unknown_field", "incomplete_field", "invalid_field_value"}
@@ -312,6 +340,48 @@ async def process_job_async(job_id: str) -> dict:
                 )
                 store.update(job_id, completed_pages=completed, progress_detail=pass_task)
                 persist()
+                return result if not pass_error or pass_task == "metadata" else None
+
+            expected = tuple(document.get("expected_fields", ()))
+            if task == "full_ocr":
+                for index in range(len(pages)):
+                    await run_pass(index, "full_ocr", expected)
+                    if cancelled(store, job_id):
+                        return store.update(job_id, documents=documents)
+
+            if adaptive and pages:
+                first = await run_pass(0, "metadata", ADMIN_FIELDS)
+                if first:
+                    apply_fields(0, first.get("fields", {}), tuple(name for name in ADMIN_FIELDS if name not in SIGNATURE_FIELDS))
+                best_index, best_fields = 0, {
+                    name: field for name, field in (first or {}).get("fields", {}).items()
+                    if name in SIGNATURE_FIELDS
+                }
+                candidates = list(reversed(range(1, len(pages))))
+                if max_pages:
+                    candidates = candidates[:max(0, max_pages - 1)]
+                complete = all(best_fields.get(name, {}).get("value") not in (None, "") for name in ("chuc_vu_nguoi_ky", "nguoi_ky"))
+                for index in candidates:
+                    if complete:
+                        break
+                    candidate = await run_pass(index, "metadata", SIGNATURE_FIELDS, extra=True)
+                    candidate_fields = (candidate or {}).get("fields", {})
+                    if sum(name in candidate_fields for name in SIGNATURE_FIELDS) > sum(name in best_fields for name in SIGNATURE_FIELDS):
+                        best_index, best_fields = index, candidate_fields
+                    complete = all(candidate_fields.get(name, {}).get("value") not in (None, "") for name in ("chuc_vu_nguoi_ky", "nguoi_ky"))
+                    if complete:
+                        best_index, best_fields = index, candidate_fields
+                apply_fields(best_index, best_fields, SIGNATURE_FIELDS)
+            else:
+                for index in plan_pages(len(pages), page_mode, max_pages):
+                    result = await run_pass(index, "metadata", expected)
+                    if result:
+                        apply_fields(index, result.get("fields", {}))
+
+            if task == "metadata":
+                for state in document["pages"]:
+                    if state["status"] == "pending":
+                        state["status"] = "skipped"
             if cancelled(store, job_id):
                 return store.update(job_id, documents=documents)
             document["errors"] = list(dict.fromkeys(page["error"] for page in document["pages"] if page.get("error")))

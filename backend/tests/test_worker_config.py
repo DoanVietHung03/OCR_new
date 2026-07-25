@@ -25,6 +25,11 @@ def test_worker_uses_environment_redis_urls(monkeypatch):
 def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypatch, pdf_bytes):
     import app.workers.tasks as tasks
 
+    document = fitz.open()
+    page = document.new_page(width=200, height=200)
+    page.insert_text((20, 100), "SIGNER", fontsize=40)
+    pdf_bytes = document.tobytes()
+    document.close()
     store = JobStore(tmp_path)
     job = store.create({"file_count": 1, "provider": "qwen", "model": "snapshot-model"})
     store.add_pdf(job["id"], "document.pdf", pdf_bytes)
@@ -38,11 +43,11 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
         return {"fields": {
             "so_van_ban": {
                 "value": "1", "source_text": "Số văn bản: 1",
-                "confidence": 0.9, "bbox": [0.1, 0.2, 0.4, 0.3], "page_index": 0,
+                "confidence": 0.9, "bbox": [0.05, 0.3, 0.8, 0.6], "page_index": 0,
             },
             "trich_yeu": {
                 "value": "Tóm tắt", "source_text": "Trích yếu: Tóm tắt",
-                "confidence": 0.8, "bbox": [0.2, 0.4, 0.8, 0.5], "page_index": 0,
+                "confidence": 0.8, "bbox": [0.05, 0.3, 0.8, 0.6], "page_index": 0,
             },
         }, "warnings": []}
 
@@ -252,6 +257,84 @@ def test_page_planner_and_metadata_scope(tmp_path, monkeypatch, pdf_bytes):
     result = asyncio.run(tasks.process_job_async(job["id"]))
     assert calls == [("metadata", 0)]
     assert result["documents"][0]["pages"][0]["ocr_scope"] == "metadata"
+
+
+def test_auto_metadata_searches_backward_until_one_signature_page_is_complete(tmp_path, monkeypatch):
+    import app.workers.tasks as tasks
+
+    pdf = fitz.open()
+    for _ in range(5):
+        pdf.new_page(width=100, height=100)
+    content = pdf.tobytes()
+    pdf.close()
+    store = JobStore(tmp_path)
+    job = store.create({
+        "file_count": 1, "provider": "qwen", "model": "test",
+        "vlm_task": "metadata", "vlm_pages": "auto",
+    })
+    store.add_pdf(job["id"], "document.pdf", content)
+    store.begin_start(job["id"])
+    calls = []
+
+    def field(value, page_index):
+        return {
+            "value": value, "source_text": value, "confidence": 0.9,
+            "bbox": [], "page_index": page_index, "needs_review": True,
+        }
+
+    async def fake_request(_: bytes, **options):
+        page_index = options["page_index"]
+        calls.append((page_index, options["expected_fields"]))
+        if page_index == 0:
+            return {"fields": {"so_van_ban": field("01", 0)}, "warnings": []}
+        if page_index == 3:
+            return {"fields": {"chuc_vu_nguoi_ky": field("BÍ THƯ SAI TRANG", 3)}, "warnings": []}
+        if page_index == 2:
+            return {"fields": {
+                "quyen_han_ky_thay": field("TM. ĐẢNG ỦY", 2),
+                "chuc_vu_nguoi_ky": field("BÍ THƯ", 2),
+                "nguoi_ky": field("Nguyễn Văn A", 2),
+            }, "warnings": []}
+        return {"fields": {}, "warnings": []}
+
+    monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(tasks, "request_page", fake_request)
+    result = asyncio.run(tasks.process_job_async(job["id"]))
+    fields = result["documents"][0]["fields"]
+
+    assert calls == [
+        (0, tasks.ADMIN_FIELDS),
+        (4, tasks.SIGNATURE_FIELDS),
+        (3, tasks.SIGNATURE_FIELDS),
+        (2, tasks.SIGNATURE_FIELDS),
+    ]
+    assert fields["so_van_ban"]["page_index"] == 0
+    assert fields["chuc_vu_nguoi_ky"]["value"] == "BÍ THƯ"
+    assert {fields[name]["page_index"] for name in tasks.SIGNATURE_FIELDS} == {2}
+    assert result["documents"][0]["pages"][1]["status"] == "skipped"
+    assert (result["completed_pages"], result["total_pages"]) == (4, 4)
+
+
+def test_crop_evidence_rejects_blank_regions(tmp_path):
+    import app.workers.tasks as tasks
+
+    blank = fitz.open()
+    blank.new_page(width=200, height=200)
+    blank_pdf = tmp_path / "blank.pdf"
+    blank_pdf.write_bytes(blank.tobytes())
+    blank.close()
+    blank_image = tasks.render_pdf(blank_pdf, tmp_path / "blank")[0]
+    assert not tasks.crop_field_evidence(blank_image, [0.1, 0.1, 0.9, 0.9], tmp_path / "blank-crop.png")
+    assert not (tmp_path / "blank-crop.png").exists()
+
+    ink = fitz.open()
+    page = ink.new_page(width=200, height=200)
+    page.insert_text((20, 100), "SIGNER", fontsize=40)
+    ink_pdf = tmp_path / "ink.pdf"
+    ink_pdf.write_bytes(ink.tobytes())
+    ink.close()
+    ink_image = tasks.render_pdf(ink_pdf, tmp_path / "ink")[0]
+    assert tasks.crop_field_evidence(ink_image, [0.05, 0.25, 0.95, 0.65], tmp_path / "ink-crop.png")
 
 
 def test_worker_persists_all_safe_warning_codes(tmp_path, monkeypatch, pdf_bytes):

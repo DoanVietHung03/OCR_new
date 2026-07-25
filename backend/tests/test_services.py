@@ -130,6 +130,18 @@ def test_runner_accepts_partial_metadata_and_markdown_json():
     assert conflict["fields"]["so_tai_lieu"]["needs_review"]
     assert conflict["fields"]["so_tai_lieu"]["review_reason"] == "validation_warning"
     assert conflict["warnings"] == ["invalid_field_value"]
+    inconsistent = validate_result({"fields": {"nguoi_ky": {
+        "value": "Trương Sức", "source_text": "Trương Tức",
+        "confidence": 0.95, "bbox": [0.5, 0.5, 0.8, 0.6],
+    }}})
+    assert inconsistent["fields"]["nguoi_ky"]["bbox"] == []
+    assert inconsistent["fields"]["nguoi_ky"]["review_reason"] == "validation_warning"
+    assert inconsistent["warnings"] == ["invalid_field_value"]
+    date = validate_result({"fields": {"ngay_ban_hanh": {
+        "value": "2016-05-18", "source_text": "ngày 18 tháng 5 năm 2016",
+        "confidence": 0.9, "bbox": [0.5, 0.5, 0.8, 0.6],
+    }}})
+    assert date["fields"]["ngay_ban_hanh"]["confidence"] == 0.9
     assert parse_json_object('```json\n{"fields": {}}\n```') == {"fields": {}}
     assert message_text({"choices": [{"message": {"content": [{"type": "text", "text": "A"}, {"type": "text", "text": "B"}]}}]}) == "A\nB"
     with pytest.raises(ValueError, match="invalid_model_json"):
@@ -246,6 +258,8 @@ def test_administrative_prompt_requires_complete_signing_authority_line():
     assert "Lưu: VT, KH-TC (PTT)" in prompt
     assert "normalized to 0..1" in prompt
     assert "not a nearby section or the whole page" in prompt
+    assert "red circular seal" in prompt
+    assert "handwriting, or signature ink overlaps it" in prompt
 
     cover_prompt = request_body(b"image", "model", expected_fields=COVER_FIELDS)["messages"][0]["content"][0]["text"]
     assert "dossier cover" in cover_prompt

@@ -11,6 +11,7 @@ ADMIN_FIELDS = (
     "ngay_ban_hanh", "loai_van_ban", "trich_yeu", "quyen_han_ky_thay",
     "chuc_vu_nguoi_ky", "nguoi_ky", "ma_luu_tru",
 )
+SIGNATURE_FIELDS = ("quyen_han_ky_thay", "chuc_vu_nguoi_ky", "nguoi_ky")
 COVER_FIELDS = (
     "co_quan_luu_tru", "khoa", "nhiem_ky", "tieu_de_ho_so", "phong_so",
     "muc_luc_so", "ma_luu_tru", "bat_dau", "ket_thuc", "ho_so_dvbq",

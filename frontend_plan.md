@@ -120,6 +120,9 @@ Các bullet dưới đây là acceptance contract đã được bảo vệ local
   toàn bộ trang; không hứa “nhanh” khi profile không hỗ trợ. Lượt metadata của
   full OCR vẫn dùng ảnh trực tiếp; browser không gửi hoặc hiển thị transcription
   như context của provider.
+- Với văn bản hành chính, `metadata + auto` xử lý metadata đầu văn bản ở trang
+  đầu rồi tìm nhóm chữ ký từ cuối về đầu và dừng khi đủ chức vụ + người ký;
+  `max_pages` là trần số trang candidate. `all` và `first,last` giữ nghĩa literal.
 - Job detail phân biệt tổng **trang PDF** với số trang provider thực sự xử lý
   (`2/5 trang metadata` cho `first,last`) và đánh dấu page `skipped` trong navigation.
 - Browser chỉ gửi `provider_profile_id`, task/pages/max-pages và consent; không
@@ -166,9 +169,10 @@ sách suggestion/evidence; workspace hiển thị source, confidence và reason 
 
 - Field card render source/page/confidence, typed review reason, suggestion +
   provenance và page-level `evidence_url`; thiếu dữ liệu hiển thị unavailable.
-- Mọi field có bbox hợp lệ dùng thumbnail crop evidence do worker tạo và mở
+- Mọi field có bbox hợp lệ, không gần như trắng dùng thumbnail crop evidence do worker tạo và mở
   native `<dialog>` Fit/100%; client không tự crop và không dùng bbox làm seed
-  cho Manual crop. `validation_warning` từ đối chiếu full-OCR cục bộ phải hiển
+  cho Manual crop. `validation_warning` từ `value/source_text` hoặc đối chiếu
+  full-OCR cục bộ phải hiển
   thị trạng thái cần rà soát và không được có crop gây hiểu nhầm.
 - Chỉ hiện “OCR gốc/Giá trị mới” khi field thật sự có correction; `ocr_value=null`
   mặc định của field chưa sửa không được tạo diff giả.

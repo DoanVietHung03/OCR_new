@@ -76,6 +76,14 @@ provider production-like thật.
   `logical_document_type`. Văn bản mới dùng schema 11 field, Bìa dùng schema 13
   field với `khoa` và không có `hop_so`; dữ liệu legacy vẫn đọc được nhưng không
   bị áp policy mới hoặc rewrite.
+- Với văn bản hành chính, `Metadata nhanh + Tự động` lấy metadata đầu văn bản ở
+  trang đầu rồi tìm riêng nhóm quyền hạn/chức vụ/người ký từ cuối về đầu, dừng
+  khi gặp trang có đủ chức vụ + người ký. `Số trang tối đa` giới hạn tổng số
+  trang candidate; `Tất cả trang` và `Trang đầu và cuối` giữ nguyên nghĩa.
+- Prompt chữ ký đọc cả chữ in bị con dấu đỏ hoặc nét ký che một phần. Crop tự
+  động chỉ được công bố cho field thắng cuối cùng và vùng có nội dung; bbox trắng
+  hoặc `value/source_text` mâu thuẫn được đánh dấu cần rà soát thay vì hiển thị
+  bằng chứng sai.
 - Nội dung chỉnh sửa, phê duyệt, audit bất biến và bằng chứng crop thủ công được
   lưu bền vững. Approval độc lập từng logical document. Rerun tạo job sạch và
   explicit reuse hoặc chạy lại segmentation; job nguồn luôn bất biến.

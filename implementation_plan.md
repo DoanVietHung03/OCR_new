@@ -180,10 +180,15 @@ Các bullet dưới đây là acceptance contract đã được bảo vệ local
   page plan đã chọn. Lượt metadata của cả hai task gửi cùng prompt image-only;
   transcription của `full_ocr` không được gửi lại provider.
 - Dùng đúng một planner trung tâm: `all` lấy mọi trang; `first,last` lấy trang
-  đầu/cuối; `auto` ban đầu lấy trang đầu và hai trang cuối; `max_pages` cắt ổn
-  định sau khi loại trùng. Cue chữ ký/con dấu chỉ bật sau khi có fixture cố định.
-- Test tối thiểu: `all/auto/first,last/max`, PDF 1–2 trang, thứ tự ổn định và số
-  provider call/pass theo task.
+  đầu/cuối. Với văn bản hành chính, `auto` lấy toàn bộ metadata đầu văn bản từ
+  trang đầu, sau đó tìm riêng nhóm `quyen_han_ky_thay`/`chuc_vu_nguoi_ky`/
+  `nguoi_ky` từ cuối về đầu và dừng tại trang đầu tiên có đủ chức vụ + người ký;
+  nhóm chữ ký cuối cùng luôn thuộc cùng một trang, không trộn theo confidence.
+  `max_pages` giới hạn tổng số trang candidate khác nhau, gồm cả trang đầu.
+- Prompt chữ ký phải đọc chữ in/đánh máy dù bị con dấu đỏ, chữ viết tay hoặc nét
+  ký che một phần, nhưng không lấy chữ trong con dấu làm tên người ký.
+- Test tối thiểu: `all/auto/first,last/max`, PDF 1–2 trang, tìm chữ ký ở trang
+  giữa, dừng sớm, ownership cùng trang, thứ tự ổn định và số provider call/pass.
 - Repro live dùng `63-btc.pdf`, SHA-256
   `5C1C6F9D0E2448832BE88D2CFCF1EF61B4FC77DE1AF7449C37367619E00261BE`, chạy cả
   `metadata` và `full_ocr`, ghi selected pages/status/fields/report nhưng không
@@ -227,7 +232,9 @@ review-reason/nested suggestion-evidence types thay vì `unknown` payload.
 - Chuẩn hóa contract nhỏ: `source_text`, `page_index`, confidence nullable,
   typed review reason, suggestion có provenance và `evidence_url` trỏ crop do
   worker tạo từ bbox normalized. Bbox phải bao nhãn + giá trị; bbox thiếu,
-  invalid hoặc mâu thuẫn OCR toàn văn là unavailable.
+  invalid, vùng crop gần như trắng, hoặc `value` mâu thuẫn với `source_text`/
+  OCR toàn văn là unavailable. Worker chỉ tạo artifact crop sau khi field đã
+  thắng lựa chọn cuối cùng, không để crop trung gian mồ côi.
 - Worker sinh và persist các dữ liệu trên cho job mới. Normalizer/validation
   dùng rule domain nhỏ, deterministic và test được; không copy nguyên pipeline,
   subprocess runner, retry variants hoặc layout artifact của dự án cũ.

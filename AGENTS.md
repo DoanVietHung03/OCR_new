@@ -21,7 +21,7 @@ telemetry.
 The 2026-07-22 Repair Gate passed 28 backend tests, 10 legacy compatibility
 tests, focused browser coverage for task/page retry and partial review, typecheck,
 build, generated OpenAPI/types, and diff checks. These are the protected baseline.
-The current suite has 49 backend tests and 19 passing browser checks. The local
+The current suite has 53 backend tests and 20 passing browser checks. The local
 contracts for `X7`–`X13`, `X16`, and the
 locally actionable `X15` scope pass. `X7`/`X16` remain IN PROGRESS at the overall
 gate only because fixture/live acceptance is missing; `X14` still needs real
@@ -111,6 +111,11 @@ revision conflict, and Continue in the browser gate.
 - `quyen_han_ky_thay` stores the complete visible signing-authority line, for
   example `KT. BỘ TRƯỞNG`; do not reduce it to the leading abbreviation or mix
   in the signer's own title from `chuc_vu_nguoi_ky`.
+- For an administrative document, `metadata + auto` extracts header metadata
+  from page zero, then searches backward for the signature group and stops at
+  the first page with both signer title and signer name. Keep all selected
+  signature fields from one page; `vlm_max_pages` caps distinct candidate pages.
+  `all` and `first,last` retain their literal meanings.
 - Persist corrections with original OCR value and immutable audit. Manual crop
   is evidence only. `/corrections` saves and approves atomically only when typed
   blockers are empty; dossier approval may be `partially_approved`.
@@ -138,9 +143,10 @@ revision conflict, and Continue in the browser gate.
   and Document. A single combined PDF may also expose Excluded; Unclassified is
   a provider-error state to resolve, not a user-selectable target.
 - New provider `bbox` is normalized `[left, top, right, bottom]` in `0..1` and
-  encloses the field label plus value. The worker creates an automatic evidence
-  crop for every returned field with a valid bbox. When a labeled metadata value
-  conflicts with an available independent full-OCR line, clear its bbox and
+  encloses the field label plus value. The worker creates automatic evidence
+  only for the final selected field when its bbox produces a non-blank crop.
+  When a metadata value conflicts with its provider `source_text` or an
+  available independent full-OCR line, clear its bbox and
   confidence, mark it for review, and do not publish a misleading crop.
   Never inject the full-OCR transcription into the metadata provider prompt;
   use it only for this local post-response validation.

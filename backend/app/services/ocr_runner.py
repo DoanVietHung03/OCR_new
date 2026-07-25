@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import re
 import unicodedata
 
 import httpx
@@ -12,7 +13,7 @@ import httpx
 from .field_policy import ADMIN_FIELDS
 from .jobs import FIELDS
 
-PROMPT_VERSION = "8"
+PROMPT_VERSION = "9"
 PROBE_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAACuklEQVR4nO3TMQEA"
     "AAiAMPuX1hgebAl4mIWw+Q6ATwYgzQCkGYA0A5BmANIMQJoBSDMAaQYgzQCkGYA0"
@@ -57,6 +58,13 @@ def comparable_text(value: object) -> str:
     )
 
 
+def comparable_date_parts(value: object) -> tuple[int, int, int] | None:
+    numbers = tuple(map(int, re.findall(r"\d+", str(value))))[:3]
+    if len(numbers) < 3:
+        return None
+    return (numbers[2], numbers[1], numbers[0]) if numbers[0] > 31 else numbers
+
+
 def supporting_line(name: str, ocr_text: str) -> str:
     labels = OCR_LABELS.get(name, ())
     return next((
@@ -83,6 +91,12 @@ def metadata_prompt(fields: tuple[str, ...]) -> str:
         "Keep the signer's own title, such as THỨ TRƯỞNG, in chuc_vu_nguoi_ky."
         if "quyen_han_ky_thay" in fields else ""
     )
+    signature_search = (
+        " Inspect the entire page for the signing block. Read printed or typed text even when a red circular seal, "
+        "handwriting, or signature ink overlaps it. Do not use text inside the seal as the signer name. Keep the "
+        "signing-authority line, signer title, and signer name separate; use bbox [] when their location is uncertain."
+        if {"chuc_vu_nguoi_ky", "nguoi_ky"}.issubset(fields) else ""
+    )
     cover = (
         " For a dossier cover, co_quan_luu_tru is all consecutive bold organization or archive-authority lines beneath the party or national header; exclude the header itself and preserve line breaks. "
         "khoa is the value after Khóa, such as V, and is separate from nhiem_ky. "
@@ -96,7 +110,7 @@ def metadata_prompt(fields: tuple[str, ...]) -> str:
         "Each fields entry uses an existing archival field name and has value, confidence "
         "(number 0..1), bbox ([left, top, right, bottom] normalized to 0..1 relative to the input image), "
         "source_text (the exact visible label and value), and page_index (integer). The bbox must tightly enclose the printed label and its visible value, not a nearby section or the whole page; use bbox [] when localization is uncertain. "
-        f"Extract every visible field from this schema: {', '.join(fields)}.{document_number}{archive_code}{signing_authority}{cover} "
+        f"Extract every visible field from this schema: {', '.join(fields)}.{document_number}{archive_code}{signing_authority}{signature_search}{cover} "
         "Do not invent fields. Use {\"fields\": {}} when nothing is found."
     )
 
@@ -185,6 +199,15 @@ def validate_result(
                     warnings.append("invalid_field_value")
                 if isinstance(item.get("suggestion_reason"), str):
                     field["suggestion_reason"] = item["suggestion_reason"]
+        source_text = field.get("source_text", "")
+        if source_text and comparable_text(value) not in comparable_text(source_text):
+            date_matches = name == "ngay_ban_hanh" and comparable_date_parts(value) == comparable_date_parts(source_text)
+            if not date_matches:
+                field.update(
+                    confidence=None, raw_confidence=confidence, bbox=[],
+                    needs_review=True, review_reason="validation_warning",
+                )
+                warnings.append("invalid_field_value")
         line = supporting_line(name, ocr_text)
         if line:
             field["source_text"] = line
