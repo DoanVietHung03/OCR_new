@@ -21,7 +21,7 @@ telemetry.
 The 2026-07-22 Repair Gate passed 28 backend tests, 10 legacy compatibility
 tests, focused browser coverage for task/page retry and partial review, typecheck,
 build, generated OpenAPI/types, and diff checks. These are the protected baseline.
-The current suite has 53 backend tests and 20 passing browser checks. The local
+The current suite has 54 backend tests and 20 passing browser checks. The local
 contracts for `X7`–`X13`, `X16`, and the
 locally actionable `X15` scope pass. `X7`/`X16` remain IN PROGRESS at the overall
 gate only because fixture/live acceptance is missing; `X14` still needs real
@@ -145,6 +145,10 @@ revision conflict, and Continue in the browser gate.
 - New provider `bbox` is normalized `[left, top, right, bottom]` in `0..1` and
   encloses the field label plus value. The worker creates automatic evidence
   only for the final selected field when its bbox produces a non-blank crop.
+  Persist typed `evidence_reason` as `bbox_missing`, `bbox_invalid`, or
+  `crop_blank`, and never overwrite an existing `validation_warning` with
+  `missing_evidence`. A non-blank crop proves artifact availability, not
+  semantic alignment; live fixture review remains required.
   When a metadata value conflicts with its provider `source_text` or an
   available independent full-OCR line, clear its bbox and
   confidence, mark it for review, and do not publish a misleading crop.

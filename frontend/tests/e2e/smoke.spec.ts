@@ -240,7 +240,11 @@ test("default document, dirty navigation and browser back keep drafts", async ({
 });
 
 test("partial page warning keeps usable review fields visible", async ({ page }) => {
-  const document = { ...fixtureDocument(), errors: ["provider_timeout"], pages: [
+  const base = fixtureDocument();
+  const document = { ...base, fields: {
+    ...base.fields,
+    so_van_ban: { ...base.fields.so_van_ban, bbox: [], evidence_url: "", evidence_status: "unavailable", review_reason: "missing_evidence", evidence_reason: "bbox_missing" },
+  }, errors: ["provider_timeout"], pages: [
     { page_index: 0, image_url: `/api/jobs/${id}/artifacts/smoke/page-1.png`, status: "completed", ocr_scope: "metadata", error: "" },
     { page_index: 1, image_url: `/api/jobs/${id}/artifacts/smoke/page-2.png`, status: "error", ocr_scope: "metadata", error: "provider_timeout" },
   ] } as any;
@@ -254,6 +258,7 @@ test("partial page warning keeps usable review fields visible", async ({ page })
   await page.goto(`/jobs/${id}?view=review`);
   await expect(page.locator(".partial-warning")).toContainText(/1\/2/);
   await expect(page.locator(".field-card")).toBeVisible();
+  await expect(page.locator(".field-card")).toContainText("Provider không trả vùng định vị");
   await expect(page.locator(".viewer-panel")).toBeVisible();
   await expect(page.locator(".page-numbers .page-error")).toHaveText("2");
   await expect(page.locator(".document-error")).toHaveCount(0);

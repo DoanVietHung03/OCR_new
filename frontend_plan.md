@@ -168,7 +168,8 @@ Generated field contract không còn `unknown` cho scalar suggestion hoặc hai 
 sách suggestion/evidence; workspace hiển thị source, confidence và reason đã persist.
 
 - Field card render source/page/confidence, typed review reason, suggestion +
-  provenance và page-level `evidence_url`; thiếu dữ liệu hiển thị unavailable.
+  provenance và page-level `evidence_url`; thiếu dữ liệu hiển thị unavailable
+  kèm lý do an toàn đã dịch (`bbox_missing`, `bbox_invalid`, `crop_blank`).
 - Mọi field có bbox hợp lệ, không gần như trắng dùng thumbnail crop evidence do worker tạo và mở
   native `<dialog>` Fit/100%; client không tự crop và không dùng bbox làm seed
   cho Manual crop. `validation_warning` từ `value/source_text` hoặc đối chiếu

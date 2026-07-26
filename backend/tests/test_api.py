@@ -303,8 +303,9 @@ def test_error_envelope_and_openapi(monkeypatch):
     job_schema = client.get("/openapi.json").json()["components"]["schemas"]["JobResponse"]
     assert {"documents", "provider", "endpoint_external", "correction_count", "started_at", "completed_at"} <= set(job_schema["properties"])
     field_schema = client.get("/openapi.json").json()["components"]["schemas"]["FieldResponse"]
-    assert {"raw_value", "source_text", "needs_review", "suggested_value", "evidence_candidates"} <= set(field_schema["properties"])
+    assert {"raw_value", "source_text", "needs_review", "suggested_value", "evidence_candidates", "evidence_reason"} <= set(field_schema["properties"])
     assert "low_confidence" in str(field_schema["properties"]["review_reason"])
+    assert "crop_blank" in str(field_schema["properties"]["evidence_reason"])
     assert field_schema["properties"]["suggested_value"].get("title") == "Suggested Value"
     assert "$ref" in str(field_schema["properties"]["suggestions"]["items"])
     assert "$ref" in str(field_schema["properties"]["evidence_candidates"]["items"])

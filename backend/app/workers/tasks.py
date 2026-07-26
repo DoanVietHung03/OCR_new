@@ -274,11 +274,19 @@ async def process_job_async(job_id: str) -> dict:
                             evidence_status="available",
                         )
                     else:
+                        validation_warning = field.get("review_reason") == "validation_warning"
+                        evidence_reason = field.get("evidence_reason") or (
+                            "crop_blank" if len(field.get("bbox", [])) == 4 else "bbox_missing"
+                        )
                         field.update(
                             confidence=None, raw_confidence=field.get("confidence"), bbox=[],
-                            needs_review=True, review_reason="missing_evidence",
-                            evidence_status="unavailable",
+                            needs_review=True, evidence_status="unavailable",
                         )
+                        if not validation_warning:
+                            field.update(
+                                review_reason="missing_evidence",
+                                evidence_reason=evidence_reason,
+                            )
                         if current is not None:
                             continue
                     document["fields"][name] = field

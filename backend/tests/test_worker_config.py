@@ -311,6 +311,7 @@ def test_auto_metadata_searches_backward_until_one_signature_page_is_complete(tm
     assert fields["so_van_ban"]["page_index"] == 0
     assert fields["chuc_vu_nguoi_ky"]["value"] == "BÍ THƯ"
     assert {fields[name]["page_index"] for name in tasks.SIGNATURE_FIELDS} == {2}
+    assert fields["so_van_ban"]["evidence_reason"] == "bbox_missing"
     assert result["documents"][0]["pages"][1]["status"] == "skipped"
     assert (result["completed_pages"], result["total_pages"]) == (4, 4)
 
@@ -335,6 +336,46 @@ def test_crop_evidence_rejects_blank_regions(tmp_path):
     ink.close()
     ink_image = tasks.render_pdf(ink_pdf, tmp_path / "ink")[0]
     assert tasks.crop_field_evidence(ink_image, [0.05, 0.25, 0.95, 0.65], tmp_path / "ink-crop.png")
+
+
+def test_worker_records_blank_crop_without_overwriting_validation_reason(tmp_path, monkeypatch):
+    import app.workers.tasks as tasks
+
+    pdf = fitz.open()
+    page = pdf.new_page(width=200, height=200)
+    page.insert_text((20, 30), "INK", fontsize=20)
+    content = pdf.tobytes()
+    pdf.close()
+    store = JobStore(tmp_path)
+    job = store.create({
+        "file_count": 1, "provider": "qwen", "model": "test",
+        "vlm_task": "metadata", "vlm_pages": "all",
+    })
+    store.add_pdf(job["id"], "document.pdf", content)
+    store.begin_start(job["id"])
+
+    async def fake_request(_: bytes, **options):
+        return {"fields": {
+            "so_van_ban": {
+                "value": "1", "source_text": "Số: 1", "confidence": 0.9,
+                "bbox": [0.1, 0.7, 0.4, 0.9], "page_index": options["page_index"],
+                "needs_review": False,
+            },
+            "nguoi_ky": {
+                "value": "A", "source_text": "B", "confidence": None,
+                "raw_confidence": 0.9, "bbox": [], "page_index": options["page_index"],
+                "needs_review": True, "review_reason": "validation_warning",
+            },
+        }, "warnings": ["invalid_field_value"]}
+
+    monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(tasks, "request_page", fake_request)
+    fields = asyncio.run(tasks.process_job_async(job["id"]))["documents"][0]["fields"]
+
+    assert fields["so_van_ban"]["evidence_reason"] == "crop_blank"
+    assert fields["so_van_ban"]["review_reason"] == "missing_evidence"
+    assert fields["nguoi_ky"]["review_reason"] == "validation_warning"
+    assert fields["nguoi_ky"].get("evidence_reason", "") == ""
 
 
 def test_worker_persists_all_safe_warning_codes(tmp_path, monkeypatch, pdf_bytes):

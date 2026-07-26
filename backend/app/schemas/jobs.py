@@ -20,6 +20,14 @@ ReviewReason = Annotated[
 SuggestionSource = Annotated[
     Literal["", "provider"], BeforeValidator(lambda value: "provider" if value == "provider" else ""),
 ]
+EvidenceReason = Annotated[
+    Literal["", "bbox_missing", "bbox_invalid", "crop_blank"],
+    BeforeValidator(
+        lambda value: value
+        if isinstance(value, str) and value in {"bbox_missing", "bbox_invalid", "crop_blank"}
+        else ""
+    ),
+]
 
 
 class CreateJobRequest(RequestModel):
@@ -78,6 +86,7 @@ class FieldResponse(PublicModel):
     evidence_source: str = ""
     evidence_confidence: float | None = None
     evidence_status: str = ""
+    evidence_reason: EvidenceReason = ""
     decision_crop_image: str = ""
     crop_image: str = ""
     ocr_value: Any | None = None

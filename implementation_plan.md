@@ -235,6 +235,11 @@ review-reason/nested suggestion-evidence types thay vì `unknown` payload.
   invalid, vùng crop gần như trắng, hoặc `value` mâu thuẫn với `source_text`/
   OCR toàn văn là unavailable. Worker chỉ tạo artifact crop sau khi field đã
   thắng lựa chọn cuối cùng, không để crop trung gian mồ côi.
+- `evidence_reason` typed phân biệt `bbox_missing`, `bbox_invalid` và
+  `crop_blank`; worker không ghi đè `validation_warning` bằng
+  `missing_evidence`. Kiểm tra vùng không trắng chỉ xác nhận artifact có nội
+  dung, không chứng minh bbox đúng ngữ nghĩa; việc đó vẫn phải qua review/fixture
+  live và Manual crop, không thêm một lượt OCR/provider thứ hai vào đường nóng.
 - Worker sinh và persist các dữ liệu trên cho job mới. Normalizer/validation
   dùng rule domain nhỏ, deterministic và test được; không copy nguyên pipeline,
   subprocess runner, retry variants hoặc layout artifact của dự án cũ.

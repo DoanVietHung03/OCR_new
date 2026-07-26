@@ -104,19 +104,22 @@ def test_runner_accepts_partial_metadata_and_markdown_json():
         "suggestion_reason": "normalized", "suggestion_source": "provider",
     }
     assert result["fields"]["trich_yeu"] == {
-        "value": "Tóm tắt", "confidence": None, "bbox": [], "page_index": 2, "needs_review": True,
+        "value": "Tóm tắt", "confidence": None, "bbox": [], "page_index": 2,
+        "needs_review": True, "evidence_reason": "bbox_missing",
     }
     assert result["warnings"] == ["unknown_field"]
     invalid_bbox = validate_result({"fields": {"so_van_ban": {
         "value": "1", "confidence": 0.9, "bbox": [0, 0, 100, 100],
     }}})
     assert invalid_bbox["fields"]["so_van_ban"]["bbox"] == []
+    assert invalid_bbox["fields"]["so_van_ban"]["evidence_reason"] == "bbox_invalid"
     assert invalid_bbox["fields"]["so_van_ban"]["needs_review"]
     assert invalid_bbox["warnings"] == ["invalid_field_value"]
     uncertain_bbox = validate_result({"fields": {"so_van_ban": {
         "value": "1", "confidence": 0.9, "bbox": [],
     }}})
     assert uncertain_bbox["fields"]["so_van_ban"]["bbox"] == []
+    assert uncertain_bbox["fields"]["so_van_ban"]["evidence_reason"] == "bbox_missing"
     assert uncertain_bbox["warnings"] == []
     empty = validate_result({"fields": {"nguoi_ky": {
         "value": "  ", "confidence": 0.99, "bbox": [0.1, 0.1, 0.2, 0.2],
@@ -136,6 +139,7 @@ def test_runner_accepts_partial_metadata_and_markdown_json():
     }}})
     assert inconsistent["fields"]["nguoi_ky"]["bbox"] == []
     assert inconsistent["fields"]["nguoi_ky"]["review_reason"] == "validation_warning"
+    assert inconsistent["fields"]["nguoi_ky"].get("evidence_reason", "") == ""
     assert inconsistent["warnings"] == ["invalid_field_value"]
     date = validate_result({"fields": {"ngay_ban_hanh": {
         "value": "2016-05-18", "source_text": "ngày 18 tháng 5 năm 2016",

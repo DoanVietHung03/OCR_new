@@ -1129,6 +1129,12 @@ export interface components {
              */
             evidence_status: string;
             /**
+             * Evidence Reason
+             * @default
+             * @enum {string}
+             */
+            evidence_reason: "" | "bbox_missing" | "bbox_invalid" | "crop_blank";
+            /**
              * Decision Crop Image
              * @default
              */

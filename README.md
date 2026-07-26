@@ -31,7 +31,7 @@ atomic approval, typed blocker/risk/error/Safe Events, field evidence, Processin
 Mode, review segmentation theo revision, Continue, rerun reuse/resegment,
 readiness probe, durable progress/failure/timeline và triage. Create/rerun từ chối
 Provider Profile chưa cấu hình hoặc không hỗ trợ mode/task/page scope đã chọn.
-Bộ backend đạt 49 tests; browser `19 passed` và eager
+Bộ backend đạt 54 tests; browser `20 passed` và eager
 Celery/fake-provider pass. Đây chưa phải bằng chứng bốn fixture, restart hoặc
 provider production-like thật.
 
@@ -83,7 +83,11 @@ provider production-like thật.
 - Prompt chữ ký đọc cả chữ in bị con dấu đỏ hoặc nét ký che một phần. Crop tự
   động chỉ được công bố cho field thắng cuối cùng và vùng có nội dung; bbox trắng
   hoặc `value/source_text` mâu thuẫn được đánh dấu cần rà soát thay vì hiển thị
-  bằng chứng sai.
+  bằng chứng sai. Lý do thiếu evidence được phân biệt thành bbox thiếu, bbox
+  không hợp lệ hoặc crop gần như trắng; cảnh báo đối chiếu giá trị được giữ
+  riêng. Crop không trắng chỉ chứng minh artifact tồn tại, reviewer vẫn phải
+  kiểm tra đúng ngữ nghĩa hoặc vẽ Manual crop; pipeline không gọi thêm OCR hay
+  provider chỉ để kiểm tra crop.
 - Nội dung chỉnh sửa, phê duyệt, audit bất biến và bằng chứng crop thủ công được
   lưu bền vững. Approval độc lập từng logical document. Rerun tạo job sạch và
   explicit reuse hoặc chạy lại segmentation; job nguồn luôn bất biến.

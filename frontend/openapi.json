@@ -2872,6 +2872,17 @@
             "title": "Evidence Status",
             "default": ""
           },
+          "evidence_reason": {
+            "type": "string",
+            "enum": [
+              "",
+              "bbox_missing",
+              "bbox_invalid",
+              "crop_blank"
+            ],
+            "title": "Evidence Reason",
+            "default": ""
+          },
           "decision_crop_image": {
             "type": "string",
             "title": "Decision Crop Image",
