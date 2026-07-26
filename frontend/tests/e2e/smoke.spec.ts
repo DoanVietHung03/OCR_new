@@ -51,7 +51,7 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   await expect(page.getByLabel(/Giới hạn trang ứng viên|Candidate page limit/)).toHaveCount(0);
   await page.getByLabel(/Tác vụ VLM|VLM task/).selectOption("metadata");
   await page.getByLabel(/Phạm vi trang|Page scope/).selectOption("auto");
-  await expect(page.getByLabel(/Giới hạn trang ứng viên|Candidate page limit/)).toBeVisible();
+  await expect(page.locator(".page-scope-card .page-scope-details").getByLabel(/Giới hạn trang ứng viên|Candidate page limit/)).toBeVisible();
   await page.getByRole("button", { name: /sẵn sàng|readiness/i }).click();
   await expect(page.locator(".upload-actions")).toContainText(/sẵn sàng|ready/i);
   await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles({ name: "smoke.pdf", mimeType: "application/pdf", buffer: pdf });
