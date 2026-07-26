@@ -33,7 +33,7 @@ export default function Home() {
   const [search, setSearch] = useState(""); const [query, setQuery] = useState(""); const [status, setStatus] = useState("all"); const [method, setMethod] = useState("all"); const [sort, setSort] = useState("created_desc");
   const [page, setPage] = useState(1); const [selected, setSelected] = useState<string[]>([]); const [engineMessage, setEngineMessage] = useState("");
   const [consent, setConsent] = useState(false); const [progress, setProgress] = useState(""); const [action, setAction] = useState<Action>(null);
-  const [actionConsent, setActionConsent] = useState(false); const actionDialog = useRef<HTMLDialogElement>(null); const uploadPanel = useRef<HTMLElement>(null); const folderInput = useRef<HTMLInputElement>(null);
+  const [actionConsent, setActionConsent] = useState(false); const actionDialog = useRef<HTMLDialogElement>(null); const uploadPanel = useRef<HTMLElement>(null); const fileInput = useRef<HTMLInputElement>(null); const folderInput = useRef<HTMLInputElement>(null);
   const [rerunMode, setRerunMode] = useState<"reuse_segmentation" | "resegment">("reuse_segmentation");
   const [profiles, setProfiles] = useState<ProviderProfile[]>([]); const [profileId, setProfileId] = useState("");
   const [reports, setReports] = useState<Reports | null>(null);
@@ -87,7 +87,7 @@ export default function Home() {
     if (next.length > state.limits.max_files_per_job || next.reduce((total, file) => total + file.size, 0) > state.limits.max_job_upload_bytes) return setError(text("fileLimit"));
     setFiles(next); setError("");
   }
-  function drop(event: DragEvent<HTMLLabelElement>) { event.preventDefault(); if (!busy) choose(Array.from(event.dataTransfer.files)); }
+  function drop(event: DragEvent<HTMLDivElement>) { event.preventDefault(); if (!busy) choose(Array.from(event.dataTransfer.files)); }
   async function upload() {
     if (!files.length || !configured || (external && !consent)) return;
     setBusy(true); setError("");
@@ -95,7 +95,7 @@ export default function Home() {
       const uploadName = `${files[0].name}${files.length > 1 ? ` +${files.length - 1}` : ""}`;
       const job = await createJob({ file_count: files.length, upload_name: uploadName, cloud_data_confirmed: consent,
         provider_profile_id: engine.id, vlm_task: task, vlm_pages: task === "full_ocr" ? "all" : pages,
-        vlm_max_pages: task === "full_ocr" ? 0 : maxPages, processing_mode: processingMode });
+        vlm_max_pages: task === "metadata" && pages === "auto" && processingMode !== "dossier_cover" ? maxPages : 0, processing_mode: processingMode });
       for (const [index, file] of files.entries()) { setProgress(text("uploading", { current: index + 1, total: files.length, name: file.name })); await uploadFile(job.id, file); }
       await startJob(job.id); router.push(`/jobs/${job.id}`);
     } catch (reason) { setError(message(reason)); } finally { setBusy(false); setProgress(""); }
@@ -132,20 +132,20 @@ export default function Home() {
   return <AppShell onNew={openUpload}>
     <header className="page-header"><div><p className="eyebrow">{text("title")}</p><h1>{text(uploadOnly ? "upload" : "jobs")}</h1><p>{text(uploadOnly ? "uploadSubtitle" : "subtitle")}</p></div>{!uploadOnly && <button className="button primary" onClick={openUpload}>＋ {text("newOcr")}</button>}</header>
     {uploadOpen && <section ref={uploadPanel} className="panel upload-panel">
-      <div className="section-head"><div><p className="eyebrow">PDF ONLY</p><h2>{text("upload")}</h2><p>{text("uploadHint", { files: state.limits.max_files_per_job, size: size(state.limits.max_job_upload_bytes) })} {text("pageLimit")}</p></div>{!uploadOnly && <button className="icon-button" aria-label={text("close")} onClick={() => setUploadOpen(false)}>×</button>}</div>
+      <div className="section-head"><div><p className="eyebrow">PDF ONLY</p>{!uploadOnly && <h2>{text("upload")}</h2>}<p>{text("uploadHint", { files: state.limits.max_files_per_job, size: size(state.limits.max_job_upload_bytes) })} {text("pageLimit")}</p></div>{!uploadOnly && <button className="icon-button" aria-label={text("close")} onClick={() => setUploadOpen(false)}>×</button>}</div>
       <div className="upload-options">
         <label><span>{language() === "vi" ? "Chế độ xử lý" : "Processing mode"}</span><select value={processingMode} disabled={busy} onChange={(event) => setProcessingMode(event.target.value as typeof processingMode)}>{(engine?.processing_modes || ["administrative_document"]).map((mode) => <option value={mode} key={mode}>{{ administrative_document: language() === "vi" ? "Văn bản hành chính" : "Administrative document", dossier_cover: language() === "vi" ? "Bìa hồ sơ" : "Dossier cover", combined_dossier: language() === "vi" ? "Hồ sơ gộp" : "Combined dossier" }[mode]}</option>)}</select></label>
-        {availableProfiles.length > 1 ? <label><span>{text("engine")}</span><select value={engine?.id || ""} disabled={busy} onChange={(event) => { setProfileId(event.target.value); setConsent(false); }}>{availableProfiles.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label> : <div className="option-value"><span>{language() === "vi" ? "Cấu hình OCR hiện tại" : "Current OCR configuration"}</span><strong>{engine?.label || "—"}</strong></div>}
+        {availableProfiles.length > 1 ? <label><span>{text("engine")}</span><select value={engine?.id || ""} disabled={busy} onChange={(event) => { setProfileId(event.target.value); setConsent(false); }}>{availableProfiles.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label> : <div className="option-value locked-value"><span aria-hidden="true">🔒</span><strong>{engine?.label || "—"}</strong><small>{text("systemManaged")}</small></div>}
         <label><span>{text("task")}</span><select value={task} disabled={busy} onChange={(event) => { const value = event.target.value as Task; setTask(value); if (value === "full_ocr") { setPages("all"); setMaxPages(0); } }}>{(engine?.tasks || ["full_ocr", "metadata"]).map((value) => <option value={value} key={value}>{text(value === "full_ocr" ? "fullOcr" : "metadata")}</option>)}</select></label>
         <label><span>{text("pageScope")}</span><select value={pages} disabled={busy || task === "full_ocr"} onChange={(event) => setPages(event.target.value as typeof pages)}>{(engine?.page_modes || ["all", "auto", "first,last"]).map((value) => <option value={value} key={value}>{text(value === "all" ? "allPages" : value === "auto" ? "autoPages" : "edgePages")}</option>)}</select>{task === "metadata" && pages === "auto" && processingMode !== "dossier_cover" && <small>{text("autoPagesHint")}</small>}</label>
-        <label><span>{text("maxPages")}</span><input type="number" min="0" max={engine?.max_pages || 100} value={maxPages} disabled={busy || task === "full_ocr"} onChange={(event) => setMaxPages(Math.max(0, Math.min(engine?.max_pages || 100, Number(event.target.value) || 0)))} /></label>
+        {task === "metadata" && pages === "auto" && processingMode !== "dossier_cover" && <label><span>{text("maxPages")}</span><input type="number" min="0" max={engine?.max_pages || 100} value={maxPages} disabled={busy} onChange={(event) => setMaxPages(Math.max(0, Math.min(engine?.max_pages || 100, Number(event.target.value) || 0)))} /></label>}
       </div>
-      <label className="dropzone" onDragOver={(event) => event.preventDefault()} onDrop={drop}>
-        <input aria-label={text("pdfFiles")} type="file" accept="application/pdf,.pdf" multiple disabled={busy} onChange={(event) => choose(Array.from(event.target.files || []))} />
-        <span className="drop-icon">⇧</span><strong>{text("chooseFiles")}</strong><small>{text("selectedFiles", { count: files.length })}</small>
-      </label>
-      <input ref={(element) => { folderInput.current = element; element?.setAttribute("webkitdirectory", ""); }} hidden aria-label={language() === "vi" ? "Thư mục PDF" : "PDF folder"} type="file" accept="application/pdf,.pdf" multiple disabled={busy} onChange={(event) => choose(Array.from(event.target.files || []))} />
-      <button className="button secondary" disabled={busy} onClick={() => folderInput.current?.click()}>{language() === "vi" ? "Chọn thư mục PDF" : "Choose PDF folder"}</button>
+      <div className="dropzone" onDragOver={(event) => event.preventDefault()} onDrop={drop}>
+        <input ref={fileInput} hidden aria-label={text("pdfFiles")} type="file" accept="application/pdf,.pdf" multiple disabled={busy} onChange={(event) => choose(Array.from(event.target.files || []))} />
+        <input ref={(element) => { folderInput.current = element; element?.setAttribute("webkitdirectory", ""); }} hidden aria-label={language() === "vi" ? "Thư mục PDF" : "PDF folder"} type="file" accept="application/pdf,.pdf" multiple disabled={busy} onChange={(event) => choose(Array.from(event.target.files || []))} />
+        <span className="drop-icon">⇧</span><strong>{text("dropFiles")}</strong><small>{text("selectedFiles", { count: files.length })}</small>
+        <div className="dropzone-links"><button className="text-button" disabled={busy} onClick={() => fileInput.current?.click()}>{text("chooseFiles")}</button><span aria-hidden="true">·</span><button className="text-button" disabled={busy} onClick={() => folderInput.current?.click()}>{text("chooseFolder")}</button></div>
+      </div>
       {!!files.length && <div className="file-list">{files.map((file) => <div key={file.name}><span><b>{file.name}</b><small>{size(file.size)}</small></span><button aria-label={text("removeFile", { name: file.name })} disabled={busy} onClick={() => choose(files.filter((item) => item !== file))}>×</button></div>)}<button className="text-button" disabled={busy} onClick={() => setFiles([])}>{text("clear")}</button></div>}
       {external && <label className="consent"><input type="checkbox" checked={consent} disabled={busy} onChange={(event) => setConsent(event.target.checked)} />{text("consent")}</label>}
       <div className="upload-actions"><div><span className={`status ${engine?.status || "not_configured"}`}>{statusText(engine?.status || "not_configured")}</span><small>{engineMessage || text("configuredHint")}</small></div><button className="button secondary" disabled={!engine || busy} onClick={() => engine && checkEngine(engine.id).then((result) => setEngineMessage(statusText(result.status))).catch((reason) => setEngineMessage(message(reason)))}>{text("checkEngine")}</button><button className="button primary" disabled={busy || !files.length || !configured || (external && !consent)} onClick={upload}>{progress || text("start")}</button></div>

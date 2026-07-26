@@ -175,6 +175,9 @@ Các bullet dưới đây là acceptance contract đã được bảo vệ local
 
 - `vlm_task`, `vlm_pages`, `vlm_max_pages` được validate/persist và worker thực thi
   bằng một planner trung tâm.
+- Việc tinh gọn form Upload chỉ đổi presentation: profile duy nhất vẫn là giá
+  trị server-owned, consent và payload giữ nguyên; `vlm_max_pages` chỉ hiện khi
+  `metadata + auto`, đúng phạm vi candidate-page hiện hành.
 - `full_ocr` phải OCR text trên mọi trang, persist text/status từng trang, rồi
   lấy metadata trên page plan phù hợp. `metadata` chỉ chạy metadata prompt trên
   page plan đã chọn. Lượt metadata của cả hai task gửi cùng prompt image-only;

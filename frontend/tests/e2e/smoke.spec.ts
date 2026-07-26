@@ -45,7 +45,13 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   });
 
   await page.goto("/upload");
-  await expect(page.locator(".upload-options .option-value")).toContainText(/Cấu hình OCR hiện tại|Current OCR configuration/);
+  await expect(page.locator(".upload-options .locked-value")).toContainText(/Do máy chủ quản lý|Managed by server/);
+  await expect(page.locator(".upload-panel h2")).toHaveCount(0);
+  await expect(page.locator(".dropzone-links button")).toHaveCount(2);
+  await expect(page.getByLabel(/Giới hạn trang ứng viên|Candidate page limit/)).toHaveCount(0);
+  await page.getByLabel(/Tác vụ VLM|VLM task/).selectOption("metadata");
+  await page.getByLabel(/Phạm vi trang|Page scope/).selectOption("auto");
+  await expect(page.getByLabel(/Giới hạn trang ứng viên|Candidate page limit/)).toBeVisible();
   await page.getByRole("button", { name: /sẵn sàng|readiness/i }).click();
   await expect(page.locator(".upload-actions")).toContainText(/sẵn sàng|ready/i);
   await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles({ name: "smoke.pdf", mimeType: "application/pdf", buffer: pdf });
@@ -152,12 +158,12 @@ test("mobile English keeps PDF-only errors, instant language and closable monito
   await page.goto("/upload"); await expect(page.locator("html")).toHaveAttribute("lang", "en"); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Upload PDF");
   await page.getByRole("button", { name: "VI", exact: true }).click(); await expect(page.getByRole("heading", { level: 1 })).toHaveText("Tải PDF"); await page.getByRole("button", { name: "EN", exact: true }).click();
   await expect(page.locator('input[type="file"]:not([webkitdirectory])')).toHaveAttribute("accept", "application/pdf,.pdf"); expect((await page.request.get("/icon.svg")).ok()).toBeTruthy();
-  await page.getByLabel("VLM task").selectOption("metadata"); await page.getByLabel("Page scope").selectOption("first,last"); await page.getByLabel("Maximum pages").fill("2");
+  await page.getByLabel("VLM task").selectOption("metadata"); await page.getByLabel("Page scope").selectOption("auto"); await page.getByLabel("Candidate page limit").fill("2");
   await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles({ name: "bad.pdf", mimeType: "application/pdf", buffer: pdf }); await page.getByRole("button", { name: "Start OCR" }).click();
   await expect(page.locator(".notice.error")).toContainText("Unsupported file"); uploadFails = false;
   await page.getByRole("button", { name: "Start OCR" }).click();
   await expect(page.locator(".notice.error")).toContainText("Worker unavailable");
-  await expect(page.locator('input[type="file"]:not([webkitdirectory])')).toHaveValue(/bad\.pdf$/); await expect(page.getByLabel("VLM task")).toHaveValue("metadata"); await expect(page.getByLabel("Page scope")).toHaveValue("first,last"); await expect(page.getByLabel("Maximum pages")).toHaveValue("2");
+  await expect(page.locator('input[type="file"]:not([webkitdirectory])')).toHaveValue(/bad\.pdf$/); await expect(page.getByLabel("VLM task")).toHaveValue("metadata"); await expect(page.getByLabel("Page scope")).toHaveValue("auto"); await expect(page.getByLabel("Candidate page limit")).toHaveValue("2");
   await page.getByRole("button", { name: /system monitor/i }).click(); await expect(page.locator(".monitor-modal")).toBeVisible(); await page.locator(".monitor-modal").getByRole("button", { name: "Close" }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/mobile-upload-390x844.png") }); }

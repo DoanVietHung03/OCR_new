@@ -65,22 +65,30 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 .upload-options { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin-top: 18px; }
 .upload-options label, .upload-options .option-value, .form-grid label { display: grid; gap: 6px; color: #526782; font-size: .78rem; font-weight: 700; }
 .upload-options select, .upload-options input, .form-grid select, .form-grid input { min-height: 41px; min-width: 0; border: 1px solid #c8d2df; border-radius: 8px; padding: 8px 10px; background: #fff; }
-.dropzone { position: relative; display: grid; min-height: 142px; margin: 18px 0; place-items: center; align-content: center; gap: 5px; border: 1.5px dashed #8aa3c4; border-radius: 11px; color: #345175; background: #f7faff; cursor: pointer; }
-.dropzone:hover { border-color: #1768d4; background: #f0f6ff; }
-.dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-panel :focus-visible { outline: 2px solid #526782; }
+.locked-value { grid-template-columns: auto 1fr; align-content: center; min-height: 41px; padding: 7px 10px; border-radius: 8px; background: #f3f5f8; }
+.locked-value span { grid-row: 1 / span 2; align-self: center; font-size: 1rem; }
+.locked-value small { color: #718097; font-weight: 500; }
+.dropzone { position: relative; display: grid; min-height: 142px; margin: 18px 0; place-items: center; align-content: center; gap: 5px; border: 1.5px dashed #8aa3c4; border-radius: 11px; color: #345175; background: #f7faff; }
+.dropzone:hover { border-color: #526782; background: #f3f5f8; }
 .dropzone small { color: #71829a; }
-.drop-icon { color: #1768d4; font-size: 2rem; }
+.drop-icon { color: #526782; font-size: 2rem; }
+.dropzone-links { display: flex; align-items: center; gap: 2px; }
+.dropzone-links .text-button { color: #345175; font-size: .82rem; }
+.dropzone-links .text-button:hover { color: #10213d; background: #e8edf3; }
 .file-list { display: grid; gap: 7px; margin-bottom: 15px; }
 .file-list > div { display: flex; align-items: center; justify-content: space-between; padding: 9px 11px; border-radius: 8px; background: #f2f6fb; }
 .file-list span { display: grid; min-width: 0; }
 .file-list b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .file-list small { color: #728199; }
 .file-list button:not(.text-button) { border: 0; color: #8e332b; background: transparent; font-size: 1.2rem; }
-.consent { display: flex; align-items: flex-start; gap: 9px; color: #4a5f7a; line-height: 1.45; }
+.consent { display: flex; align-items: flex-start; gap: 9px; border-radius: 9px; padding: 12px 14px; color: #344b69; background: #f2f5f9; line-height: 1.45; }
 .consent input { margin-top: 4px; }
 .upload-actions { justify-content: flex-end; margin-top: 17px; flex-wrap: wrap; }
 .upload-actions > div { display: flex; flex: 1 1 280px; align-items: center; gap: 10px; }
 .upload-actions small { color: #64758d; }
+.upload-actions .primary { background: #10213d; }
+.upload-actions .primary:hover { background: #07152b; }
 
 .status { display: inline-flex; width: fit-content; align-items: center; border-radius: 999px; padding: 5px 9px; color: #4a5d75; background: #edf1f5; font-size: .76rem; font-weight: 800; white-space: nowrap; }
 .status.completed, .status.configured { color: #087448; background: #e7f7ee; }

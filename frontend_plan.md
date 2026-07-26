@@ -105,6 +105,12 @@ terminal dừng polling và stale refresh giữ snapshot gần nhất kèm cản
 Frontend hiện dùng durable state, correction conflict, API typing, accessibility
 và data safety. Ưu tiên dữ liệu worker/contract trước CSS; không dựng lại baseline.
 
+Route Upload giữ một card: bỏ tiêu đề lặp, đặt chọn tệp/thư mục thành hai action
+nhỏ trong dropzone, biểu diễn profile duy nhất bằng trạng thái khóa do máy chủ
+quản lý và tách consent bằng nền riêng. `vlm_max_pages` chỉ hiện cho
+`metadata + auto`; focus keyboard vẫn nhìn thấy nhưng Bắt đầu OCR là CTA màu
+chính duy nhất của form.
+
 ## Kế hoạch đang mở
 
 Các bullet dưới đây là acceptance contract đã được bảo vệ local; phần còn mở
