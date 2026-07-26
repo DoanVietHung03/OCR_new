@@ -194,7 +194,11 @@ def test_new_document_policy_adds_missing_field_atomically(tmp_path, pdf_bytes):
     store.add_pdf(job["id"], "document.pdf", pdf_bytes)
     document = annotate({
         "id": "document", "logical_document_type": "administrative_document", "fields": {
-            "co_quan_ban_hanh": {"value": "A"}, "so_van_ban": {"value": "1"}, "trich_yeu": {"value": "T"},
+            "co_quan_ban_hanh": {
+                "value": "A", "review_reason": "missing_evidence",
+                "evidence_reason": "bbox_missing", "needs_review": True,
+            },
+            "so_van_ban": {"value": "1"}, "trich_yeu": {"value": "T"},
         }, "pages": [{"page_index": 0, "status": "completed", "error": ""}],
     })
     store.update(job["id"], status="completed", documents=[document])
@@ -203,6 +207,8 @@ def test_new_document_policy_adds_missing_field_atomically(tmp_path, pdf_bytes):
     assert "nguoi_ky" not in store.read(job["id"])["documents"][0]["fields"]
     saved, approved = store.apply_review(job["id"], "document", [{"field": "ngay_ban_hanh", "old_value": None, "new_value": "2026-07-22"}])
     assert approved["review_status"] == "approved"
+    assert approved["approval_blockers"] == []
+    assert {"code": "field_needs_review", "field": "co_quan_ban_hanh"} in approved["review_risks"]
     assert approved["fields"]["ngay_ban_hanh"]["ocr_value"] is None
     assert approved["expected_fields"] == list(ADMIN_FIELDS)
     assert len(COVER_FIELDS) == 13

@@ -249,6 +249,9 @@ review-reason/nested suggestion-evidence types thay vì `unknown` payload.
   subprocess runner, retry variants hoặc layout artifact của dự án cũ.
 - Artifact/evidence hỏng cục bộ không làm mất field/page tốt. Chỉ mở retry/debug
   richness sâu hơn khi fixture cố định chứng minh contract tối thiểu chưa đủ.
+- `missing_evidence` chỉ là review risk, không phải approval blocker: metadata
+  hợp lệ vẫn được giữ và có thể duyệt. Không tạo crop phỏng đoán khi thiếu bbox;
+  reviewer dùng toàn ảnh trang nguồn hoặc vẽ Manual crop.
 - Gate: bốn fixture có field evidence thật, reload/restart giữ nguyên, không chứa
   document text trong log; report coverage phản ánh missing thay vì dựng số.
 

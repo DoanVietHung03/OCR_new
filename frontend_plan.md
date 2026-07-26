@@ -186,6 +186,9 @@ sách suggestion/evidence; workspace hiển thị source, confidence và reason 
   mặc định của field chưa sửa không được tạo diff giả.
 - Job mới từ fixture phải có cùng UX evidence như job legacy có data tương ứng;
   artifact thiếu chỉ làm block cục bộ unavailable.
+- Field có giá trị nhưng thiếu crop vẫn giữ nguyên giá trị, hiển thị risk và có
+  action mở đúng toàn ảnh `page_index`; thiếu evidence không khóa Save and
+  approve. Chỉ bbox hợp lệ hoặc Manual crop mới được hiển thị như crop evidence.
 - Chưa thêm debug timeline, retry variants, layout/result side-by-side hoặc
   paper-like preview cho tới khi backend persist dữ liệu thật và fixture cần.
 

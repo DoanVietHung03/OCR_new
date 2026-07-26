@@ -149,6 +149,9 @@ revision conflict, and Continue in the browser gate.
   `crop_blank`, and never overwrite an existing `validation_warning` with
   `missing_evidence`. A non-blank crop proves artifact availability, not
   semantic alignment; live fixture review remains required.
+  `missing_evidence` is a review risk, never an approval blocker: retain a valid
+  metadata value and let the reviewer open its full source page or draw Manual
+  crop. Do not fabricate a broad automatic crop without grounded coordinates.
   When a metadata value conflicts with its provider `source_text` or an
   available independent full-OCR line, clear its bbox and
   confidence, mark it for review, and do not publish a misleading crop.
