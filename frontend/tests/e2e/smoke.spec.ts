@@ -523,10 +523,12 @@ test("missing canonical fields keep drafts until atomic approval succeeds", asyn
 });
 
 test("sizing local workflow gates drilldown calculator catalog snapshot and retention", async ({ page }) => {
+  const secondJobId = "22222222-2222-4222-8222-222222222222";
   let catalog = { revision: 0, price_profiles: [] as any[], workload_profiles: [] as any[], hardware_profiles: [] as any[] };
   let snapshots: any[] = [];
   const overview = { generated_at: now, sample_count: 1, operation_count: 1, value_kind: "measured", unit: "job", unit_sample_count: 1, prompt_tokens: 10, completion_tokens: 2, total_tokens: 12, duration_ms_p50: 20, duration_ms_p95: 20, known_cost: null, total_cost: null, unknown_cost_attempts: 1, series: [{ date: "2026-07-27", total_tokens: 12 }], provenance: { value_kind: "measured", sample_count: 1 }, coverage: { response_usage_percent: 100, billing_certainty_percent: 0, complete_usage_attempts: 1, response_attempts: 1, known_billing_attempts: 0, total_attempts: 1 }, gates: { preview: { minimum_jobs: 1, available: true, reason: "available" }, comparison: { minimum_jobs: 2, available: false, reason: "insufficient_sample" }, trend: { minimum_jobs: 5, available: false, reason: "insufficient_sample" }, capacity: { minimum_jobs: 20, available: false, reason: "insufficient_sample" } } };
-  const jobs = { items: [{ job_id: id, provider_profile_id: "qwen", processing_mode: "administrative_document", operation_count: 1, prompt_tokens: 10, completion_tokens: 2, total_tokens: 12, known_cost: null, total_cost: null, response_usage_percent: 100, billing_certainty_percent: 0, started_at: now }], pagination: { page: 1, page_size: 25, total: 1, pages: 1 } };
+  const sizingJob = (job_id: string) => ({ job_id, provider_profile_id: "qwen", processing_mode: "administrative_document", operation_count: 1, prompt_tokens: 10, completion_tokens: 2, total_tokens: 12, known_cost: null, total_cost: null, response_usage_percent: 100, billing_certainty_percent: 0, started_at: now });
+  const jobs = { items: [sizingJob(id), sizingJob(secondJobId)], pagination: { page: 1, page_size: 25, total: 2, pages: 1 } };
   await page.route("**/api/**", async (route) => {
     const request = route.request(), apiPath = new URL(request.url()).pathname;
     if (apiPath === "/api/sizing/overview") return route.fulfill({ json: overview });
@@ -543,7 +545,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
     return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
   });
   await page.goto("/sizing"); await expect(page.getByText("12")).toBeVisible();
-  await page.getByRole("button", { name: /Document Explorer/i }).click(); await page.getByRole("button", { name: /Xem attempts|View attempts/i }).click(); await expect(page.locator(".data-table", { hasText: "complete" })).toBeVisible();
+  await page.getByRole("button", { name: /Document Explorer/i }).click(); const attempts = page.getByRole("button", { name: /Xem attempts|View attempts/i }); await attempts.nth(0).click(); await attempts.nth(1).click(); await expect(page.locator(".attempts-table")).toHaveCount(2); await expect(page.locator(".attempts-table").first()).toContainText("complete");
   await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await page.getByRole("button", { name: /Tính Preview|Calculate Preview/i }).click(); await expect(page.locator(".safe-json")).toContainText("insufficient_sample");
   await page.getByRole("button", { name: /Lưu snapshot|Save snapshot/i }).click();
   await page.getByRole("button", { name: /Retention/i }).click(); await expect(page.locator(".data-table tbody tr")).toHaveCount(1);

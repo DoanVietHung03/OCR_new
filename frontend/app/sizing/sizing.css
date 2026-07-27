@@ -1,10 +1,60 @@
-.sizing-tabs { margin-bottom: 18px; }
-.sizing-filters { margin-bottom: 18px; }
-.sizing-chart { width: 100%; min-height: 360px; margin: 16px 0; }
-.safe-json { max-height: 360px; overflow: auto; padding: 16px; background: var(--surface-muted, #f6f7f9); border-radius: 8px; }
-@media (max-width: 600px) {
+.sizing-tabs { margin-bottom: 1.5rem; }
+.sizing-filters, .sizing-card { padding: 20px; }
+.sizing-filters { margin-bottom: 1.5rem; }
+.sizing-card { border-color: #d5dee9; border-radius: 12px; background: #f8fafc; box-shadow: 0 6px 18px rgb(24 46 79 / 6%); }
+.sizing-stack { display: grid; gap: 1.5rem; }
+.sizing-chart { width: 100%; min-height: 360px; margin: 16px 0; border-radius: 8px; background: #fff; }
+.sizing-notice { justify-content: flex-start; margin: 0 0 16px; }
+.sizing-notice span { font-size: 1.1rem; }
+
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 12px; margin: 0 0 1.5rem; }
+.metric-card { display: grid; min-height: 94px; align-content: center; gap: 8px; border-radius: 8px; padding: 16px; background: #fff; }
+.metric-card span { color: #65768e; font-size: 13px; }
+.metric-card strong { color: #14243c; font-size: 24px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+
+.sizing-status { display: inline-flex; width: fit-content; align-items: center; border-radius: 999px; padding: 5px 9px; font-size: .75rem; font-weight: 800; white-space: nowrap; }
+.sizing-status.good { color: #087448; background: #e7f7ee; }
+.sizing-status.warning { color: #91600a; background: #fff3d2; }
+.sizing-status.bad { color: #ad281c; background: #fff0ef; }
+.sizing-status.info { color: #185fb8; background: #e9f2ff; }
+.sizing-status.subtle { font-weight: 700; }
+
+.sizing-form-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
+.sizing-form-grid input, .sizing-form-grid select { color: #182338; background: #fff; }
+.sizing-form-grid input::placeholder { color: #8997aa; }
+.sizing-card .modal-actions { margin-top: 18px; flex-wrap: wrap; }
+.disabled-help { display: inline-flex; }
+.field-help { display: block; margin-top: 8px; color: #697b93; }
+.safe-json { max-height: 360px; overflow: auto; padding: 16px; background: #fff; border-radius: 8px; }
+
+.sizing-jobs-table td:first-child { white-space: nowrap; }
+.numeric { text-align: right !important; font-variant-numeric: tabular-nums; }
+.job-id { color: #315375; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.copy-id { margin-left: 5px; border: 0; border-radius: 6px; padding: 4px 6px; color: #526782; background: transparent; }
+.copy-id:hover { color: #1768d4; background: #edf5ff; }
+.attempt-row > td { padding: 0 !important; background: #eef3f8; }
+.attempt-shell { margin: 10px 18px 18px; border-radius: 8px; padding: 14px; background: #fff; }
+.attempt-shell .table-scroll { margin-top: 10px; }
+.attempts-table th, .attempts-table td { padding-block: 9px; }
+
+.snapshot-empty { display: grid; min-height: 180px; place-items: center; align-content: center; gap: 7px; color: #65768e; text-align: center; }
+.snapshot-empty span { color: #8aa3c4; font-size: 2rem; }
+.snapshot-empty b { color: #293b57; }
+.retention-danger { border-color: #efc5c1; }
+.retention-warning { display: flex; align-items: center; gap: 12px; margin: -20px -20px 18px; border-radius: 12px 12px 0 0; padding: 14px 20px; color: #8d3028; background: #fff3f1; }
+.retention-warning > span { font-size: 1.25rem; }
+.retention-warning p { margin-top: 3px; color: #9a5a54; font-size: .8rem; }
+.outline-danger { background: transparent; }
+.solid-danger { color: #fff; background: #b1271b; }
+.solid-danger:hover { background: #921e15; }
+.check-label { align-content: center; grid-template-columns: auto 1fr; }
+.check-label input { min-height: auto; accent-color: #1768d4; }
+
+@media (max-width: 700px) {
   .sizing-chart { min-height: 280px; }
   .sizing-tabs { overflow-x: auto; }
+  .sizing-card { padding: 16px; }
+  .retention-warning { margin: -16px -16px 16px; }
 }
 @media print {
   .sidebar, .sizing-tabs, button, .sizing-filters { display: none !important; }
