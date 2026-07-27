@@ -1,8 +1,15 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.settings import Settings
 
 client = TestClient(app)
+
+
+def test_ocr_data_dir_is_a_path_at_runtime():
+    assert Settings(ocr_data_dir="data/jobs").ocr_data_dir == Path("data/jobs")
 
 
 def use_store(tmp_path, monkeypatch):
