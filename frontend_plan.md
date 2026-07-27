@@ -11,6 +11,11 @@ Phần local của `FE-X17A`–`FE-X17E` đã triển khai; Preview/provider/fix
 và capacity evidence vẫn mở tại `FE-X17F`. Chi tiết nằm tại
 [`Token_Cal.md`](Token_Cal.md). Các external gate của Milestone C nằm tại
 [`incomlpeted.md`](incomlpeted.md).
+
+**Reliability recheck 2026-07-27:** backend `61 passed`, browser `21 passed`,
+typecheck/build/OpenAPI/compile/diff đều pass. Thay đổi retry là nội bộ backend,
+không đổi public API hay frontend contract; fixture/provider/server evidence
+vẫn còn mở.
 Milestone C là internal production-like pilot; live evidence vẫn
 ghi duy nhất trong `BE-C-EVIDENCE`.
 
@@ -141,6 +146,9 @@ Các bullet dưới đây là acceptance contract đã được bảo vệ local
   (`2/5 trang metadata` cho `first,last`) và đánh dấu page `skipped` trong navigation.
 - Browser chỉ gửi `provider_profile_id`, task/pages/max-pages và consent; không
   gửi URL/key/header/model tùy ý.
+- Retry provider là reliability policy nội bộ của backend với tối đa hai attempt;
+  browser không resubmit page/job và chỉ hiển thị page error sau khi attempt cuối
+  thất bại. Selection vẫn được giữ để operator có thể rerun theo workflow hiện có.
 - E2E phải chứng minh payload đúng và kết quả live hiển thị selected pages/status
   do backend trả, không chỉ kiểm tra dropdown đã đổi state.
 - Giữ selection khi create/upload/start thất bại để người dùng retry.
@@ -196,8 +204,9 @@ sách suggestion/evidence; workspace hiển thị source, confidence và reason 
 - Field có giá trị nhưng thiếu crop vẫn giữ nguyên giá trị, hiển thị risk và có
   action mở đúng toàn ảnh `page_index`; thiếu evidence không khóa Save and
   approve. Chỉ bbox hợp lệ hoặc Manual crop mới được hiển thị như crop evidence.
-- Chưa thêm debug timeline, retry variants, layout/result side-by-side hoặc
-  paper-like preview cho tới khi backend persist dữ liệu thật và fixture cần.
+- Review workspace không thêm nút retry page hay debug variant; attempt thật đã
+  persist thuộc Sizing/diagnostics, còn rerun job tiếp tục dùng workflow hiện có.
+  Chưa thêm layout/result side-by-side hoặc paper-like preview cho tới khi fixture cần.
 
 ### FE-X14
 

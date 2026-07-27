@@ -274,7 +274,7 @@ def retry_delay(response: httpx.Response) -> float:
 
 
 async def request_page(
-    image: bytes, *, base_url: str, api_key: str, model: str, timeout: float = 120,
+    image: bytes, *, base_url: str, api_key: str, model: str, timeout: float = 180,
     page_index: int = 0, task: str = "metadata", expected_fields: tuple[str, ...] | None = None,
     ocr_text: str = "", measurement_store: MeasurementStore | None = None,
     measurement_context: dict | None = None,
@@ -297,7 +297,12 @@ async def request_page(
                 )
             except httpx.ReadTimeout as exc:
                 if target:
-                    measurement_store.finish(target, status="timeout", duration_ms=round((time.monotonic() - started) * 1000), billing_state="unknown")
+                    measurement_store.finish(
+                        target, status="timeout", duration_ms=round((time.monotonic() - started) * 1000),
+                        retryable=attempt == 0, billing_state="unknown",
+                    )
+                if attempt == 0:
+                    continue
                 raise RuntimeError("provider_timeout") from exc
             except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
                 if target:
@@ -344,9 +349,12 @@ async def request_page(
                     expected_fields=expected_fields, ocr_text=ocr_text,
                 )
             except ValueError as exc:
+                error = str(exc) if str(exc).startswith("invalid_model_json") else "invalid_model_json"
                 if target:
-                    measurement_store.finish(target, status="invalid_json")
-                raise ValueError(str(exc) if str(exc).startswith("invalid_model_json") else "invalid_model_json") from exc
+                    measurement_store.finish(target, status="invalid_json", retryable=attempt == 0)
+                if attempt == 0:
+                    continue
+                raise ValueError(error) from exc
     raise RuntimeError("provider_unavailable")
 
 

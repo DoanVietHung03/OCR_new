@@ -5,6 +5,7 @@ import httpx
 import fitz
 
 from app.services.jobs import JobStore
+from app.services.sizing import MeasurementStore
 
 
 def test_worker_uses_environment_redis_urls(monkeypatch):
@@ -138,7 +139,7 @@ def test_cancel_and_restart_never_call_provider(tmp_path, monkeypatch, pdf_bytes
     assert asyncio.run(tasks.process_job_async(interrupted["id"]))["status"] == "interrupted"
 
 
-def test_provider_retries_429_once_but_not_read_timeout(monkeypatch):
+def test_provider_retries_transient_page_failures_once(tmp_path, monkeypatch):
     import app.services.ocr_runner as runner
 
     real_client = httpx.AsyncClient
@@ -159,20 +160,49 @@ def test_provider_retries_429_once_but_not_read_timeout(monkeypatch):
     assert asyncio.run(runner.request_page(b"image", base_url="http://provider", api_key="x", model="m")) == {"fields": {}, "warnings": []}
     assert attempts == 2
 
-    def timeout(_: httpx.Request) -> httpx.Response:
-        raise httpx.ReadTimeout("secret response", request=httpx.Request("POST", "http://provider"))
+    for failure in ("timeout", "invalid_json"):
+        attempts = 0
 
-    monkeypatch.setattr(
-        runner.httpx,
-        "AsyncClient",
-        lambda **options: real_client(transport=httpx.MockTransport(timeout), **options),
-    )
+        def transient(request: httpx.Request) -> httpx.Response:
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1 and failure == "timeout":
+                raise httpx.ReadTimeout("secret response", request=request)
+            if attempts == 1:
+                return httpx.Response(200, json={"choices": [{"message": {"content": "not-json"}}]})
+            return httpx.Response(200, json={"choices": [{"message": {"content": '{"fields": {}}'}}]})
+
+        monkeypatch.setattr(
+            runner.httpx,
+            "AsyncClient",
+            lambda **options: real_client(transport=httpx.MockTransport(transient), **options),
+        )
+        store = MeasurementStore(tmp_path / failure)
+        assert asyncio.run(runner.request_page(
+            b"image", base_url="http://provider", api_key="x", model="m",
+            measurement_store=store, measurement_context={"job_id": "job", "task": "metadata"},
+        )) == {"fields": {}, "warnings": []}
+        assert attempts == 2
+        operations = sorted(store.operations(job_id="job"), key=lambda item: item["attempt"])
+        assert [(item["status"], item["retryable"]) for item in operations] == [
+            (failure, True), ("success", False),
+        ]
+
+    attempts = 0
+
+    def timeout(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        raise httpx.ReadTimeout("secret response", request=request)
+
+    monkeypatch.setattr(runner.httpx, "AsyncClient", lambda **options: real_client(transport=httpx.MockTransport(timeout), **options))
     try:
         asyncio.run(runner.request_page(b"image", base_url="http://provider", api_key="x", model="m"))
     except RuntimeError as exc:
         assert str(exc) == "provider_timeout"
     else:
         raise AssertionError("read timeout was accepted")
+    assert attempts == 2
 
     import app.workers.tasks as tasks
     assert tasks.safe_error(RuntimeError("raw provider secret")) == "ocr_failed"

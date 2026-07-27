@@ -29,6 +29,13 @@ benchmark fingerprints. The locally actionable `X17A`–`X17E` scope is
 implemented; `X17F` still needs real provider/fixture/server evidence.
 `incomlpeted.md` lists every external condition still required.
 
+The 2026-07-27 OpenAI-compatible reliability update preserves the minimal
+Chat Completions payload, raises the default provider timeout to 180 seconds,
+and gives each eligible page operation at most two total attempts. Its local
+gate passed 61 backend tests, 21 browser checks, frontend typecheck/build,
+OpenAPI generation/check, Python compileall, and diff checks; real
+provider/fixture/server evidence remains open.
+
 The X7/X16 local contract now also preserves typed suggestion confidence/reason
 with provider-owned provenance, validates create/rerun against configured
 Provider Profile capabilities, keeps both segmentation waiting states across
@@ -84,9 +91,12 @@ revision conflict, and Continue in the browser gate.
 - Preserve states `segmenting`, `awaiting_segmentation_review`,
   `segmentation_confirmed`, `extraction_starting`, and `running`. The two waiting
   states survive restart; active states become `interrupted` and never auto-resume.
-- Retry a page once only for a pre-response connection failure or HTTP
-  `429/502/503/504`; cap `Retry-After` at 10 seconds. Do not retry read timeout,
-  invalid JSON, or validation errors.
+- A provider page operation has at most two attempts total. Retry once after the
+  first pre-response connection failure, read timeout, invalid model JSON, or HTTP
+  `429/502/503/504`; mixed failure types do not reset this budget and
+  `Retry-After` is capped at 10 seconds. Do not retry other HTTP failures, local
+  field warnings, or a whole job. The default provider read timeout is 180 seconds
+  and remains configurable with `OCR_TIMEOUT_SECONDS`.
 - Production Celery always uses `--concurrency=1 --prefetch-multiplier=1`.
 - Backend writes before dispatch, worker writes while active, backend writes
   again after terminal. Cancel creates a marker; do not add distributed locks.

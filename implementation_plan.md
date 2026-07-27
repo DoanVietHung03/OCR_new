@@ -12,6 +12,12 @@ bốn fixture, provider/restart thật. Phần có thể kiểm tra local của 
 đã triển khai; `X17F` và Measurement Preview thật còn chờ provider/fixture/server.
 Chi tiết nằm tại [`Token_Cal.md`](Token_Cal.md). Các
 external gate của Milestone C tập trung tại [`incomlpeted.md`](incomlpeted.md).
+
+**Reliability recheck 2026-07-27:** giữ nguyên minimal OpenAI Chat Completions
+payload, timeout mặc định 180 giây và tối đa hai attempt cho mỗi page operation
+đủ điều kiện retry. Local gate pass 61 backend tests, 21 browser checks,
+typecheck/build, OpenAPI check, compileall và diff check; chưa thay thế các
+provider/fixture/server gate còn mở.
 Milestone C là
 **internal production-like pilot**, không phải customer-production-ready; chỉ ký
 sau local contract gate và evidence strong-server. Runtime được vận hành duy nhất
@@ -115,14 +121,17 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
   `awaiting_segmentation_review`, `segmentation_confirmed`,
   `extraction_starting`, `running` và terminal. Hai state chờ sống qua restart;
   state active thành `interrupted` và không auto-resume.
-- Segmentation gọi provider đúng một lần/page trên toàn bộ PDF và dùng retry rule
-  hiện có. Page lỗi provider thành `unclassified`; render lỗi mới block. Mỗi
+- Segmentation tạo đúng một operation/page trên toàn bộ PDF; operation đó dùng
+  retry rule có tối đa hai attempt. Page lỗi provider thành `unclassified`; render lỗi mới block. Mỗi
   source PDF xác nhận bằng revision; khi tất cả đã xác nhận, backend persist trước
   rồi dispatch cùng task `ocr.process_job` với expected phase/revision.
 - Production worker luôn `--concurrency=1 --prefetch-multiplier=1`.
-- Một page chỉ retry một lần với pre-response connection failure hoặc HTTP
-  `429/502/503/504`; `Retry-After` tối đa 10 giây. Không retry read timeout,
-  invalid JSON hoặc validation error.
+- Mỗi provider operation/page có tối đa hai attempt tổng cộng. Sau attempt đầu,
+  retry đúng một lần nếu gặp pre-response connection failure, read timeout,
+  invalid model JSON hoặc HTTP `429/502/503/504`; lỗi hỗn hợp không làm mới
+  budget và `Retry-After` tối đa 10 giây. Không retry HTTP khác, field warning
+  cục bộ hoặc cả job. Read timeout mặc định là 180 giây và vẫn cấu hình qua
+  `OCR_TIMEOUT_SECONDS`.
 - Chỉ persist stable safe error. Cấm secret, URL, header, raw provider response,
   unredacted request/response và document text trong log.
 - Backend ghi trước dispatch, worker ghi khi active, backend ghi lại sau terminal.

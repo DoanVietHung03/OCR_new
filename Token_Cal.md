@@ -139,7 +139,8 @@ canonical_total = prompt_tokens + completion_tokens
 - Cached lớn hơn prompt hoặc component không hợp lệ: loại sample khỏi cost.
 
 Usage phải finalize sau khi nhận response và trước parse OCR. Invalid OCR JSON
-vẫn giữ usage/bytes/latency. `429/502/503/504` giữ usage nếu response có trả.
+vẫn giữ usage/bytes/latency rồi có thể tạo attempt thứ hai theo retry budget.
+`429/502/503/504` giữ usage nếu response có trả.
 
 ### 3.4 Safe outcome và billing certainty
 
@@ -153,6 +154,9 @@ Chỉ persist outcome allowlist:
 - `interrupted`
 
 Cho phép `http_status`, `retryable`; cấm exception message và response body.
+`retryable=true` chỉ đánh dấu attempt đầu đủ điều kiện retry. Mỗi operation có tối
+đa hai attempt tổng cộng cho connect failure, read timeout, invalid JSON hoặc HTTP
+`429/502/503/504`; lỗi hỗn hợp không làm mới budget.
 
 Hai coverage khác nhau:
 
@@ -574,6 +578,12 @@ local. `X17F` cùng one-PDF/provider Preview, bốn fixture, backup/restart,
 20-compatible-job và cluster benchmark vẫn là live evidence, không được thay
 bằng unit/mock/eager-task.
 
+Reliability sidecar cùng ngày đã xác minh attempt đầu bị read timeout hoặc
+invalid JSON được ghi `retryable=true`, attempt cuối là `false`, và mixed
+failure không làm mới ngân sách hai attempt. Full local gate pass 61 backend
+tests, 21 browser checks, typecheck/build/OpenAPI/compile/diff; live evidence
+vẫn thuộc `X17F`.
+
 ### X17A — Measurement foundation
 
 - Attempt sidecar/lifecycle/usage/safe error/payload/duration.
@@ -616,7 +626,8 @@ Local contract:
 
 - usage complete/missing/malformed/inconsistent/cached/reasoning;
 - invalid OCR JSON vẫn giữ usage;
-- retry, `429/502/503/504`, connect/read timeout, interrupted;
+- retry tối đa hai attempt cho `429/502/503/504`, connect/read timeout và invalid
+  JSON; terminal attempt cùng interrupted;
 - no double count reload/restart; sidecar/aggregate rebuild;
 - readiness scope/cache/coalescing;
 - old job no rewrite/backfill;

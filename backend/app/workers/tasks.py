@@ -210,7 +210,7 @@ async def segment_job(store: JobStore, job: dict) -> dict:
                 try:
                     result = await request_page(
                         image.read_bytes(), base_url=os.getenv("OCR_BASE_URL", ""), api_key=os.getenv("OCR_API_KEY", ""),
-                        model=job.get("model", ""), timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "120")),
+                        model=job.get("model", ""), timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "180")),
                         page_index=page_index, task="segmentation",
                         measurement_store=measurements,
                         measurement_context={
@@ -379,7 +379,7 @@ async def process_job_async(job_id: str) -> dict:
                         base_url=os.getenv("OCR_BASE_URL", ""),
                         api_key=os.getenv("OCR_API_KEY", ""),
                         model=job.get("model", ""),
-                        timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "120")),
+                        timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "180")),
                         page_index=index,
                         task=pass_task,
                         expected_fields=expected_fields,
