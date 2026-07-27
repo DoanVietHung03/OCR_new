@@ -373,6 +373,7 @@ async def process_job_async(job_id: str) -> dict:
                 pass_error = ""
                 warning_codes: list[str] = []
                 pass_started = time.monotonic()
+                result = None
                 try:
                     result = await request_page(
                         pages[index].read_bytes(),
@@ -383,6 +384,10 @@ async def process_job_async(job_id: str) -> dict:
                         page_index=index,
                         task=pass_task,
                         expected_fields=expected_fields,
+                        required_any_fields=(
+                            tuple(name for name in ADMIN_FIELDS if name not in SIGNATURE_FIELDS)
+                            if adaptive and index == 0 and pass_task == "metadata" else ()
+                        ),
                         ocr_text=state.get("text", "") if pass_task == "metadata" else "",
                         measurement_store=measurements,
                         measurement_context={
@@ -489,9 +494,15 @@ async def process_job_async(job_id: str) -> dict:
         except Exception as exc:
             document.update(status="error", error=safe_error(exc))
         annotate(document)
+        if document["status"] == "completed" and document["approval_blockers"]:
+            document["status"] = "completed_with_warnings"
         persist()
     failures = sum(page.get("status") == "error" for item in documents for page in item.get("pages", []))
-    warnings = any(page.get("status") == "completed_with_warnings" for item in documents for page in item.get("pages", []))
+    warnings = any(
+        item.get("status") == "completed_with_warnings"
+        or any(page.get("status") == "completed_with_warnings" for page in item.get("pages", []))
+        for item in documents
+    )
     status = "completed" if successes and not failures and not warnings else "completed_with_warnings" if successes else "error"
     first_failure = next((page for item in documents for page in item.get("pages", []) if page.get("status") == "error"), None)
     store.add_event(job_id, "job_completed", severity="error" if status == "error" else "warning" if warnings else "info")

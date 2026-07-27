@@ -134,12 +134,18 @@ RETRYABLE_STATUSES = {429, 502, 503, 504}
 
 def parse_json_object(content: str) -> object:
     decoder = json.JSONDecoder()
+    result = None
+    result_end = -1
     for index, char in enumerate(content):
         if char == "{":
             try:
-                return decoder.raw_decode(content[index:])[0]
+                candidate, end = decoder.raw_decode(content[index:])
             except json.JSONDecodeError:
                 continue
+            if index + end > result_end:
+                result, result_end = candidate, index + end
+    if result is not None:
+        return result
     raise ValueError("invalid_model_json:malformed_json")
 
 
@@ -277,7 +283,7 @@ async def request_page(
     image: bytes, *, base_url: str, api_key: str, model: str, timeout: float = 180,
     page_index: int = 0, task: str = "metadata", expected_fields: tuple[str, ...] | None = None,
     ocr_text: str = "", measurement_store: MeasurementStore | None = None,
-    measurement_context: dict | None = None,
+    measurement_context: dict | None = None, required_any_fields: tuple[str, ...] = (),
 ) -> dict:
     body = request_body(image, model, task, expected_fields)
     serialized = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
@@ -344,10 +350,13 @@ async def request_page(
                 content = message_text(response_payload)
                 if not content:
                     raise ValueError("invalid_model_json:missing_content")
-                return validate_result(
+                result = validate_result(
                     parse_json_object(content), page_index=page_index, task=task,
                     expected_fields=expected_fields, ocr_text=ocr_text,
                 )
+                if required_any_fields and not any(name in result.get("fields", {}) for name in required_any_fields):
+                    raise ValueError("invalid_model_json:empty_required_fields")
+                return result
             except ValueError as exc:
                 error = str(exc) if str(exc).startswith("invalid_model_json") else "invalid_model_json"
                 if target:

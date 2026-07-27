@@ -147,6 +147,9 @@ def test_runner_accepts_partial_metadata_and_markdown_json():
     }}})
     assert date["fields"]["ngay_ban_hanh"]["confidence"] == 0.9
     assert parse_json_object('```json\n{"fields": {}}\n```') == {"fields": {}}
+    assert parse_json_object(
+        'analysis {"fields": {}} final {"fields": {"so_van_ban": {"value": "1176"}}}'
+    ) == {"fields": {"so_van_ban": {"value": "1176"}}}
     assert message_text({"choices": [{"message": {"content": [{"type": "text", "text": "A"}, {"type": "text", "text": "B"}]}}]}) == "A\nB"
     with pytest.raises(ValueError, match="invalid_model_json"):
         validate_result({"not_fields": {}})

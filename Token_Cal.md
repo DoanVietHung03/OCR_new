@@ -156,7 +156,8 @@ Chỉ persist outcome allowlist:
 Cho phép `http_status`, `retryable`; cấm exception message và response body.
 `retryable=true` chỉ đánh dấu attempt đầu đủ điều kiện retry. Mỗi operation có tối
 đa hai attempt tổng cộng cho connect failure, read timeout, invalid JSON hoặc HTTP
-`429/502/503/504`; lỗi hỗn hợp không làm mới budget.
+`429/502/503/504`; page-zero metadata không có field header cũng là invalid JSON
+về ngữ nghĩa và dùng cùng budget. Lỗi hỗn hợp không làm mới budget.
 
 Hai coverage khác nhau:
 
@@ -583,6 +584,10 @@ invalid JSON được ghi `retryable=true`, attempt cuối là `false`, và mixe
 failure không làm mới ngân sách hai attempt. Full local gate pass 61 backend
 tests, 21 browser checks, typecheck/build/OpenAPI/compile/diff; live evidence
 vẫn thuộc `X17F`.
+
+Semantic regression bổ sung xác minh parser lấy JSON object hoàn chỉnh cuối cùng,
+header rỗng được ghi như invalid JSON rồi retry, còn required-field blocker làm
+job `completed_with_warnings`. Không persist raw response hay document text.
 
 ### X17A — Measurement foundation
 

@@ -36,6 +36,11 @@ gate passed 61 backend tests, 21 browser checks, frontend typecheck/build,
 OpenAPI generation/check, Python compileall, and diff checks; real
 provider/fixture/server evidence remains open.
 
+The same-day semantic hardening selects the last complete JSON object in model
+content, treats an administrative page-zero response with no header metadata as
+invalid model JSON within the same two-attempt budget, and reports required-field
+blockers as `completed_with_warnings` instead of a clean completion.
+
 The X7/X16 local contract now also preserves typed suggestion confidence/reason
 with provider-owned provenance, validates create/rerun against configured
 Provider Profile capabilities, keeps both segmentation waiting states across
@@ -97,6 +102,11 @@ revision conflict, and Continue in the browser gate.
   `Retry-After` is capped at 10 seconds. Do not retry other HTTP failures, local
   field warnings, or a whole job. The default provider read timeout is 180 seconds
   and remains configurable with `OCR_TIMEOUT_SECONDS`.
+- JSON enforcement remains provider-neutral: parse the last complete JSON object
+  from model content. For administrative `metadata + auto`, page zero must return
+  at least one non-signature metadata field; an empty semantic result is invalid
+  model JSON and uses the same retry budget. Required-field blockers make the
+  document/job `completed_with_warnings`, never a clean `completed`.
 - Production Celery always uses `--concurrency=1 --prefetch-multiplier=1`.
 - Backend writes before dispatch, worker writes while active, backend writes
   again after terminal. Cancel creates a marker; do not add distributed locks.

@@ -18,6 +18,11 @@ payload, timeout mặc định 180 giây và tối đa hai attempt cho mỗi pag
 đủ điều kiện retry. Local gate pass 61 backend tests, 21 browser checks,
 typecheck/build, OpenAPI check, compileall và diff check; chưa thay thế các
 provider/fixture/server gate còn mở.
+
+Semantic hardening cùng ngày chọn JSON object hoàn chỉnh cuối cùng trong model
+content, coi page zero của văn bản hành chính không có metadata header là
+`invalid_model_json` trong cùng budget hai attempt, và chuyển job còn
+required-field blocker thành `completed_with_warnings`.
 Milestone C là
 **internal production-like pilot**, không phải customer-production-ready; chỉ ký
 sau local contract gate và evidence strong-server. Runtime được vận hành duy nhất
@@ -132,6 +137,11 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
   budget và `Retry-After` tối đa 10 giây. Không retry HTTP khác, field warning
   cục bộ hoặc cả job. Read timeout mặc định là 180 giây và vẫn cấu hình qua
   `OCR_TIMEOUT_SECONDS`.
+- Parser chọn JSON object hoàn chỉnh kết thúc cuối cùng thay vì object đầu tiên
+  trong model content. Với văn bản hành chính `metadata + auto`, page zero phải
+  có ít nhất một field metadata không thuộc nhóm chữ ký; response rỗng là
+  `invalid_model_json` và dùng chung budget hai attempt. Required-field blocker
+  làm document/job `completed_with_warnings`, không được ghi clean `completed`.
 - Chỉ persist stable safe error. Cấm secret, URL, header, raw provider response,
   unredacted request/response và document text trong log.
 - Backend ghi trước dispatch, worker ghi khi active, backend ghi lại sau terminal.

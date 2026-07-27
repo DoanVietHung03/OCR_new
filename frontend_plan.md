@@ -16,6 +16,10 @@ và capacity evidence vẫn mở tại `FE-X17F`. Chi tiết nằm tại
 typecheck/build/OpenAPI/compile/diff đều pass. Thay đổi retry là nội bộ backend,
 không đổi public API hay frontend contract; fixture/provider/server evidence
 vẫn còn mở.
+
+Semantic hardening cùng ngày không đổi public schema: backend retry một header
+response rỗng trong budget hiện có, và UI nhận `completed_with_warnings` khi
+required-field blocker vẫn tồn tại thay vì hiển thị clean `completed`.
 Milestone C là internal production-like pilot; live evidence vẫn
 ghi duy nhất trong `BE-C-EVIDENCE`.
 
@@ -148,7 +152,9 @@ Các bullet dưới đây là acceptance contract đã được bảo vệ local
   gửi URL/key/header/model tùy ý.
 - Retry provider là reliability policy nội bộ của backend với tối đa hai attempt;
   browser không resubmit page/job và chỉ hiển thị page error sau khi attempt cuối
-  thất bại. Selection vẫn được giữ để operator có thể rerun theo workflow hiện có.
+  thất bại. Header response rỗng cũng dùng budget này; nếu vẫn rỗng, UI phải phản
+  ánh page error hoặc `completed_with_warnings` cùng blocker thật. Selection vẫn
+  được giữ để operator có thể rerun theo workflow hiện có.
 - E2E phải chứng minh payload đúng và kết quả live hiển thị selected pages/status
   do backend trả, không chỉ kiểm tra dropdown đã đổi state.
 - Giữ selection khi create/upload/start thất bại để người dùng retry.

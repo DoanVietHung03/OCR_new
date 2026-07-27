@@ -56,7 +56,7 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     monkeypatch.setattr(tasks, "request_page", fake_request)
     result = asyncio.run(tasks.process_job_async(job["id"]))
 
-    assert result["status"] == "completed"
+    assert result["status"] == "completed_with_warnings"
     assert result["page_count"] == 1
     assert result["started_at"]
     assert result["completed_at"]
@@ -83,7 +83,7 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     assert [event["code"] for event in result["events"]].count("page_pass_completed") == 2
     assert "job_completed" in [event["code"] for event in result["events"]]
     assert [event["status"] for event in result["events"] if event["code"] == "job_status_changed"] == [
-        "ready", "starting", "queued", "running", "completed",
+        "ready", "starting", "queued", "running", "completed_with_warnings",
     ]
     page_events = [event for event in result["events"] if event["code"] == "page_pass_completed"]
     assert all(event.get("duration_seconds", -1) >= 0 for event in page_events)
@@ -204,6 +204,31 @@ def test_provider_retries_transient_page_failures_once(tmp_path, monkeypatch):
         raise AssertionError("read timeout was accepted")
     assert attempts == 2
 
+    attempts = 0
+
+    def empty_header(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        content = '{"fields": {}}' if attempts == 1 else '{"fields": {"so_van_ban": {"value": "1176"}}}'
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    monkeypatch.setattr(
+        runner.httpx,
+        "AsyncClient",
+        lambda **options: real_client(transport=httpx.MockTransport(empty_header), **options),
+    )
+    store = MeasurementStore(tmp_path / "empty_header")
+    assert "so_van_ban" in asyncio.run(runner.request_page(
+        b"image", base_url="http://provider", api_key="x", model="m",
+        required_any_fields=("so_van_ban",), measurement_store=store,
+        measurement_context={"job_id": "job", "task": "metadata"},
+    ))["fields"]
+    assert attempts == 2
+    assert [
+        (item["status"], item["retryable"])
+        for item in sorted(store.operations(job_id="job"), key=lambda item: item["attempt"])
+    ] == [("invalid_json", True), ("success", False)]
+
     import app.workers.tasks as tasks
     assert tasks.safe_error(RuntimeError("raw provider secret")) == "ocr_failed"
 
@@ -314,7 +339,7 @@ def test_auto_metadata_searches_backward_until_one_signature_page_is_complete(tm
 
     async def fake_request(_: bytes, **options):
         page_index = options["page_index"]
-        calls.append((page_index, options["expected_fields"]))
+        calls.append((page_index, options["expected_fields"], options.get("required_any_fields", ())))
         if page_index == 0:
             return {"fields": {"so_van_ban": field("01", 0)}, "warnings": []}
         if page_index == 3:
@@ -333,10 +358,10 @@ def test_auto_metadata_searches_backward_until_one_signature_page_is_complete(tm
     fields = result["documents"][0]["fields"]
 
     assert calls == [
-        (0, tasks.ADMIN_FIELDS),
-        (4, tasks.SIGNATURE_FIELDS),
-        (3, tasks.SIGNATURE_FIELDS),
-        (2, tasks.SIGNATURE_FIELDS),
+        (0, tasks.ADMIN_FIELDS, tuple(name for name in tasks.ADMIN_FIELDS if name not in tasks.SIGNATURE_FIELDS)),
+        (4, tasks.SIGNATURE_FIELDS, ()),
+        (3, tasks.SIGNATURE_FIELDS, ()),
+        (2, tasks.SIGNATURE_FIELDS, ()),
     ]
     assert fields["so_van_ban"]["page_index"] == 0
     assert fields["chuc_vu_nguoi_ky"]["value"] == "BÍ THƯ"
