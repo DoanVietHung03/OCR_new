@@ -119,9 +119,11 @@
   .workspace-head { align-items: flex-start; flex-direction: column; }
   .approve-bar { align-items: stretch; flex-direction: column; }
 }
-.segmentation-review article { border-top: 1px solid var(--border); padding: 1rem 0; }
-.segmentation-sources { max-height: 620px; overflow-y: auto; }
-.multi-source article { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, auto) auto; gap: .5rem 1rem; align-items: center; padding: .7rem 0; }
+.segmentation-review { padding: 20px; }
+.segmentation-review article { border-top: 1px solid #dce4ee; padding: 1rem 0; }
+.segmentation-review article:first-child { border-top: 0; }
+.segmentation-sources { max-height: 620px; overflow-y: auto; margin-top: 16px; border: 1px solid #d8e0ea; border-radius: 10px; padding: 0 14px; background: #fbfcfe; scrollbar-gutter: stable; }
+.multi-source article { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, auto) auto; gap: .75rem 1.25rem; align-items: center; padding: 16px 4px; }
 .multi-source article h3 { margin: 0; }
 .multi-source .source-pages { grid-column: 1; margin: 0; }
 .multi-source .source-pages img { width: 48px; }

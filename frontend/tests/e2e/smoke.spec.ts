@@ -510,6 +510,11 @@ test("multi-PDF dossier can confirm the whole document structure at once", async
   await expect(page.locator(".job-lifecycle-actions").getByRole("button", { name: /hủy|cancel/i })).toBeVisible();
   await expect(page.locator(".confirm-source")).toHaveCount(19);
   await expect(page.locator(".confirm-source.primary")).toHaveCount(0);
+  const reviewSpacing = await page.locator(".segmentation-review").evaluate((review) => {
+    const panel = getComputedStyle(review), row = getComputedStyle(review.querySelectorAll("article")[1]), list = getComputedStyle(review.querySelector(".segmentation-sources")!);
+    return { panelPadding: parseFloat(panel.paddingLeft), rowPadding: parseFloat(row.paddingTop), divider: row.borderTopStyle, listBorder: list.borderTopWidth };
+  });
+  expect(reviewSpacing).toMatchObject({ panelPadding: 20, rowPadding: 16, divider: "solid", listBorder: "1px" });
   const sourceListSize = await page.locator(".segmentation-sources").evaluate((list) => ({ client: list.clientHeight, scroll: list.scrollHeight }));
   expect(sourceListSize.scroll).toBeGreaterThan(sourceListSize.client);
   await page.getByRole("button", { name: /xác nhận tất cả PDF|confirm all PDFs/i }).click();
