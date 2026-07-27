@@ -6,12 +6,15 @@ import asyncio
 import base64
 import json
 import re
+import time
 import unicodedata
+import uuid
 
 import httpx
 
 from .field_policy import ADMIN_FIELDS
 from .jobs import FIELDS
+from .sizing import MeasurementStore, parse_usage
 
 PROMPT_VERSION = "9"
 PROBE_PNG = base64.b64decode(
@@ -273,27 +276,59 @@ def retry_delay(response: httpx.Response) -> float:
 async def request_page(
     image: bytes, *, base_url: str, api_key: str, model: str, timeout: float = 120,
     page_index: int = 0, task: str = "metadata", expected_fields: tuple[str, ...] | None = None,
-    ocr_text: str = "",
+    ocr_text: str = "", measurement_store: MeasurementStore | None = None,
+    measurement_context: dict | None = None,
 ) -> dict:
+    body = request_body(image, model, task, expected_fields)
+    serialized = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
+    operation_id = f"op_{uuid.uuid4().hex}"
     async with httpx.AsyncClient(timeout=timeout) as client:
         for attempt in range(2):
+            target = measurement_store.begin(
+                measurement_context or {}, operation_id=operation_id,
+                attempt=attempt + 1, request_bytes=len(serialized),
+            ) if measurement_store else None
+            started = time.monotonic()
             try:
                 response = await client.post(
                     base_url.rstrip("/") + "/chat/completions",
-                    json=request_body(image, model, task, expected_fields),
-                    headers={"Authorization": f"Bearer {api_key}"},
+                    content=serialized,
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                 )
             except httpx.ReadTimeout as exc:
+                if target:
+                    measurement_store.finish(target, status="timeout", duration_ms=round((time.monotonic() - started) * 1000), billing_state="unknown")
                 raise RuntimeError("provider_timeout") from exc
             except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+                if target:
+                    measurement_store.finish(target, status="connect_failure", duration_ms=round((time.monotonic() - started) * 1000), billing_state="not_billable")
                 if attempt == 0:
                     continue
                 raise RuntimeError("provider_unavailable") from exc
             except httpx.HTTPError as exc:
+                if target:
+                    measurement_store.finish(target, status="connect_failure", duration_ms=round((time.monotonic() - started) * 1000), billing_state="unknown")
                 raise RuntimeError("provider_unavailable") from exc
+            try:
+                response_payload = response.json()
+            except ValueError:
+                response_payload = None
+            usage_status, usage = parse_usage(response_payload)
+            if target:
+                measurement_store.finish(
+                    target, status="success" if response.is_success else "http_error",
+                    duration_ms=round((time.monotonic() - started) * 1000),
+                    response_bytes=len(response.content), http_status=response.status_code,
+                    retryable=response.status_code in RETRYABLE_STATUSES,
+                    usage_status=usage_status, usage=usage,
+                    billing_state="known" if usage_status in {"complete", "inconsistent"} else "unknown",
+                )
             if response.status_code in RETRYABLE_STATUSES:
                 if attempt == 0:
-                    await asyncio.sleep(retry_delay(response))
+                    delay = retry_delay(response)
+                    if target:
+                        measurement_store.finish(target, retry_delay_ms=round(delay * 1000))
+                    await asyncio.sleep(delay)
                     continue
                 raise RuntimeError("provider_unavailable")
             try:
@@ -301,7 +336,7 @@ async def request_page(
             except httpx.HTTPStatusError as exc:
                 raise RuntimeError("provider_unavailable") from exc
             try:
-                content = message_text(response.json())
+                content = message_text(response_payload)
                 if not content:
                     raise ValueError("invalid_model_json:missing_content")
                 return validate_result(
@@ -309,6 +344,8 @@ async def request_page(
                     expected_fields=expected_fields, ocr_text=ocr_text,
                 )
             except ValueError as exc:
+                if target:
+                    measurement_store.finish(target, status="invalid_json")
                 raise ValueError(str(exc) if str(exc).startswith("invalid_model_json") else "invalid_model_json") from exc
     raise RuntimeError("provider_unavailable")
 
@@ -317,23 +354,54 @@ def configured(base_url: str, model: str) -> bool:
     return bool(base_url and model)
 
 
-async def probe_provider(*, base_url: str, api_key: str, model: str, timeout: float = 10) -> str:
+async def probe_provider(
+    *, base_url: str, api_key: str, model: str, timeout: float = 10,
+    measurement_store: MeasurementStore | None = None, measurement_context: dict | None = None,
+) -> str:
     if not configured(base_url, model):
         return "not_configured"
+    target = None
+    started = time.monotonic()
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
+            body = request_body(PROBE_PNG, model, expected_fields=ADMIN_FIELDS)
+            serialized = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
+            operation_id = f"op_{uuid.uuid4().hex}"
+            target = measurement_store.begin(
+                measurement_context or {}, operation_id=operation_id, attempt=1,
+                request_bytes=len(serialized),
+            ) if measurement_store else None
+            started = time.monotonic()
             response = await client.post(
                 base_url.rstrip("/") + "/chat/completions",
-                json=request_body(PROBE_PNG, model, expected_fields=ADMIN_FIELDS),
-                headers={"Authorization": f"Bearer {api_key}"},
+                content=serialized,
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             )
+            try:
+                response_payload = response.json()
+            except ValueError:
+                response_payload = None
+            usage_status, usage = parse_usage(response_payload)
+            if target:
+                measurement_store.finish(
+                    target, status="success" if response.is_success else "http_error",
+                    duration_ms=round((time.monotonic() - started) * 1000),
+                    response_bytes=len(response.content), http_status=response.status_code,
+                    retryable=response.status_code in RETRYABLE_STATUSES,
+                    usage_status=usage_status, usage=usage,
+                    billing_state="known" if usage_status in {"complete", "inconsistent"} else "unknown",
+                )
     except httpx.HTTPError:
+        if target:
+            measurement_store.finish(target, status="connect_failure", duration_ms=round((time.monotonic() - started) * 1000), billing_state="unknown")
         return "unreachable"
     if not response.is_success:
         return "reachable"
     try:
-        content = message_text(response.json())
+        content = message_text(response_payload)
         validate_result(parse_json_object(content), expected_fields=ADMIN_FIELDS)
     except (TypeError, ValueError):
+        if target:
+            measurement_store.finish(target, status="invalid_json")
         return "reachable"
     return "ready"

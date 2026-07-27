@@ -1270,6 +1270,740 @@
         }
       }
     },
+    "/api/sizing/overview": {
+      "get": {
+        "summary": "Sizing Overview",
+        "operationId": "sizing_overview_api_sizing_overview_get",
+        "parameters": [
+          {
+            "name": "provider_profile_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Provider Profile Id"
+            }
+          },
+          {
+            "name": "task",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Task"
+            }
+          },
+          {
+            "name": "processing_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Processing Mode"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "End Date"
+            }
+          },
+          {
+            "name": "unit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(attempt|page|document|job|system)$",
+              "default": "job",
+              "title": "Unit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizingOverviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/sizing/jobs": {
+      "get": {
+        "summary": "Sizing Jobs",
+        "operationId": "sizing_jobs_api_sizing_jobs_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizingJobsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/sizing/jobs/{job_id}": {
+      "get": {
+        "summary": "Sizing Job",
+        "operationId": "sizing_job_api_sizing_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizingJobDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/sizing/jobs/{job_id}/operations": {
+      "get": {
+        "summary": "Sizing Operations",
+        "operationId": "sizing_operations_api_sizing_jobs__job_id__operations_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "source_pdf_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Source Pdf Id"
+            }
+          },
+          {
+            "name": "task",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Task"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizingOperationsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/sizing/catalog": {
+      "get": {
+        "summary": "Get Sizing Catalog",
+        "operationId": "get_sizing_catalog_api_sizing_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizingCatalogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Put Sizing Catalog",
+        "operationId": "put_sizing_catalog_api_sizing_catalog_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SizingCatalogRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizingCatalogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sizing/calculate": {
+      "post": {
+        "summary": "Sizing Calculate",
+        "operationId": "sizing_calculate_api_sizing_calculate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SizingCalculateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizingCalculateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sizing/snapshots": {
+      "post": {
+        "summary": "Create Sizing Snapshot",
+        "operationId": "create_sizing_snapshot_api_sizing_snapshots_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Sizing Snapshots",
+        "operationId": "get_sizing_snapshots_api_sizing_snapshots_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/sizing/snapshots/{snapshot_id}": {
+      "patch": {
+        "summary": "Patch Sizing Snapshot",
+        "operationId": "patch_sizing_snapshot_api_sizing_snapshots__snapshot_id__patch",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotPatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Sizing Snapshot",
+        "operationId": "delete_sizing_snapshot_api_sizing_snapshots__snapshot_id__delete",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteSnapshotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/sizing/snapshots/{snapshot_id}/delete-preview": {
+      "post": {
+        "summary": "Preview Sizing Snapshot Delete",
+        "operationId": "preview_sizing_snapshot_delete_api_sizing_snapshots__snapshot_id__delete_preview_post",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/sizing/retention/preview": {
+      "post": {
+        "summary": "Sizing Retention Preview",
+        "operationId": "sizing_retention_preview_api_sizing_retention_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sizing/retention/apply": {
+      "post": {
+        "summary": "Sizing Retention Apply",
+        "operationId": "sizing_retention_apply_api_sizing_retention_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionApplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sizing/exchange-rate-sources": {
+      "get": {
+        "summary": "Exchange Rate Sources",
+        "operationId": "exchange_rate_sources_api_sizing_exchange_rate_sources_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sizing/exchange-rate-suggestions": {
+      "post": {
+        "summary": "Exchange Rate Suggestions",
+        "operationId": "exchange_rate_suggestions_api_sizing_exchange_rate_suggestions_post",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -2043,6 +2777,27 @@
         ],
         "title": "DeleteResponse"
       },
+      "DeleteSnapshotRequest": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision"
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Checksum"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "revision",
+          "checksum"
+        ],
+        "title": "DeleteSnapshotRequest"
+      },
       "DiskMetricsResponse": {
         "properties": {
           "used_bytes": {
@@ -2470,6 +3225,22 @@
           "summary": {
             "type": "string",
             "title": "Summary"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached",
+            "default": false
           }
         },
         "type": "object",
@@ -3901,6 +4672,63 @@
         "type": "object",
         "title": "RerunRequest"
       },
+      "RetentionApplyRequest": {
+        "properties": {
+          "plan_token": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Plan Token"
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Checksum"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan_token",
+          "checksum"
+        ],
+        "title": "RetentionApplyRequest"
+      },
+      "RetentionPreviewRequest": {
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "End Date"
+          },
+          "include_system": {
+            "type": "boolean",
+            "title": "Include System",
+            "default": false
+          },
+          "include_rollups": {
+            "type": "boolean",
+            "title": "Include Rollups",
+            "default": false
+          },
+          "include_pinned_benchmarks": {
+            "type": "boolean",
+            "title": "Include Pinned Benchmarks",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "start_date",
+          "end_date"
+        ],
+        "title": "RetentionPreviewRequest"
+      },
       "ReviewIssue": {
         "properties": {
           "code": {
@@ -4223,6 +5051,1049 @@
           "end_page"
         ],
         "title": "SegmentationSegmentRequest"
+      },
+      "SizingCalculateRequest": {
+        "properties": {
+          "monthly_jobs": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Monthly Jobs"
+          },
+          "operating_days": {
+            "type": "number",
+            "maximum": 31.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Operating Days"
+          },
+          "operating_hours": {
+            "type": "number",
+            "maximum": 24.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Operating Hours"
+          },
+          "processing_mode": {
+            "type": "string",
+            "enum": [
+              "administrative_document",
+              "dossier_cover",
+              "combined_dossier"
+            ],
+            "title": "Processing Mode"
+          },
+          "peak_factor": {
+            "type": "number",
+            "minimum": 1.0,
+            "title": "Peak Factor",
+            "default": 1
+          },
+          "reserve": {
+            "type": "number",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Reserve",
+            "default": 0
+          },
+          "minimum_success_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Minimum Success Rate",
+            "default": 0.95
+          },
+          "artifact_retention_days": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Artifact Retention Days",
+            "default": 30
+          },
+          "average_pages_per_job": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Pages Per Job"
+          },
+          "average_documents_per_dossier": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Documents Per Dossier"
+          },
+          "average_pages_per_document": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Pages Per Document"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "monthly_jobs",
+          "operating_days",
+          "operating_hours",
+          "processing_mode"
+        ],
+        "title": "SizingCalculateRequest"
+      },
+      "SizingCalculateResponse": {
+        "properties": {
+          "value_kind": {
+            "type": "string",
+            "const": "calculated",
+            "title": "Value Kind"
+          },
+          "average_jobs_per_hour": {
+            "type": "number",
+            "title": "Average Jobs Per Hour"
+          },
+          "peak_jobs_per_hour": {
+            "type": "number",
+            "title": "Peak Jobs Per Hour"
+          },
+          "required_capacity_jobs_per_hour": {
+            "type": "number",
+            "title": "Required Capacity Jobs Per Hour"
+          },
+          "measured_capacity_jobs_per_hour": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measured Capacity Jobs Per Hour"
+          },
+          "theoretical_capacity_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theoretical Capacity Units"
+          },
+          "capacity_verdict": {
+            "type": "string",
+            "title": "Capacity Verdict"
+          },
+          "cost_forecast_available": {
+            "type": "boolean",
+            "title": "Cost Forecast Available"
+          },
+          "estimated_monthly_tokens": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Monthly Tokens"
+          },
+          "estimated_monthly_known_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Monthly Known Cost"
+          },
+          "self_host_tco": {
+            "type": "null",
+            "title": "Self Host Tco"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "value_kind",
+          "average_jobs_per_hour",
+          "peak_jobs_per_hour",
+          "required_capacity_jobs_per_hour",
+          "capacity_verdict",
+          "cost_forecast_available"
+        ],
+        "title": "SizingCalculateResponse"
+      },
+      "SizingCatalogRequest": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision"
+          },
+          "price_profiles": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Price Profiles"
+          },
+          "workload_profiles": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Workload Profiles"
+          },
+          "hardware_profiles": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Hardware Profiles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "revision"
+        ],
+        "title": "SizingCatalogRequest"
+      },
+      "SizingCatalogResponse": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "price_profiles": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Price Profiles"
+          },
+          "workload_profiles": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Workload Profiles"
+          },
+          "hardware_profiles": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Hardware Profiles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "price_profiles",
+          "workload_profiles",
+          "hardware_profiles"
+        ],
+        "title": "SizingCatalogResponse"
+      },
+      "SizingCoverage": {
+        "properties": {
+          "response_usage_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Usage Percent"
+          },
+          "billing_certainty_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billing Certainty Percent"
+          },
+          "complete_usage_attempts": {
+            "type": "integer",
+            "title": "Complete Usage Attempts",
+            "default": 0
+          },
+          "response_attempts": {
+            "type": "integer",
+            "title": "Response Attempts",
+            "default": 0
+          },
+          "known_billing_attempts": {
+            "type": "integer",
+            "title": "Known Billing Attempts",
+            "default": 0
+          },
+          "total_attempts": {
+            "type": "integer",
+            "title": "Total Attempts",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "SizingCoverage"
+      },
+      "SizingDocumentSummary": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "source_pdf_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Pdf Id"
+          },
+          "operation_count": {
+            "type": "integer",
+            "title": "Operation Count",
+            "default": 0
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens",
+            "default": 0
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id"
+        ],
+        "title": "SizingDocumentSummary"
+      },
+      "SizingGate": {
+        "properties": {
+          "minimum_jobs": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Minimum Jobs"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "default": false
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minimum_jobs",
+          "reason"
+        ],
+        "title": "SizingGate"
+      },
+      "SizingJobDetailResponse": {
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/SizingJobSummary"
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/SizingDocumentSummary"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "system_overhead_separate": {
+            "type": "boolean",
+            "title": "System Overhead Separate",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "job",
+          "documents"
+        ],
+        "title": "SizingJobDetailResponse"
+      },
+      "SizingJobSummary": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "provider_profile_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Profile Id"
+          },
+          "processing_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Mode"
+          },
+          "operation_count": {
+            "type": "integer",
+            "title": "Operation Count",
+            "default": 0
+          },
+          "prompt_tokens": {
+            "type": "integer",
+            "title": "Prompt Tokens",
+            "default": 0
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "title": "Completion Tokens",
+            "default": 0
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens",
+            "default": 0
+          },
+          "known_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known Cost"
+          },
+          "total_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Cost"
+          },
+          "response_usage_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Usage Percent"
+          },
+          "billing_certainty_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billing Certainty Percent"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "SizingJobSummary"
+      },
+      "SizingJobsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SizingJobSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "pagination"
+        ],
+        "title": "SizingJobsResponse"
+      },
+      "SizingOperation": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version",
+            "default": 1
+          },
+          "operation_id": {
+            "type": "string",
+            "title": "Operation Id"
+          },
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "job",
+              "system"
+            ],
+            "title": "Scope"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "provider_profile_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Profile Id"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task"
+          },
+          "processing_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Mode"
+          },
+          "source_pdf_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Pdf Id"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "page_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Index"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "request_bytes": {
+            "type": "integer",
+            "title": "Request Bytes"
+          },
+          "response_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Bytes"
+          },
+          "http_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Http Status"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable",
+            "default": false
+          },
+          "usage_status": {
+            "type": "string",
+            "title": "Usage Status"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "operation_id",
+          "attempt",
+          "scope",
+          "status",
+          "started_at",
+          "request_bytes",
+          "usage_status"
+        ],
+        "title": "SizingOperation"
+      },
+      "SizingOperationsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SizingOperation"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "pagination"
+        ],
+        "title": "SizingOperationsResponse"
+      },
+      "SizingOverviewResponse": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "sample_count": {
+            "type": "integer",
+            "title": "Sample Count",
+            "default": 0
+          },
+          "operation_count": {
+            "type": "integer",
+            "title": "Operation Count",
+            "default": 0
+          },
+          "value_kind": {
+            "type": "string",
+            "enum": [
+              "measured",
+              "calculated",
+              "assumed",
+              "unavailable"
+            ],
+            "title": "Value Kind"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/SizingCoverage"
+          },
+          "gates": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SizingGate"
+            },
+            "type": "object",
+            "title": "Gates"
+          },
+          "prompt_tokens": {
+            "type": "integer",
+            "title": "Prompt Tokens",
+            "default": 0
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "title": "Completion Tokens",
+            "default": 0
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens",
+            "default": 0
+          },
+          "duration_ms_p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms P50"
+          },
+          "duration_ms_p95": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms P95"
+          },
+          "known_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known Cost"
+          },
+          "total_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Cost"
+          },
+          "unknown_cost_attempts": {
+            "type": "integer",
+            "title": "Unknown Cost Attempts",
+            "default": 0
+          },
+          "series": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provenance"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "attempt",
+              "page",
+              "document",
+              "job",
+              "system"
+            ],
+            "title": "Unit",
+            "default": "job"
+          },
+          "unit_sample_count": {
+            "type": "integer",
+            "title": "Unit Sample Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "value_kind",
+          "coverage",
+          "gates"
+        ],
+        "title": "SizingOverviewResponse"
+      },
+      "SnapshotCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Inputs"
+          },
+          "aggregate": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Aggregate"
+          },
+          "result": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Result"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provenance"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "inputs",
+          "aggregate",
+          "result",
+          "provenance"
+        ],
+        "title": "SnapshotCreateRequest"
+      },
+      "SnapshotPatchRequest": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "revision",
+          "archived"
+        ],
+        "title": "SnapshotPatchRequest"
+      },
+      "SnapshotResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Inputs"
+          },
+          "aggregate": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Aggregate"
+          },
+          "result": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Result"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provenance"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "revision",
+          "archived",
+          "created_at",
+          "name",
+          "inputs",
+          "aggregate",
+          "result",
+          "provenance"
+        ],
+        "title": "SnapshotResponse"
+      },
+      "SnapshotsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SnapshotResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationResponse"
+          },
+          "quota_used": {
+            "type": "integer",
+            "title": "Quota Used"
+          },
+          "quota_limit": {
+            "type": "integer",
+            "title": "Quota Limit",
+            "default": 1000
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "pagination",
+          "quota_used"
+        ],
+        "title": "SnapshotsResponse"
       },
       "SourcePdfResponse": {
         "properties": {

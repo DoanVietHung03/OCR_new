@@ -1,0 +1,15 @@
+.sizing-tabs { margin-bottom: 18px; }
+.sizing-filters { margin-bottom: 18px; }
+.sizing-chart { width: 100%; min-height: 360px; margin: 16px 0; }
+.safe-json { max-height: 360px; overflow: auto; padding: 16px; background: var(--surface-muted, #f6f7f9); border-radius: 8px; }
+@media (max-width: 600px) {
+  .sizing-chart { min-height: 280px; }
+  .sizing-tabs { overflow-x: auto; }
+}
+@media print {
+  .sidebar, .sizing-tabs, button, .sizing-filters { display: none !important; }
+  .main-content { margin: 0 !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sizing-chart * { animation: none !important; transition: none !important; }
+}

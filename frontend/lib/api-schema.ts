@@ -414,6 +414,230 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sizing/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sizing Overview */
+        get: operations["sizing_overview_api_sizing_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sizing Jobs */
+        get: operations["sizing_jobs_api_sizing_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sizing Job */
+        get: operations["sizing_job_api_sizing_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/jobs/{job_id}/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sizing Operations */
+        get: operations["sizing_operations_api_sizing_jobs__job_id__operations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sizing Catalog */
+        get: operations["get_sizing_catalog_api_sizing_catalog_get"];
+        /** Put Sizing Catalog */
+        put: operations["put_sizing_catalog_api_sizing_catalog_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/calculate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sizing Calculate */
+        post: operations["sizing_calculate_api_sizing_calculate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sizing Snapshots */
+        get: operations["get_sizing_snapshots_api_sizing_snapshots_get"];
+        put?: never;
+        /** Create Sizing Snapshot */
+        post: operations["create_sizing_snapshot_api_sizing_snapshots_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/snapshots/{snapshot_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Sizing Snapshot */
+        delete: operations["delete_sizing_snapshot_api_sizing_snapshots__snapshot_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Sizing Snapshot */
+        patch: operations["patch_sizing_snapshot_api_sizing_snapshots__snapshot_id__patch"];
+        trace?: never;
+    };
+    "/api/sizing/snapshots/{snapshot_id}/delete-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Sizing Snapshot Delete */
+        post: operations["preview_sizing_snapshot_delete_api_sizing_snapshots__snapshot_id__delete_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/retention/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sizing Retention Preview */
+        post: operations["sizing_retention_preview_api_sizing_retention_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/retention/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sizing Retention Apply */
+        post: operations["sizing_retention_apply_api_sizing_retention_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/exchange-rate-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exchange Rate Sources */
+        get: operations["exchange_rate_sources_api_sizing_exchange_rate_sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sizing/exchange-rate-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Exchange Rate Suggestions */
+        post: operations["exchange_rate_suggestions_api_sizing_exchange_rate_suggestions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -741,6 +965,13 @@ export interface components {
             /** Failed */
             failed: string[];
         };
+        /** DeleteSnapshotRequest */
+        DeleteSnapshotRequest: {
+            /** Revision */
+            revision: number;
+            /** Checksum */
+            checksum: string;
+        };
         /** DiskMetricsResponse */
         DiskMetricsResponse: {
             /** Used Bytes */
@@ -952,6 +1183,13 @@ export interface components {
             status: "not_configured" | "unreachable" | "reachable" | "ready";
             /** Summary */
             summary: string;
+            /** Checked At */
+            checked_at?: string | null;
+            /**
+             * Cached
+             * @default false
+             */
+            cached: boolean;
         };
         /** EngineResponse */
         EngineResponse: {
@@ -1606,6 +1844,35 @@ export interface components {
              */
             rerun_mode: "reuse_segmentation" | "resegment";
         };
+        /** RetentionApplyRequest */
+        RetentionApplyRequest: {
+            /** Plan Token */
+            plan_token: string;
+            /** Checksum */
+            checksum: string;
+        };
+        /** RetentionPreviewRequest */
+        RetentionPreviewRequest: {
+            /** Start Date */
+            start_date: string;
+            /** End Date */
+            end_date: string;
+            /**
+             * Include System
+             * @default false
+             */
+            include_system: boolean;
+            /**
+             * Include Rollups
+             * @default false
+             */
+            include_rollups: boolean;
+            /**
+             * Include Pinned Benchmarks
+             * @default false
+             */
+            include_pinned_benchmarks: boolean;
+        };
         /** ReviewIssue */
         ReviewIssue: {
             /** Code */
@@ -1719,6 +1986,437 @@ export interface components {
             start_page: number;
             /** End Page */
             end_page: number;
+        };
+        /** SizingCalculateRequest */
+        SizingCalculateRequest: {
+            /** Monthly Jobs */
+            monthly_jobs: number;
+            /** Operating Days */
+            operating_days: number;
+            /** Operating Hours */
+            operating_hours: number;
+            /**
+             * Processing Mode
+             * @enum {string}
+             */
+            processing_mode: "administrative_document" | "dossier_cover" | "combined_dossier";
+            /**
+             * Peak Factor
+             * @default 1
+             */
+            peak_factor: number;
+            /**
+             * Reserve
+             * @default 0
+             */
+            reserve: number;
+            /**
+             * Minimum Success Rate
+             * @default 0.95
+             */
+            minimum_success_rate: number;
+            /**
+             * Artifact Retention Days
+             * @default 30
+             */
+            artifact_retention_days: number;
+            /** Average Pages Per Job */
+            average_pages_per_job?: number | null;
+            /** Average Documents Per Dossier */
+            average_documents_per_dossier?: number | null;
+            /** Average Pages Per Document */
+            average_pages_per_document?: number | null;
+        };
+        /** SizingCalculateResponse */
+        SizingCalculateResponse: {
+            /**
+             * Value Kind
+             * @constant
+             */
+            value_kind: "calculated";
+            /** Average Jobs Per Hour */
+            average_jobs_per_hour: number;
+            /** Peak Jobs Per Hour */
+            peak_jobs_per_hour: number;
+            /** Required Capacity Jobs Per Hour */
+            required_capacity_jobs_per_hour: number;
+            /** Measured Capacity Jobs Per Hour */
+            measured_capacity_jobs_per_hour?: number | null;
+            /** Theoretical Capacity Units */
+            theoretical_capacity_units?: number | null;
+            /** Capacity Verdict */
+            capacity_verdict: string;
+            /** Cost Forecast Available */
+            cost_forecast_available: boolean;
+            /** Estimated Monthly Tokens */
+            estimated_monthly_tokens?: number | null;
+            /** Estimated Monthly Known Cost */
+            estimated_monthly_known_cost?: number | null;
+            /** Self Host Tco */
+            self_host_tco?: null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SizingCatalogRequest */
+        SizingCatalogRequest: {
+            /** Revision */
+            revision: number;
+            /** Price Profiles */
+            price_profiles?: {
+                [key: string]: unknown;
+            }[];
+            /** Workload Profiles */
+            workload_profiles?: {
+                [key: string]: unknown;
+            }[];
+            /** Hardware Profiles */
+            hardware_profiles?: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** SizingCatalogResponse */
+        SizingCatalogResponse: {
+            /** Revision */
+            revision: number;
+            /** Price Profiles */
+            price_profiles: {
+                [key: string]: unknown;
+            }[];
+            /** Workload Profiles */
+            workload_profiles: {
+                [key: string]: unknown;
+            }[];
+            /** Hardware Profiles */
+            hardware_profiles: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** SizingCoverage */
+        SizingCoverage: {
+            /** Response Usage Percent */
+            response_usage_percent?: number | null;
+            /** Billing Certainty Percent */
+            billing_certainty_percent?: number | null;
+            /**
+             * Complete Usage Attempts
+             * @default 0
+             */
+            complete_usage_attempts: number;
+            /**
+             * Response Attempts
+             * @default 0
+             */
+            response_attempts: number;
+            /**
+             * Known Billing Attempts
+             * @default 0
+             */
+            known_billing_attempts: number;
+            /**
+             * Total Attempts
+             * @default 0
+             */
+            total_attempts: number;
+        };
+        /** SizingDocumentSummary */
+        SizingDocumentSummary: {
+            /** Document Id */
+            document_id: string;
+            /** Source Pdf Id */
+            source_pdf_id?: string | null;
+            /**
+             * Operation Count
+             * @default 0
+             */
+            operation_count: number;
+            /**
+             * Total Tokens
+             * @default 0
+             */
+            total_tokens: number;
+            /**
+             * Page Count
+             * @default 0
+             */
+            page_count: number;
+        };
+        /** SizingGate */
+        SizingGate: {
+            /** Minimum Jobs */
+            minimum_jobs: number;
+            /**
+             * Available
+             * @default false
+             */
+            available: boolean;
+            /** Reason */
+            reason: string;
+        };
+        /** SizingJobDetailResponse */
+        SizingJobDetailResponse: {
+            job: components["schemas"]["SizingJobSummary"];
+            /** Documents */
+            documents: components["schemas"]["SizingDocumentSummary"][];
+            /**
+             * System Overhead Separate
+             * @default true
+             */
+            system_overhead_separate: boolean;
+        };
+        /** SizingJobSummary */
+        SizingJobSummary: {
+            /** Job Id */
+            job_id: string;
+            /** Provider Profile Id */
+            provider_profile_id?: string | null;
+            /** Processing Mode */
+            processing_mode?: string | null;
+            /**
+             * Operation Count
+             * @default 0
+             */
+            operation_count: number;
+            /**
+             * Prompt Tokens
+             * @default 0
+             */
+            prompt_tokens: number;
+            /**
+             * Completion Tokens
+             * @default 0
+             */
+            completion_tokens: number;
+            /**
+             * Total Tokens
+             * @default 0
+             */
+            total_tokens: number;
+            /** Known Cost */
+            known_cost?: number | null;
+            /** Total Cost */
+            total_cost?: number | null;
+            /** Response Usage Percent */
+            response_usage_percent?: number | null;
+            /** Billing Certainty Percent */
+            billing_certainty_percent?: number | null;
+            /** Started At */
+            started_at?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SizingJobsResponse */
+        SizingJobsResponse: {
+            /** Items */
+            items: components["schemas"]["SizingJobSummary"][];
+            pagination: components["schemas"]["PaginationResponse"];
+        };
+        /** SizingOperation */
+        SizingOperation: {
+            /**
+             * Schema Version
+             * @default 1
+             */
+            schema_version: number;
+            /** Operation Id */
+            operation_id: string;
+            /** Attempt */
+            attempt: number;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "job" | "system";
+            /** Job Id */
+            job_id?: string | null;
+            /** Provider Profile Id */
+            provider_profile_id?: string | null;
+            /** Model */
+            model?: string | null;
+            /** Task */
+            task?: string | null;
+            /** Processing Mode */
+            processing_mode?: string | null;
+            /** Source Pdf Id */
+            source_pdf_id?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Page Index */
+            page_index?: number | null;
+            /** Status */
+            status: string;
+            /** Started At */
+            started_at: string;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /** Request Bytes */
+            request_bytes: number;
+            /** Response Bytes */
+            response_bytes?: number | null;
+            /** Http Status */
+            http_status?: number | null;
+            /**
+             * Retryable
+             * @default false
+             */
+            retryable: boolean;
+            /** Usage Status */
+            usage_status: string;
+            /** Usage */
+            usage?: {
+                [key: string]: number | null;
+            } | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SizingOperationsResponse */
+        SizingOperationsResponse: {
+            /** Items */
+            items: components["schemas"]["SizingOperation"][];
+            pagination: components["schemas"]["PaginationResponse"];
+        };
+        /** SizingOverviewResponse */
+        SizingOverviewResponse: {
+            /** Generated At */
+            generated_at: string;
+            /**
+             * Sample Count
+             * @default 0
+             */
+            sample_count: number;
+            /**
+             * Operation Count
+             * @default 0
+             */
+            operation_count: number;
+            /**
+             * Value Kind
+             * @enum {string}
+             */
+            value_kind: "measured" | "calculated" | "assumed" | "unavailable";
+            coverage: components["schemas"]["SizingCoverage"];
+            /** Gates */
+            gates: {
+                [key: string]: components["schemas"]["SizingGate"];
+            };
+            /**
+             * Prompt Tokens
+             * @default 0
+             */
+            prompt_tokens: number;
+            /**
+             * Completion Tokens
+             * @default 0
+             */
+            completion_tokens: number;
+            /**
+             * Total Tokens
+             * @default 0
+             */
+            total_tokens: number;
+            /** Duration Ms P50 */
+            duration_ms_p50?: number | null;
+            /** Duration Ms P95 */
+            duration_ms_p95?: number | null;
+            /** Known Cost */
+            known_cost?: number | null;
+            /** Total Cost */
+            total_cost?: number | null;
+            /**
+             * Unknown Cost Attempts
+             * @default 0
+             */
+            unknown_cost_attempts: number;
+            /** Series */
+            series?: {
+                [key: string]: unknown;
+            }[];
+            /** Provenance */
+            provenance?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Unit
+             * @default job
+             * @enum {string}
+             */
+            unit: "attempt" | "page" | "document" | "job" | "system";
+            /**
+             * Unit Sample Count
+             * @default 0
+             */
+            unit_sample_count: number;
+        };
+        /** SnapshotCreateRequest */
+        SnapshotCreateRequest: {
+            /** Name */
+            name: string;
+            /** Inputs */
+            inputs: {
+                [key: string]: unknown;
+            };
+            /** Aggregate */
+            aggregate: {
+                [key: string]: unknown;
+            };
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            };
+            /** Provenance */
+            provenance: {
+                [key: string]: unknown;
+            };
+        };
+        /** SnapshotPatchRequest */
+        SnapshotPatchRequest: {
+            /** Revision */
+            revision: number;
+            /** Archived */
+            archived: boolean;
+        };
+        /** SnapshotResponse */
+        SnapshotResponse: {
+            /** Id */
+            id: string;
+            /** Revision */
+            revision: number;
+            /** Archived */
+            archived: boolean;
+            /** Created At */
+            created_at: string;
+            /** Name */
+            name: string;
+            /** Inputs */
+            inputs: {
+                [key: string]: unknown;
+            };
+            /** Aggregate */
+            aggregate: {
+                [key: string]: unknown;
+            };
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            };
+            /** Provenance */
+            provenance: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** SnapshotsResponse */
+        SnapshotsResponse: {
+            /** Items */
+            items: components["schemas"]["SnapshotResponse"][];
+            pagination: components["schemas"]["PaginationResponse"];
+            /** Quota Used */
+            quota_used: number;
+            /**
+             * Quota Limit
+             * @default 1000
+             */
+            quota_limit: number;
         };
         /** SourcePdfResponse */
         SourcePdfResponse: {
@@ -2661,6 +3359,528 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SystemMetricsResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    sizing_overview_api_sizing_overview_get: {
+        parameters: {
+            query?: {
+                provider_profile_id?: string;
+                task?: string;
+                processing_mode?: string;
+                start_date?: string;
+                end_date?: string;
+                unit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SizingOverviewResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    sizing_jobs_api_sizing_jobs_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SizingJobsResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    sizing_job_api_sizing_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SizingJobDetailResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    sizing_operations_api_sizing_jobs__job_id__operations_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                document_id?: string;
+                source_pdf_id?: string;
+                task?: string;
+                status?: string;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SizingOperationsResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sizing_catalog_api_sizing_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SizingCatalogResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_sizing_catalog_api_sizing_catalog_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SizingCatalogRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SizingCatalogResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    sizing_calculate_api_sizing_calculate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SizingCalculateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SizingCalculateResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sizing_snapshots_api_sizing_snapshots_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotsResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_sizing_snapshot_api_sizing_snapshots_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnapshotCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_sizing_snapshot_api_sizing_snapshots__snapshot_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteSnapshotRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patch_sizing_snapshot_api_sizing_snapshots__snapshot_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnapshotPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_sizing_snapshot_delete_api_sizing_snapshots__snapshot_id__delete_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    sizing_retention_preview_api_sizing_retention_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    sizing_retention_apply_api_sizing_retention_apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    exchange_rate_sources_api_sizing_exchange_rate_sources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    exchange_rate_suggestions_api_sizing_exchange_rate_suggestions_post: {
+        parameters: {
+            query: {
+                source_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Unprocessable Entity */

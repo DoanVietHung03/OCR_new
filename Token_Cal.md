@@ -569,6 +569,11 @@ POST /api/sizing/exchange-rate-suggestions
 
 ## 11. Triển khai X17
 
+**Trạng thái 2026-07-27:** `X17A`–`X17E` đã hoàn tất phần có thể kiểm tra
+local. `X17F` cùng one-PDF/provider Preview, bốn fixture, backup/restart,
+20-compatible-job và cluster benchmark vẫn là live evidence, không được thay
+bằng unit/mock/eager-task.
+
 ### X17A — Measurement foundation
 
 - Attempt sidecar/lifecycle/usage/safe error/payload/duration.

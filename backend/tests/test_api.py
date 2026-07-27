@@ -10,6 +10,11 @@ def use_store(tmp_path, monkeypatch):
 
     store = routes.JobStore(tmp_path)
     monkeypatch.setattr(routes, "store", store)
+    monkeypatch.setattr(routes, "sizing_measurements", routes.MeasurementStore(tmp_path))
+    monkeypatch.setattr(routes, "sizing_catalog", routes.SizingCatalog(tmp_path))
+    monkeypatch.setattr(routes, "sizing_snapshots", routes.SnapshotStore(tmp_path))
+    monkeypatch.setattr(routes, "_readiness_cache", None)
+    monkeypatch.setattr(routes.settings, "ocr_data_dir", tmp_path)
     monkeypatch.setattr(routes.settings, "ocr_base_url", "http://provider.test/v1")
     monkeypatch.setattr(routes.settings, "ocr_model", "test-model")
     monkeypatch.setattr(routes.settings, "ocr_endpoint_external", False)
@@ -52,7 +57,6 @@ def test_write_requests_reject_unknown_fields(tmp_path, monkeypatch, pdf_bytes):
     assert rejected.json() == {"detail": {"code": "invalid_request", "message": "invalid_request"}}
     assert "must-not-persist" not in rejected.text
     assert store.list() == []
-
     job = create_and_upload(pdf_bytes)
     store.update(job["id"], status="completed", documents=[{
         "id": "a", "file_name": "a.pdf", "status": "completed",
@@ -69,6 +73,75 @@ def test_write_requests_reject_unknown_fields(tmp_path, monkeypatch, pdf_bytes):
     })
     assert rejected.status_code == 422
     assert not list((store.path(job["id"]) / "corrections").iterdir())
+
+
+def test_sizing_overview_is_honest_before_measurement_foundation(tmp_path, monkeypatch):
+    use_store(tmp_path, monkeypatch)
+    response = client.get("/api/sizing/overview")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["value_kind"] == "unavailable"
+    assert payload["sample_count"] == payload["operation_count"] == 0
+    assert payload["coverage"]["response_usage_percent"] is None
+    assert payload["gates"]["preview"] == {
+        "minimum_jobs": 1,
+        "available": False,
+        "reason": "measurement_foundation_pending",
+    }
+
+
+def test_sizing_local_workflow_catalog_drilldown_calculate_snapshot_and_retention(tmp_path, monkeypatch):
+    import app.api.routes as routes
+
+    store = use_store(tmp_path, monkeypatch)
+    job = store.create({"file_count": 1, "provider_profile_id": "qwen", "model": "test-model"})
+    target = routes.sizing_measurements.begin({
+        "job_id": job["id"], "provider_profile_id": "qwen", "model": "test-model",
+        "task": "metadata", "processing_mode": "administrative_document",
+        "document_id": "doc", "page_index": 0,
+    }, operation_id="op_test", attempt=1, request_bytes=10)
+    routes.sizing_measurements.finish(target, status="success", response_bytes=5, duration_ms=20, usage_status="complete", usage={
+        "prompt_tokens": 10, "completion_tokens": 2, "reported_total_tokens": 12,
+        "canonical_total_tokens": 12, "cached_tokens": None, "reasoning_tokens": None,
+    })
+    catalog = client.put("/api/sizing/catalog", json={
+        "revision": 0, "workload_profiles": [], "hardware_profiles": [], "price_profiles": [{
+            "id": "p", "provider_profile_id": "qwen", "model": "test-model",
+            "billing_currency": "USD",
+            "effective_from": "2020-01-01T00:00:00+00:00", "input_per_million": 1,
+            "output_per_million": 2, "fixed_cost_policy": "successful_response",
+        }],
+    })
+    assert catalog.status_code == 200
+    overview = client.get("/api/sizing/overview").json()
+    assert overview["sample_count"] == overview["operation_count"] == 1
+    assert overview["total_tokens"] == 12
+    assert overview["gates"]["preview"]["available"] is True
+    assert client.get("/api/sizing/jobs").json()["items"][0]["job_id"] == job["id"]
+    assert client.get(f"/api/sizing/jobs/{job['id']}/operations").json()["items"][0]["usage_status"] == "complete"
+    calculated = client.post("/api/sizing/calculate", json={
+        "monthly_jobs": 100, "operating_days": 20, "operating_hours": 8,
+        "processing_mode": "administrative_document",
+    })
+    assert calculated.status_code == 200
+    assert calculated.json()["capacity_verdict"] == "insufficient_sample"
+
+    snapshot = client.post("/api/sizing/snapshots", json={
+        "name": "Preview", "inputs": {}, "aggregate": overview, "result": calculated.json(), "provenance": {},
+    }).json()
+    preview = client.post(f"/api/sizing/snapshots/{snapshot['id']}/delete-preview").json()
+    assert client.request("DELETE", f"/api/sizing/snapshots/{snapshot['id']}", json={
+        "revision": preview["revision"], "checksum": preview["checksum"],
+    }).status_code == 204
+
+    retention = client.post("/api/sizing/retention/preview", json={
+        "start_date": "2000-01-01", "end_date": "2100-01-01", "include_system": False,
+    }).json()
+    assert retention["operation_count"] == 1
+    applied = client.post("/api/sizing/retention/apply", json={
+        "plan_token": retention["plan_token"], "checksum": retention["checksum"],
+    })
+    assert applied.json()["deleted_operations"] == 1
 
 
 def test_segmentation_request_rejects_nested_unknown_fields(tmp_path, monkeypatch, pdf_bytes):
@@ -103,9 +176,10 @@ def test_readiness_gates_start_without_losing_durable_state(tmp_path, monkeypatc
     check = client.post("/api/engines/qwen/check")
     start = client.post(f"/api/jobs/{job['id']}/start")
 
-    assert check.json() == {
-        "id": "qwen", "status": "unreachable", "summary": "OCR provider is unreachable.",
-    }
+    assert check.json()["status"] == "unreachable"
+    assert check.json()["summary"] == "OCR provider is unreachable."
+    assert check.json()["cached"] is False
+    assert check.json()["checked_at"]
     assert (start.status_code, start.json()["detail"]["code"]) == (503, "ocr_unreachable")
     assert store.read(job["id"])["status"] == "ready"
     store.update(job["id"], status="segmentation_confirmed")

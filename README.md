@@ -6,15 +6,16 @@ máy chủ cấu hình.
 
 Milestone A, B và frontend Next.js đã có closure local ngày 2026-07-21.
 Repair Gate đã pass local ngày 2026-07-22; contract local
-của `X7`–`X13`, `X16` và phần local của `X15` đã pass. `X7`/`X16` vẫn IN PROGRESS
-ở gate tổng thể vì còn thiếu fixture/provider live; `X14` còn benchmark thật.
+của `X7`–`X13`, `X16`, phần local của `X15` và `X17A`–`X17E` đã pass.
+`X7`/`X16` vẫn IN PROGRESS ở gate tổng thể vì còn thiếu fixture/provider live;
+`X14` còn benchmark thật và `X17F` còn one-PDF/provider/fixture/server evidence.
 Điều kiện hoàn thành các phần phụ thuộc bên ngoài nằm trong
 [`incomlpeted.md`](incomlpeted.md).
 Milestone C chỉ là internal production-like pilot,
 không phải customer-production approval.
 
 Giao diện Next.js có route Jobs, Upload, Manage/Documents, Logs, Reports,
-Codes và job workspace. Dữ liệu giàu gồm Provider Profile, OCR text/quality/
+Codes, Sizing & Cost và job workspace. Dữ liệu giàu gồm Provider Profile, OCR text/quality/
 evidence/suggestion, artifact manifest, Safe Events, report/benchmark nullable,
 Code Catalog `_codes.json` và System Monitor allowlist. Mọi số liệu đều lấy từ
 API/dữ liệu bền vững hoặc hiển thị unavailable trung thực.
@@ -31,7 +32,10 @@ atomic approval, typed blocker/risk/error/Safe Events, field evidence, Processin
 Mode, review segmentation theo revision, Continue, rerun reuse/resegment,
 readiness probe, durable progress/failure/timeline và triage. Create/rerun từ chối
 Provider Profile chưa cấu hình hoặc không hỗ trợ mode/task/page scope đã chọn.
-Bộ backend đạt 54 tests; browser `20 passed` và eager
+Sizing & Cost đo từng provider attempt, aggregate tài nguyên/token/cost bền vững,
+giữ catalog/snapshot dưới `OCR_DATA_DIR/_sizing*`, và chỉ mở calculator/capacity
+theo sample/coverage gate; thiếu dữ liệu luôn hiển thị unavailable.
+Bộ backend đạt 54 tests ở baseline; browser `20 passed` và eager
 Celery/fake-provider pass. Đây chưa phải bằng chứng bốn fixture, restart hoặc
 provider production-like thật.
 
@@ -200,4 +204,4 @@ hỗ trợ — backend luôn lắng nghe tại `50177`.
 Xem [implementation_plan.md](implementation_plan.md) cho backend, Repair Gate,
 cutover và evidence Milestone C; xem
 [frontend_plan.md](frontend_plan.md) cho frontend và các
-counterpart `FE-X1`–`FE-X16`.
+counterpart `FE-X1`–`FE-X17`.

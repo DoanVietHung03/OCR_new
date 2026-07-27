@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import os
 import re
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +36,21 @@ from ..schemas.jobs import (
     ProviderProfilesResponse,
     ReportsResponse,
     RerunRequest,
+    DeleteSnapshotRequest,
+    RetentionApplyRequest,
+    RetentionPreviewRequest,
+    SizingCalculateRequest,
+    SizingCalculateResponse,
+    SizingCatalogRequest,
+    SizingCatalogResponse,
+    SizingJobsResponse,
+    SizingJobDetailResponse,
+    SizingOperationsResponse,
+    SizingOverviewResponse,
+    SnapshotCreateRequest,
+    SnapshotPatchRequest,
+    SnapshotResponse,
+    SnapshotsResponse,
     StateResponse,
     SystemMetricsResponse,
     UploadResponse,
@@ -41,11 +59,20 @@ from ..services.codes import CodeCatalog
 from ..services.jobs import ACTIVE, ApprovalBlocked, DELETABLE, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
 from ..services.ocr_runner import PROMPT_VERSION, configured, probe_provider
 from ..services.system_metrics import system_metrics as read_system_metrics
+from ..services.sizing import (
+    MeasurementStore, SizingCatalog, SnapshotStore, aggregate, atomic_json,
+    calculate_scenario, checksum, merge_aggregates, price_for,
+)
 from ..settings import settings
 
 router = APIRouter(responses={422: {"model": ErrorResponse}})
 store = JobStore(settings.ocr_data_dir)
 codes = CodeCatalog(settings.ocr_data_dir)
+sizing_measurements = MeasurementStore(settings.ocr_data_dir, recover=False)
+sizing_catalog = SizingCatalog(settings.ocr_data_dir)
+sizing_snapshots = SnapshotStore(settings.ocr_data_dir)
+_readiness_cache: tuple[float, str, str] | None = None
+_readiness_lock = asyncio.Lock()
 
 
 def fail(status: int, code: str) -> None:
@@ -240,13 +267,37 @@ def profile_supports(profile: dict, options: dict) -> bool:
     )
 
 
+async def provider_readiness_detail() -> tuple[str, str, bool]:
+    global _readiness_cache
+    if _readiness_cache and time.monotonic() - _readiness_cache[0] < 30:
+        return _readiness_cache[1], _readiness_cache[2], True
+    async with _readiness_lock:
+        if _readiness_cache and time.monotonic() - _readiness_cache[0] < 30:
+            return _readiness_cache[1], _readiness_cache[2], True
+        result = await probe_provider(
+            base_url=settings.ocr_base_url,
+            api_key=settings.ocr_api_key,
+            model=settings.ocr_model,
+            timeout=min(settings.ocr_timeout_seconds, 10),
+            measurement_store=sizing_measurements,
+            measurement_context={
+                "job_id": None, "provider_profile_id": settings.ocr_provider,
+                "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
+                "model": settings.ocr_model, "task": "readiness_probe",
+                "measurement_fingerprint": checksum({
+                    "provider_profile_id": settings.ocr_provider, "model": settings.ocr_model,
+                    "task": "readiness_probe", "dpi": 200, "prompt_version": PROMPT_VERSION,
+                    "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
+                }),
+            },
+        )
+        checked_at = now()
+        _readiness_cache = (time.monotonic(), result, checked_at)
+        return result, checked_at, False
+
+
 async def provider_readiness() -> str:
-    return await probe_provider(
-        base_url=settings.ocr_base_url,
-        api_key=settings.ocr_api_key,
-        model=settings.ocr_model,
-        timeout=min(settings.ocr_timeout_seconds, 10),
-    )
+    return (await provider_readiness_detail())[0]
 
 
 async def require_provider_ready() -> None:
@@ -622,7 +673,7 @@ async def get_reports():
 async def check_engine(engine_id: str):
     if engine_id not in {engine["id"] for engine in engines()}:
         fail(404, "invalid_ocr_method")
-    readiness = await provider_readiness()
+    readiness, checked_at, cached = await provider_readiness_detail()
     return {
         "id": engine_id,
         "status": readiness,
@@ -632,6 +683,8 @@ async def check_engine(engine_id: str):
             "reachable": "OCR provider responded but is not ready.",
             "ready": "OCR provider is ready.",
         }[readiness],
+        "checked_at": checked_at,
+        "cached": cached,
     }
 
 
@@ -764,6 +817,7 @@ async def bulk_delete(payload: JobIdsRequest):
             if store.read(job_id).get("status") not in DELETABLE:
                 skipped.append(job_id)
                 continue
+            sizing_measurements.rollup_job(job_id)
             store.delete(job_id)
             deleted.append(job_id)
         except ValueError:
@@ -850,3 +904,299 @@ async def system_metrics():
         state = str(job.get("status", "unknown"))
         states[state] = states.get(state, 0) + 1
     return {**result, "operations": {"states": states}}
+
+
+@router.get("/sizing/overview", response_model=SizingOverviewResponse)
+async def sizing_overview(
+    provider_profile_id: str = "", task: str = "", processing_mode: str = "",
+    start_date: str = "", end_date: str = "",
+    unit: str = Query("job", pattern=r"^(attempt|page|document|job|system)$"),
+):
+    operations = [
+        item for item in sizing_measurements.operations()
+        if (not provider_profile_id or item.get("provider_profile_id") == provider_profile_id)
+        and (not task or item.get("task") == task)
+        and (not processing_mode or item.get("processing_mode") == processing_mode)
+        and (not start_date or str(item.get("started_at", ""))[:10] >= start_date)
+        and (not end_date or str(item.get("started_at", ""))[:10] <= end_date)
+    ]
+    job_ids = {item.get("job_id") for item in operations if item.get("job_id")}
+    live_summary = aggregate(operations, sample_count=len(job_ids), price_profiles=sizing_catalog.read()["price_profiles"])
+    rollups = [] if any((provider_profile_id, task, processing_mode, start_date, end_date)) else [
+        item for job_id, item in sizing_measurements.rollups().items() if job_id not in job_ids
+    ]
+    summary = merge_aggregates([live_summary, *rollups])
+    sample_count = summary["sample_count"]
+    daily: dict[str, int] = {}
+    for item in operations:
+        if item.get("usage_status") not in {"complete", "inconsistent"} or not item.get("usage"):
+            continue
+        day = str(item.get("started_at", ""))[:10]
+        daily[day] = daily.get(day, 0) + int(item["usage"].get("canonical_total_tokens") or 0)
+    unit_keys = {
+        "attempt": {(item.get("operation_id"), item.get("attempt")) for item in operations},
+        "page": {(item.get("job_id"), item.get("document_id"), item.get("page_index")) for item in operations if item.get("page_index") is not None},
+        "document": {(item.get("job_id"), item.get("document_id")) for item in operations if item.get("document_id")},
+        "job": {(item.get("job_id"),) for item in operations if item.get("job_id")},
+        "system": {(item.get("operation_id"),) for item in operations if item.get("scope") == "system"},
+    }
+    return {
+        "generated_at": now(),
+        **summary,
+        "value_kind": "measured" if operations else "unavailable",
+        "coverage": {
+            "response_usage_percent": summary["response_usage_percent"],
+            "billing_certainty_percent": summary["billing_certainty_percent"],
+            "complete_usage_attempts": sum(item.get("usage_status") in {"complete", "inconsistent"} for item in operations),
+            "response_attempts": sum(item.get("response_bytes") is not None for item in operations),
+            "known_billing_attempts": summary["operation_count"] - summary["unknown_cost_attempts"],
+            "total_attempts": summary["operation_count"],
+        },
+        "series": [{"date": day, "total_tokens": total} for day, total in sorted(daily.items())],
+        "provenance": {
+            "value_kind": "measured" if operations else "unavailable",
+            "sample_count": sample_count,
+            "measurement_source": "provider_operation_sidecars",
+            "filters_applied": bool(any((provider_profile_id, task, processing_mode, start_date, end_date))),
+        },
+        "unit": unit,
+        "unit_sample_count": len(unit_keys[unit]),
+        "gates": {
+            name: {
+                "minimum_jobs": minimum, "available": sample_count >= minimum,
+                "reason": "available" if sample_count >= minimum else "measurement_foundation_pending" if name == "preview" and not operations else "insufficient_sample",
+            }
+            for name, minimum in {"preview": 1, "comparison": 2, "trend": 5, "capacity": 20}.items()
+        },
+    }
+
+
+def sizing_page(items: list, page: int, page_size: int) -> tuple[list, dict]:
+    offset = (page - 1) * page_size
+    return items[offset:offset + page_size], {
+        "page": page, "page_size": page_size, "total": len(items),
+        "pages": max(1, (len(items) + page_size - 1) // page_size),
+    }
+
+
+@router.get("/sizing/jobs", response_model=SizingJobsResponse)
+async def sizing_jobs(page: int = 1, page_size: int = Query(25, ge=1, le=100)):
+    operations = sizing_measurements.operations()
+    catalog = sizing_catalog.read()
+    job_ids = list(dict.fromkeys(item["job_id"] for item in operations if item.get("job_id")))
+    items = []
+    for job_id in job_ids:
+        selected = [item for item in operations if item.get("job_id") == job_id]
+        summary = aggregate(selected, sample_count=1, price_profiles=catalog["price_profiles"])
+        try:
+            job = store.read(job_id)
+        except FileNotFoundError:
+            job = {}
+        items.append({
+            "job_id": job_id, "provider_profile_id": selected[0].get("provider_profile_id"),
+            "processing_mode": job.get("processing_mode") or selected[0].get("processing_mode"),
+            "started_at": min((item.get("started_at") for item in selected), default=None),
+            **summary,
+        })
+    items.extend(item for job_id, item in sizing_measurements.rollups().items() if job_id not in job_ids)
+    selected, pagination = sizing_page(items, page, page_size)
+    return {"items": selected, "pagination": pagination}
+
+
+@router.get("/sizing/jobs/{job_id}", response_model=SizingJobDetailResponse)
+async def sizing_job(job_id: str):
+    operations = sizing_measurements.operations(job_id=job_id)
+    if not operations:
+        fail(404, "measurement_not_found")
+    summary = aggregate(operations, sample_count=1, price_profiles=sizing_catalog.read()["price_profiles"])
+    item = {
+        "job_id": job_id, "provider_profile_id": operations[0].get("provider_profile_id"),
+        "processing_mode": operations[0].get("processing_mode"),
+        "started_at": min(item.get("started_at") for item in operations), **summary,
+    }
+    document_ids = list(dict.fromkeys(operation.get("document_id") for operation in operations if operation.get("document_id")))
+    documents = []
+    for document_id in document_ids:
+        selected = [operation for operation in operations if operation.get("document_id") == document_id]
+        document_summary = aggregate(selected, sample_count=1)
+        documents.append({
+            "document_id": document_id, "source_pdf_id": selected[0].get("source_pdf_id"),
+            "operation_count": document_summary["operation_count"],
+            "total_tokens": document_summary["total_tokens"],
+            "page_count": len({operation.get("page_index") for operation in selected if operation.get("page_index") is not None}),
+        })
+    return {"job": item, "documents": documents, "system_overhead_separate": True}
+
+
+@router.get("/sizing/jobs/{job_id}/operations", response_model=SizingOperationsResponse)
+async def sizing_operations(
+    job_id: str, page: int = 1, page_size: int = Query(50, ge=1, le=100),
+    document_id: str = "", source_pdf_id: str = "", task: str = "", status: str = "",
+):
+    items = [
+        item for item in sizing_measurements.operations(job_id=job_id)
+        if (not document_id or item.get("document_id") == document_id)
+        and (not source_pdf_id or item.get("source_pdf_id") == source_pdf_id)
+        and (not task or item.get("task") == task)
+        and (not status or item.get("status") == status)
+    ]
+    selected, pagination = sizing_page(items, page, page_size)
+    return {"items": selected, "pagination": pagination}
+
+
+def sizing_conflict(exc: (ValueError | FileNotFoundError)) -> None:
+    code = str(exc)
+    fail(409 if code == "revision_conflict" else 404 if isinstance(exc, FileNotFoundError) else 400, code)
+
+
+@router.get("/sizing/catalog", response_model=SizingCatalogResponse)
+async def get_sizing_catalog():
+    return sizing_catalog.read()
+
+
+@router.put("/sizing/catalog", response_model=SizingCatalogResponse)
+async def put_sizing_catalog(payload: SizingCatalogRequest):
+    try:
+        current = sizing_catalog.read()
+        used = {
+            profile["id"] for operation in sizing_measurements.operations()
+            if (profile := price_for(operation, current["price_profiles"]))
+        }
+        return sizing_catalog.replace(payload.revision, payload.model_dump(exclude={"revision"}), used_price_ids=used)
+    except ValueError as exc:
+        sizing_conflict(exc)
+
+
+@router.post("/sizing/calculate", response_model=SizingCalculateResponse)
+async def sizing_calculate(payload: SizingCalculateRequest):
+    operations = [
+        item for item in sizing_measurements.operations()
+        if item.get("processing_mode") == payload.processing_mode
+    ]
+    job_ids = {item.get("job_id") for item in operations if item.get("job_id")}
+    summary = aggregate(operations, sample_count=len(job_ids), price_profiles=sizing_catalog.read()["price_profiles"])
+    durations = []
+    for job_id in job_ids:
+        try:
+            job = store.read(job_id)
+        except FileNotFoundError:
+            continue
+        if job.get("started_at") and job.get("completed_at"):
+            durations.append(max(0, (datetime.fromisoformat(job["completed_at"]) - datetime.fromisoformat(job["started_at"])).total_seconds()))
+    summary["job_duration_seconds_p95"] = sorted(durations)[max(0, int(len(durations) * .95 + .999) - 1)] if durations else None
+    return calculate_scenario(payload.model_dump(), summary)
+
+
+@router.post("/sizing/snapshots", response_model=SnapshotResponse, status_code=201)
+async def create_sizing_snapshot(payload: SnapshotCreateRequest):
+    try:
+        return sizing_snapshots.create(payload.model_dump())
+    except ValueError as exc:
+        sizing_conflict(exc)
+
+
+@router.get("/sizing/snapshots", response_model=SnapshotsResponse)
+async def get_sizing_snapshots(page: int = 1, page_size: int = Query(25, ge=1, le=100)):
+    items = sizing_snapshots.list()
+    selected, pagination = sizing_page(items, page, page_size)
+    return {"items": selected, "pagination": pagination, "quota_used": len(items), "quota_limit": sizing_snapshots.LIMIT}
+
+
+@router.patch("/sizing/snapshots/{snapshot_id}", response_model=SnapshotResponse)
+async def patch_sizing_snapshot(snapshot_id: str, payload: SnapshotPatchRequest):
+    try:
+        return sizing_snapshots.patch(snapshot_id, payload.revision, archived=payload.archived)
+    except (ValueError, FileNotFoundError) as exc:
+        sizing_conflict(exc)
+
+
+@router.post("/sizing/snapshots/{snapshot_id}/delete-preview")
+async def preview_sizing_snapshot_delete(snapshot_id: str):
+    try:
+        return sizing_snapshots.delete_preview(snapshot_id)
+    except FileNotFoundError as exc:
+        sizing_conflict(exc)
+
+
+@router.delete("/sizing/snapshots/{snapshot_id}", status_code=204)
+async def delete_sizing_snapshot(snapshot_id: str, payload: DeleteSnapshotRequest):
+    try:
+        sizing_snapshots.delete(snapshot_id, payload.revision, payload.checksum)
+    except (ValueError, FileNotFoundError) as exc:
+        sizing_conflict(exc)
+
+
+@router.post("/sizing/retention/preview")
+async def sizing_retention_preview(payload: RetentionPreviewRequest):
+    paths = []
+    for parent in settings.ocr_data_dir.iterdir():
+        if not parent.is_dir() or parent.name == "_sizing" and not payload.include_system:
+            continue
+        operation_dir = parent / "provider_operations" if parent.name != "_sizing" else parent / "system_operations"
+        for path in operation_dir.glob("*.json"):
+            try:
+                started = str(json.loads(path.read_text(encoding="utf-8")).get("started_at", ""))[:10]
+            except (OSError, json.JSONDecodeError):
+                continue
+            if payload.start_date <= started <= payload.end_date:
+                paths.append(str(path.relative_to(settings.ocr_data_dir)))
+    token = uuid.uuid4().hex
+    rollup_job_ids = [
+        job_id for job_id, item in sizing_measurements.rollups().items()
+        if payload.include_rollups and payload.start_date <= str(item.get("started_at", ""))[:10] <= payload.end_date
+        and (payload.include_pinned_benchmarks or not item.get("benchmark_pinned"))
+    ]
+    plan = {
+        "paths": sorted(paths), "rollup_job_ids": sorted(rollup_job_ids),
+        "start_date": payload.start_date, "end_date": payload.end_date,
+    }
+    plan_checksum = checksum(plan)
+    atomic_json(settings.ocr_data_dir / "_sizing" / "archive_transactions" / f"{token}.json", plan)
+    return {"plan_token": token, "checksum": plan_checksum, "operation_count": len(paths), "rollup_count": len(rollup_job_ids)}
+
+
+@router.post("/sizing/retention/apply")
+async def sizing_retention_apply(payload: RetentionApplyRequest):
+    plan_path = settings.ocr_data_dir / "_sizing" / "archive_transactions" / f"{payload.plan_token}.json"
+    try:
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        fail(404, "retention_plan_not_found")
+    if checksum(plan) != payload.checksum:
+        fail(409, "revision_conflict")
+    deleted = 0
+    for relative in plan["paths"]:
+        target = (settings.ocr_data_dir / relative).resolve()
+        if settings.ocr_data_dir.resolve() not in target.parents:
+            fail(400, "invalid_retention_target")
+        if target.exists():
+            target.unlink()
+            deleted += 1
+    removed_rollups = 0
+    for job_id in plan.get("rollup_job_ids", []):
+        rollup = settings.ocr_data_dir / "_sizing" / "rollups" / f"{job_id}.json"
+        if rollup.exists():
+            rollup.unlink()
+            removed_rollups += 1
+    atomic_json(settings.ocr_data_dir / "_sizing" / "tombstones" / f"{payload.plan_token}.json", {
+        "deleted_at": now(), "start_date": plan["start_date"], "end_date": plan["end_date"],
+        "operation_count": deleted, "rollup_count": removed_rollups, "checksum": payload.checksum,
+    })
+    plan_path.unlink(missing_ok=True)
+    return {"deleted_operations": deleted, "deleted_rollups": removed_rollups}
+
+
+@router.get("/sizing/exchange-rate-sources")
+async def exchange_rate_sources():
+    return {"items": [
+        {"id": "vietcombank", "label": "Vietcombank", "currencies": ["VND"], "url": "https://www.vietcombank.com.vn/"},
+        {"id": "agribank", "label": "Agribank", "currencies": ["VND"], "url": "https://www.agribank.com.vn/"},
+        {"id": "ecb", "label": "ECB", "currencies": ["EUR"], "url": "https://data.ecb.europa.eu/"},
+    ]}
+
+
+@router.post("/sizing/exchange-rate-suggestions")
+async def exchange_rate_suggestions(source_id: str):
+    if source_id not in {"vietcombank", "agribank", "ecb"}:
+        fail(400, "invalid_exchange_source")
+    fail(503, "exchange_source_unavailable")

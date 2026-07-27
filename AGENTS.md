@@ -21,12 +21,13 @@ telemetry.
 The 2026-07-22 Repair Gate passed 28 backend tests, 10 legacy compatibility
 tests, focused browser coverage for task/page retry and partial review, typecheck,
 build, generated OpenAPI/types, and diff checks. These are the protected baseline.
-The current suite has 54 backend tests and 20 passing browser checks. The local
+The protected baseline has 54 backend tests and 20 passing browser checks. The local
 contracts for `X7`–`X13`, `X16`, and the
 locally actionable `X15` scope pass. `X7`/`X16` remain IN PROGRESS at the overall
 gate only because fixture/live acceptance is missing; `X14` still needs real
-benchmark fingerprints. `incomlpeted.md` lists every external condition still
-required.
+benchmark fingerprints. The locally actionable `X17A`–`X17E` scope is
+implemented; `X17F` still needs real provider/fixture/server evidence.
+`incomlpeted.md` lists every external condition still required.
 
 The X7/X16 local contract now also preserves typed suggestion confidence/reason
 with provider-owned provenance, validates create/rerun against configured
@@ -132,7 +133,7 @@ revision conflict, and Continue in the browser gate.
   production is a separate architecture request.
 - The primary UI persona is an operations reviewer completing upload → monitor
   → review/correct/approve. The frontend provides permanent Jobs, Upload, Manage,
-  Logs, Report, and Codes navigation with real routes and data; System Monitor
+  Logs, Report, Codes, and Sizing navigation with real routes and data; System Monitor
   remains a global dialog/deep-linkable state.
 - `/corrections` saves and approves in one call. UI with drafts must say “Save
   and approve”; do not invent an unapproved saved-correction state. Unknown or

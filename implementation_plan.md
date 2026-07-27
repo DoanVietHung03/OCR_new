@@ -8,8 +8,9 @@ cutover và bằng chứng Milestone C. Kế hoạch frontend nằm trong
 `FE-X1`–`FE-X3` đã pass local. `X8`–`X13` và phần local của `X15` đã pass;
 `X14` đã có corrected export,
 timing/report thật nhưng còn chờ benchmark fingerprint. `X7` và `X16` còn chờ
-bốn fixture, provider/restart thật. `X17` token/cost/sizing đã được khóa contract
-nhưng chưa triển khai; chi tiết nằm tại [`Token_Cal.md`](Token_Cal.md). Các
+bốn fixture, provider/restart thật. Phần có thể kiểm tra local của `X17A`–`X17E`
+đã triển khai; `X17F` và Measurement Preview thật còn chờ provider/fixture/server.
+Chi tiết nằm tại [`Token_Cal.md`](Token_Cal.md). Các
 external gate của Milestone C tập trung tại [`incomlpeted.md`](incomlpeted.md).
 Milestone C là
 **internal production-like pilot**, không phải customer-production-ready; chỉ ký
@@ -377,7 +378,7 @@ manual-boundary flow, live provider và deployment rollback evidence.
 
 ### BE-X17
 
-**P1 — Token, cost và sizing — NOT STARTED.** Counterpart:
+**P1 — Token, cost và sizing — LOCAL COMPLETE; LIVE EVIDENCE PENDING.** Counterpart:
 [`FE-X17`](frontend_plan.md#fe-x17). Đặc tả chi tiết:
 [`Token_Cal.md`](Token_Cal.md).
 
@@ -417,6 +418,14 @@ Gate backend:
 
 `X17` là P1 độc lập và không thay thế `BE-X14` hay tự động trở thành blocker mới
 của Milestone C hiện tại. Chỉ evidence thật mới được chuyển trạng thái mục này.
+
+`X17A`–`X17E` đã hoàn tất phần local: provider-attempt/system measurement,
+resource sampler/recovery/rollup, aggregate/filter/nearest-rank, catalog và
+backend calculator, snapshots, retention Preview → Confirm, generated contract
+và `/sizing` drill-down/chart/export. Gate `1/2/5/20` vẫn hiển thị
+`unavailable`/`insufficient` trung thực. Chưa đóng toàn bộ `X17`: một PDF thật,
+bốn fixture, backup/restart, tối thiểu 20 compatible jobs và cluster scale-out
+thuộc `X17F`/live evidence trong [`incomlpeted.md`](incomlpeted.md).
 
 ## Thứ tự triển khai parity
 

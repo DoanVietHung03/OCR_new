@@ -74,3 +74,19 @@ thành:
 - ghi toàn bộ bằng chứng sanitized vào `BE-C-EVIDENCE`;
 - việc bỏ auth anonymous hoặc nâng lên customer production là một yêu cầu kiến
   trúc riêng, không thuộc gate pilot hiện tại.
+
+## 5. X17F — Sizing evidence thật
+
+`X17A`–`X17E` đã hoàn tất contract, persistence, API, UI và kiểm thử local.
+Các điều kiện dưới đây cần provider/dữ liệu/runtime bên ngoài repository:
+
+- chạy một PDF thật và đối soát aggregate với toàn bộ attempt sidecar;
+- chạy bốn fixture cùng compatible fingerprint cho `full_ocr`, `metadata`,
+  `segmentation` và `readiness_probe`, gồm trường hợp provider không trả usage;
+- backup/restore, restart/interrupted và delete/rollup không mất hoặc cộng trùng
+  measurement;
+- thu ít nhất 20 compatible jobs với coverage/reliability đạt gate trước khi mở
+  full capacity/SLA screening;
+- chỉ gắn nhãn scale-out validated sau cluster benchmark thật;
+- nếu cần tỷ giá gợi ý, kiểm tra nguồn allowlist qua mạng thật và user xác nhận;
+  lỗi nguồn không được ảnh hưởng OCR.

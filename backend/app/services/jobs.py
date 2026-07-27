@@ -443,7 +443,7 @@ class JobStore:
     def list(self) -> list[dict[str, Any]]:
         jobs = []
         for path in self.root.iterdir():
-            if path.is_dir():
+            if path.is_dir() and re.fullmatch(r"[a-f0-9-]{36}", path.name):
                 try:
                     jobs.append(self.read(path.name))
                 except FileNotFoundError:

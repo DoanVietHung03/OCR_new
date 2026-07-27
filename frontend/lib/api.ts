@@ -12,6 +12,13 @@ export type ProviderProfile = Schemas["ProviderProfileResponse"];
 export type Documents = Schemas["DocumentsResponse"];
 export type Events = Schemas["EventsResponse"];
 export type Reports = Schemas["ReportsResponse"];
+export type SizingOverview = Schemas["SizingOverviewResponse"];
+export type SizingJobs = Schemas["SizingJobsResponse"];
+export type SizingJob = Schemas["SizingJobSummary"];
+export type SizingOperations = Schemas["SizingOperationsResponse"];
+export type SizingCatalog = Schemas["SizingCatalogResponse"];
+export type SizingSnapshot = Schemas["SnapshotResponse"];
+export type SizingSnapshots = Schemas["SnapshotsResponse"];
 export type CodeCatalog = Schemas["CodeCatalogResponse"];
 export type CodeEntry = Schemas["CodeEntry"];
 export type CodeInput = Schemas["CodeInput"];
@@ -71,6 +78,33 @@ export const getDocuments = (filters: NonNullable<operations["get_documents_api_
 export const getEvents = (filters: NonNullable<operations["get_events_api_events_get"]["parameters"]["query"]> = {}) =>
   request<Events>(`/api/events?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);
 export const getReports = () => request<Reports>("/api/reports");
+const sizingQuery = (filters: Record<string, string | number | undefined> = {}) =>
+  new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined && value !== "").map(([key, value]) => [key, String(value)])).toString();
+export const getSizingOverview = (filters: Record<string, string | undefined> = {}) => request<SizingOverview>(`/api/sizing/overview?${sizingQuery(filters)}`);
+export const getSizingJobs = (page = 1) => request<SizingJobs>(`/api/sizing/jobs?${sizingQuery({ page })}`);
+export const getSizingOperations = (jobId: string, filters: Record<string, string | number | undefined> = {}) =>
+  request<SizingOperations>(`/api/sizing/jobs/${encodeURIComponent(jobId)}/operations?${sizingQuery(filters)}`);
+export const getSizingCatalog = () => request<SizingCatalog>("/api/sizing/catalog");
+export const putSizingCatalog = (payload: Schemas["SizingCatalogRequest"]) =>
+  request<SizingCatalog>("/api/sizing/catalog", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+export const calculateSizing = (payload: Schemas["SizingCalculateRequest"]) =>
+  request<Schemas["SizingCalculateResponse"]>("/api/sizing/calculate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+export const getSizingSnapshots = () => request<SizingSnapshots>("/api/sizing/snapshots");
+export const createSizingSnapshot = (payload: Schemas["SnapshotCreateRequest"]) =>
+  request<SizingSnapshot>("/api/sizing/snapshots", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+export const patchSizingSnapshot = (id: string, payload: Schemas["SnapshotPatchRequest"]) =>
+  request<SizingSnapshot>(`/api/sizing/snapshots/${encodeURIComponent(id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+export const previewSizingSnapshotDelete = (id: string) =>
+  request<{ snapshot_id: string; revision: number; checksum: string }>(`/api/sizing/snapshots/${encodeURIComponent(id)}/delete-preview`, { method: "POST" });
+export const deleteSizingSnapshot = (id: string, payload: Schemas["DeleteSnapshotRequest"]) =>
+  request<void>(`/api/sizing/snapshots/${encodeURIComponent(id)}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+export const previewSizingRetention = (payload: Schemas["RetentionPreviewRequest"]) =>
+  request<{ plan_token: string; checksum: string; operation_count: number }>("/api/sizing/retention/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+export const applySizingRetention = (payload: Schemas["RetentionApplyRequest"]) =>
+  request<{ deleted_operations: number }>("/api/sizing/retention/apply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+export const getExchangeRateSources = () => request<{ items: { id: string; label: string; currencies: string[]; url: string }[] }>("/api/sizing/exchange-rate-sources");
+export const suggestExchangeRate = (sourceId: string) =>
+  request<{ items: unknown[] }>(`/api/sizing/exchange-rate-suggestions?source_id=${encodeURIComponent(sourceId)}`, { method: "POST" });
 export const getArtifacts = (id: string) => request<Artifacts>(`/api/jobs/${encodeURIComponent(id)}/artifacts`);
 export const getCodes = () => request<CodeCatalog>("/api/codes");
 export const createCode = (payload: Schemas["CodeInput"]) =>

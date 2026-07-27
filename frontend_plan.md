@@ -7,7 +7,8 @@ trong [`implementation_plan.md`](implementation_plan.md).
 **Trạng thái kiểm tra lại 2026-07-24:** Repair Gate `FE-X1`–`FE-X3` và counterpart backend đã
 pass local. `FE-X8`–`FE-X13` và phạm vi local của `FE-X15` đã pass; `FE-X14` còn
 chờ benchmark fingerprint. `FE-X7`/`FE-X16` còn chờ bốn fixture và restart thật.
-`FE-X17` sizing đã khóa contract nhưng chưa triển khai; chi tiết nằm tại
+Phần local của `FE-X17A`–`FE-X17E` đã triển khai; Preview/provider/fixture thật
+và capacity evidence vẫn mở tại `FE-X17F`. Chi tiết nằm tại
 [`Token_Cal.md`](Token_Cal.md). Các external gate của Milestone C nằm tại
 [`incomlpeted.md`](incomlpeted.md).
 Milestone C là internal production-like pilot; live evidence vẫn
@@ -259,7 +260,7 @@ khi đóng.
 
 ### FE-X17
 
-**P1 — Sizing & Cost — NOT STARTED.** Counterpart:
+**P1 — Sizing & Cost — LOCAL COMPLETE; LIVE EVIDENCE PENDING.** Counterpart:
 [`BE-X17`](implementation_plan.md#be-x17). Đặc tả chi tiết:
 [`Token_Cal.md`](Token_Cal.md).
 
@@ -303,6 +304,13 @@ aggregate khớp sidecar và unavailable/insufficient/partial cost hiển thị 
 Bốn fixture chỉ là reproducible baseline; full capacity screening vẫn cần
 20-job/coverage gate. `FE-X17` không thay thế `FE-X14` hoặc block Milestone C
 hiện tại.
+
+Đã hoàn tất phần local của `/sizing`: URL-persisted filters, Overview,
+Document Explorer lazy/paginated, ECharts dynamic import + table fallback,
+catalogs/calculator backend-owned, snapshot, retention Preview → Confirm và
+CSV/JSON/PNG/print export. UI gate `1/2/5/20` không dựng chart, zero hay verdict
+giả khi thiếu dữ liệu. Preview trên PDF/provider thật và full capacity screening
+vẫn mở tại `X17F`.
 
 ## Thứ tự triển khai parity
 
@@ -354,7 +362,7 @@ hiện tại.
 | Segmentation/Bìa/logical documents | `X16` LOCAL COMPLETE; LIVE PENDING | Bốn fixture, confirm/restart/review và legacy read pass |
 | Progress/timeline/triage | PASS LOCAL `X12`–`X13` | Persisted counters/failure/timeline, backend triage, deep-link và missing artifact pass |
 | Report/export/URL | `X14` LOCAL COMPLETE; LIVE SAMPLE PENDING; `X15` PASS LOCAL | Benchmark fingerprint thật |
-| Token/cost/sizing | `X17` NOT STARTED | Measurement foundation → one-PDF Preview → 20-job capacity gate |
+| Token/cost/sizing | `X17A`–`X17E` LOCAL COMPLETE; `X17F` LIVE PENDING | One-PDF/provider Preview → bốn fixture → 20-job capacity gate |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 

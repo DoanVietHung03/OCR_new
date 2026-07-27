@@ -459,6 +459,211 @@ class ReportsResponse(BaseModel):
     benchmark_samples: list[BenchmarkSample] | None = None
 
 
+class SizingGate(BaseModel):
+    minimum_jobs: int = Field(ge=1)
+    available: bool = False
+    reason: str
+
+
+class SizingCoverage(BaseModel):
+    response_usage_percent: float | None = None
+    billing_certainty_percent: float | None = None
+    complete_usage_attempts: int = 0
+    response_attempts: int = 0
+    known_billing_attempts: int = 0
+    total_attempts: int = 0
+
+
+class SizingOverviewResponse(BaseModel):
+    generated_at: str
+    sample_count: int = 0
+    operation_count: int = 0
+    value_kind: Literal["measured", "calculated", "assumed", "unavailable"]
+    coverage: SizingCoverage
+    gates: dict[str, SizingGate]
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    duration_ms_p50: float | None = None
+    duration_ms_p95: float | None = None
+    known_cost: float | None = None
+    total_cost: float | None = None
+    unknown_cost_attempts: int = 0
+    series: list[dict[str, Any]] = Field(default_factory=list)
+    provenance: dict[str, Any] = Field(default_factory=dict)
+    unit: Literal["attempt", "page", "document", "job", "system"] = "job"
+    unit_sample_count: int = 0
+
+
+class SizingOperation(PublicModel):
+    schema_version: int = 1
+    operation_id: str
+    attempt: int
+    scope: Literal["job", "system"]
+    job_id: str | None = None
+    provider_profile_id: str | None = None
+    model: str | None = None
+    task: str | None = None
+    processing_mode: str | None = None
+    source_pdf_id: str | None = None
+    document_id: str | None = None
+    page_index: int | None = None
+    status: str
+    started_at: str
+    duration_ms: int | None = None
+    request_bytes: int
+    response_bytes: int | None = None
+    http_status: int | None = None
+    retryable: bool = False
+    usage_status: str
+    usage: dict[str, int | None] | None = None
+
+
+class SizingOperationsResponse(BaseModel):
+    items: list[SizingOperation]
+    pagination: PaginationResponse
+
+
+class SizingJobSummary(PublicModel):
+    job_id: str
+    provider_profile_id: str | None = None
+    processing_mode: str | None = None
+    operation_count: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    known_cost: float | None = None
+    total_cost: float | None = None
+    response_usage_percent: float | None = None
+    billing_certainty_percent: float | None = None
+    started_at: str | None = None
+
+
+class SizingJobsResponse(BaseModel):
+    items: list[SizingJobSummary]
+    pagination: PaginationResponse
+
+
+class SizingDocumentSummary(BaseModel):
+    document_id: str
+    source_pdf_id: str | None = None
+    operation_count: int = 0
+    total_tokens: int = 0
+    page_count: int = 0
+
+
+class SizingJobDetailResponse(BaseModel):
+    job: SizingJobSummary
+    documents: list[SizingDocumentSummary]
+    system_overhead_separate: bool = True
+
+
+class SizingCatalogResponse(BaseModel):
+    revision: int
+    price_profiles: list[dict[str, Any]]
+    workload_profiles: list[dict[str, Any]]
+    hardware_profiles: list[dict[str, Any]]
+
+
+class SizingCatalogRequest(RequestModel):
+    revision: int = Field(ge=0)
+    price_profiles: list[dict[str, Any]] = Field(default_factory=list)
+    workload_profiles: list[dict[str, Any]] = Field(default_factory=list)
+    hardware_profiles: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class SizingCalculateRequest(RequestModel):
+    monthly_jobs: float = Field(gt=0)
+    operating_days: float = Field(gt=0, le=31)
+    operating_hours: float = Field(gt=0, le=24)
+    processing_mode: Literal["administrative_document", "dossier_cover", "combined_dossier"]
+    peak_factor: float = Field(default=1, ge=1)
+    reserve: float = Field(default=0, ge=0, le=5)
+    minimum_success_rate: float = Field(default=.95, gt=0, le=1)
+    artifact_retention_days: int = Field(default=30, ge=0)
+    average_pages_per_job: float | None = Field(default=None, gt=0)
+    average_documents_per_dossier: float | None = Field(default=None, gt=0)
+    average_pages_per_document: float | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def combined_averages(self):
+        if self.processing_mode == "combined_dossier" and (
+            self.average_documents_per_dossier is None or self.average_pages_per_document is None
+        ):
+            raise ValueError("combined_dossier_averages_required")
+        return self
+
+
+class SizingCalculateResponse(PublicModel):
+    value_kind: Literal["calculated"]
+    average_jobs_per_hour: float
+    peak_jobs_per_hour: float
+    required_capacity_jobs_per_hour: float
+    measured_capacity_jobs_per_hour: float | None = None
+    theoretical_capacity_units: int | None = None
+    capacity_verdict: str
+    cost_forecast_available: bool
+    estimated_monthly_tokens: float | None = None
+    estimated_monthly_known_cost: float | None = None
+    self_host_tco: None = None
+
+
+class SnapshotCreateRequest(RequestModel):
+    name: str = Field(min_length=1, max_length=200)
+    inputs: dict[str, Any]
+    aggregate: dict[str, Any]
+    result: dict[str, Any]
+    provenance: dict[str, Any]
+
+
+class SnapshotPatchRequest(RequestModel):
+    revision: int = Field(ge=0)
+    archived: bool
+
+
+class SnapshotResponse(PublicModel):
+    id: str
+    revision: int
+    archived: bool
+    created_at: str
+    name: str
+    inputs: dict[str, Any]
+    aggregate: dict[str, Any]
+    result: dict[str, Any]
+    provenance: dict[str, Any]
+
+
+class SnapshotsResponse(BaseModel):
+    items: list[SnapshotResponse]
+    pagination: PaginationResponse
+    quota_used: int
+    quota_limit: int = 1000
+
+
+class DeleteSnapshotRequest(RequestModel):
+    revision: int = Field(ge=0)
+    checksum: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class RetentionPreviewRequest(RequestModel):
+    start_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    end_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    include_system: bool = False
+    include_rollups: bool = False
+    include_pinned_benchmarks: bool = False
+
+    @model_validator(mode="after")
+    def ordered_dates(self):
+        if self.start_date > self.end_date:
+            raise ValueError("invalid_date_range")
+        return self
+
+
+class RetentionApplyRequest(RequestModel):
+    plan_token: str = Field(pattern=r"^[0-9a-f]{32}$")
+    checksum: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class StateResponse(PublicModel):
     server_mode: bool
     jobs: list[JobResponse]
@@ -478,6 +683,8 @@ class EngineCheckResponse(BaseModel):
     id: str
     status: Literal["not_configured", "unreachable", "reachable", "ready"]
     summary: str
+    checked_at: str | None = None
+    cached: bool = False
 
 
 CodeGroup = Literal[

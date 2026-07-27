@@ -4,14 +4,15 @@ import asyncio
 import os
 import time
 from pathlib import Path
-from threading import Thread
+from threading import Event, Thread
 
 from celery import Celery
 from celery.signals import worker_ready
 
 from ..services.field_policy import ADMIN_FIELDS, SIGNATURE_FIELDS, annotate
 from ..services.jobs import ACTIVE, MAX_PAGES, JobStore, failure, now
-from ..services.ocr_runner import request_page
+from ..services.ocr_runner import PROMPT_VERSION, request_page
+from ..services.sizing import MeasurementStore, aggregate, atomic_json, checksum, utc_now
 
 celery_app = Celery(
     "ocr",
@@ -24,6 +25,55 @@ SAFE_ERRORS = {
     "pdf_page_limit_exceeded", "provider_timeout", "provider_unavailable",
     "unsupported_file", "worker_interrupted",
 }
+
+
+class ResourceSampler:
+    def __init__(self, store: JobStore, job_id: str) -> None:
+        self.store, self.job_id, self.stop_event = store, job_id, Event()
+        self.peak_rss = 0
+        self.cpu_seconds = 0.0
+        self.thread = Thread(target=self.run, daemon=True)
+
+    def start(self) -> None:
+        self.thread.start()
+
+    def run(self) -> None:
+        try:
+            import psutil
+            process = psutil.Process()
+            while not self.stop_event.wait(1):
+                processes = [process, *process.children(recursive=True)]
+                self.peak_rss = max(self.peak_rss, sum(item.memory_info().rss for item in processes if item.is_running()))
+                self.cpu_seconds = sum(sum(item.cpu_times()[:2]) for item in processes if item.is_running())
+        except Exception:
+            pass
+
+    def stop(self) -> None:
+        self.stop_event.set()
+        self.thread.join(timeout=2)
+        try:
+            root = self.store.path(self.job_id)
+            files = [path for path in root.rglob("*") if path.is_file()]
+            source_pdf_bytes = sum(path.stat().st_size for path in (root / "uploads").glob("*.pdf"))
+            rendered_page_bytes = sum(path.stat().st_size for path in (root / "artifacts").rglob("page-*.png"))
+            evidence_bytes = sum(path.stat().st_size for path in (root / "artifacts").rglob("field-*.png"))
+            measurement_bytes = sum(path.stat().st_size for path in (root / "provider_operations").rglob("*.json"))
+            total_job_bytes = sum(path.stat().st_size for path in files)
+            atomic_json(root / "resource_usage.json", {
+                "schema_version": 1, "scope": "worker", "measured_at": utc_now(),
+                "peak_worker_rss_bytes": self.peak_rss or None,
+                "worker_cpu_seconds": round(self.cpu_seconds, 3) if self.cpu_seconds else None,
+                "working_disk_bytes": total_job_bytes,
+                "storage": {
+                    "source_pdf_bytes": source_pdf_bytes, "rendered_page_bytes": rendered_page_bytes,
+                    "evidence_bytes": evidence_bytes, "report_bytes": 0,
+                    "measurement_bytes": measurement_bytes,
+                    "other_safe_bytes": max(0, total_job_bytes - source_pdf_bytes - rendered_page_bytes - evidence_bytes - measurement_bytes),
+                    "total_job_bytes": total_job_bytes,
+                },
+            })
+        except (OSError, ValueError):
+            pass
 
 
 def safe_error(error: Exception) -> str:
@@ -130,6 +180,7 @@ def reused_classification(segment: dict, page_index: int) -> str:
 
 
 async def segment_job(store: JobStore, job: dict) -> dict:
+    measurements = MeasurementStore(store.root)
     job = store.update(job["id"], status="segmenting", error=None, failure=None, progress_stage="segmenting")
     sources = job.get("source_pdfs", [])
     rendered = {}
@@ -161,6 +212,21 @@ async def segment_job(store: JobStore, job: dict) -> dict:
                         image.read_bytes(), base_url=os.getenv("OCR_BASE_URL", ""), api_key=os.getenv("OCR_API_KEY", ""),
                         model=job.get("model", ""), timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "120")),
                         page_index=page_index, task="segmentation",
+                        measurement_store=measurements,
+                        measurement_context={
+                            "job_id": job["id"], "provider_profile_id": job.get("provider_profile_id"),
+                            "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
+                            "model": job.get("model", ""), "task": "segmentation",
+                            "processing_mode": job.get("processing_mode"), "source_pdf_id": source["id"],
+                            "document_id": None, "page_index": page_index,
+                            "segmentation_revision": source.get("revision"),
+                            "measurement_fingerprint": checksum({
+                                "provider_profile_id": job.get("provider_profile_id"), "model": job.get("model", ""),
+                                "task": "segmentation", "processing_mode": job.get("processing_mode"),
+                                "dpi": 200, "prompt_version": PROMPT_VERSION,
+                                "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
+                            }),
+                        },
                     )
                     classification = result["classification"]
                 except Exception as exc:
@@ -182,6 +248,7 @@ async def segment_job(store: JobStore, job: dict) -> dict:
 
 async def process_job_async(job_id: str) -> dict:
     store = JobStore(os.getenv("OCR_DATA_DIR", "data/jobs"))
+    measurements = MeasurementStore(store.root)
     job = store.read(job_id)
     if job.get("status") == "cancelling" and cancelled(store, job_id):
         return store.read(job_id)
@@ -317,6 +384,26 @@ async def process_job_async(job_id: str) -> dict:
                         task=pass_task,
                         expected_fields=expected_fields,
                         ocr_text=state.get("text", "") if pass_task == "metadata" else "",
+                        measurement_store=measurements,
+                        measurement_context={
+                            "job_id": job_id, "provider_profile_id": job.get("provider_profile_id"),
+                            "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
+                            "model": job.get("model", ""), "task": pass_task,
+                            "processing_mode": job.get("processing_mode"),
+                            "source_pdf_id": document.get("source_pdf_id"),
+                            "document_id": document["id"], "page_index": index,
+                            "segmentation_revision": next((
+                                source.get("revision") for source in job.get("source_pdfs", [])
+                                if source.get("id") == document.get("source_pdf_id")
+                            ), None),
+                            "measurement_fingerprint": checksum({
+                                "provider_profile_id": job.get("provider_profile_id"), "model": job.get("model", ""),
+                                "task": pass_task, "processing_mode": job.get("processing_mode"),
+                                "page_scope": page_mode, "vlm_max_pages": max_pages, "dpi": 200,
+                                "prompt_version": PROMPT_VERSION,
+                                "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
+                            }),
+                        },
                     )
                     if pass_task == "full_ocr":
                         state["text"] = result["text"]
@@ -408,21 +495,25 @@ async def process_job_async(job_id: str) -> dict:
     status = "completed" if successes and not failures and not warnings else "completed_with_warnings" if successes else "error"
     first_failure = next((page for item in documents for page in item.get("pages", []) if page.get("status") == "error"), None)
     store.add_event(job_id, "job_completed", severity="error" if status == "error" else "warning" if warnings else "info")
+    resource_usage = aggregate(measurements.operations(job_id=job_id), sample_count=1)
     return store.update(
         job_id, status=status, documents=documents, report_url=None, completed_at=now(),
         progress_stage="failed" if status == "error" else "completed",
         failure=failure(first_failure["error"], first_failure.get("page_index")) if status == "error" and first_failure else None,
         dossier_cover_count=sum(item.get("logical_document_type") == "dossier_cover" for item in documents),
         administrative_document_count=sum(item.get("logical_document_type") == "administrative_document" for item in documents),
+        resource_usage=resource_usage,
     )
 
 
 @celery_app.task(name="ocr.process_job")
 def process_job(job_id: str) -> dict:
+    store = JobStore(os.getenv("OCR_DATA_DIR", "data/jobs"))
+    sampler = ResourceSampler(store, job_id)
+    sampler.start()
     try:
         return asyncio.run(process_job_async(job_id))
     except Exception as exc:
-        store = JobStore(os.getenv("OCR_DATA_DIR", "data/jobs"))
         try:
             if store.read(job_id).get("status") in ACTIVE:
                 code = safe_error(exc)
@@ -430,6 +521,8 @@ def process_job(job_id: str) -> dict:
             return store.read(job_id)
         except (FileNotFoundError, ValueError):
             return {"id": job_id, "status": "error", "error": "ocr_failed"}
+    finally:
+        sampler.stop()
 
 
 def dispatch(job_id: str) -> None:
