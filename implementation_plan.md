@@ -8,8 +8,10 @@ cutover và bằng chứng Milestone C. Kế hoạch frontend nằm trong
 `FE-X1`–`FE-X3` đã pass local. `X8`–`X13` và phần local của `X15` đã pass;
 `X14` đã có corrected export,
 timing/report thật nhưng còn chờ benchmark fingerprint. `X7` và `X16` còn chờ
-bốn fixture, provider/restart thật. Phần chưa thể đóng được tập trung tại
-[`incomlpeted.md`](incomlpeted.md). Milestone C là
+bốn fixture, provider/restart thật. `X17` token/cost/sizing đã được khóa contract
+nhưng chưa triển khai; chi tiết nằm tại [`Token_Cal.md`](Token_Cal.md). Các
+external gate của Milestone C tập trung tại [`incomlpeted.md`](incomlpeted.md).
+Milestone C là
 **internal production-like pilot**, không phải customer-production-ready; chỉ ký
 sau local contract gate và evidence strong-server. Runtime được vận hành duy nhất
 bởi stack Next.js/FastAPI/Celery.
@@ -18,7 +20,7 @@ bởi stack Next.js/FastAPI/Celery.
 
 - Backend sở hữu schema, validation, persistence, worker, provider, deployment
   và evidence vận hành; frontend không chép lại các contract này.
-- Mỗi mục giao nhau dùng mã `X1`–`X16` và backlink đối xứng. Một mục chỉ được đóng
+- Mỗi mục giao nhau dùng mã `X1`–`X17` và backlink đối xứng. Một mục chỉ được đóng
   khi counterpart đã pass hoặc ghi rõ `N/A` cùng lý do.
 - Public schema thay đổi bắt buộc kiểm tra `BE-X3` và `FE-X3`.
 - Checkbox/test local không thay thế evidence provider/worker thật trong
@@ -44,6 +46,7 @@ bởi stack Next.js/FastAPI/Celery.
 | `X14` | Benchmark, report và export | [`FE-X14`](frontend_plan.md#fe-x14) | Không placeholder; output đã duyệt tải được |
 | `X15` | Native URL/interaction support | [`FE-X15`](frontend_plan.md#fe-x15) | Public data hỗ trợ state/utility thật, không dependency mới |
 | `X16` | Source PDF và logical documents | [`FE-X16`](frontend_plan.md#fe-x16) | Hồ sơ gộp được phân đoạn, xác nhận và review bền vững |
+| `X17` | Provider measurement, sizing contract và durable analytics | [`FE-X17`](frontend_plan.md#fe-x17) | Measurement Preview dùng dữ liệu thật; calculator/capacity chỉ mở sau sample gate |
 
 ## Domain contract
 
@@ -59,6 +62,9 @@ bởi stack Next.js/FastAPI/Celery.
 | Review Risk | Aggregate typed phục vụ triage; không được client suy ra từ dữ liệu partial |
 | Progress Snapshot | Stage/count/detail an toàn đã persist; không phải phần trăm client nội suy |
 | Benchmark Sample | Timing/resource sample gắn fixture/config fingerprint tương thích |
+| Provider Operation | Một HTTP attempt an toàn, khóa bởi `(operation_id, attempt)` và persist trước/sau provider call |
+| Measurement Fingerprint | Fingerprint config vận hành; không chứa fixture/hardware và cho phép aggregate PDF thường tương thích |
+| Sizing Snapshot | Kết quả calculator immutable do user chủ động lưu, kèm input/provenance/sample gate |
 | Logical Document | Bìa hoặc văn bản nghiệp vụ thuộc đúng một source PDF; persist trong `job.documents[]` với `logical_document_type` |
 | Code Catalog | Danh mục mã có revision, lưu atomic tại `OCR_DATA_DIR/_codes.json` |
 | Safe Event | Event typed và sanitized; không phải raw provider log hoặc stack trace |
@@ -120,6 +126,40 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
   unredacted request/response và document text trong log.
 - Backend ghi trước dispatch, worker ghi khi active, backend ghi lại sau terminal.
   Cancel dùng marker; stale task phải no-op.
+
+### Measurement, cost và sizing
+
+- Contract chi tiết của `X17` nằm tại [`Token_Cal.md`](Token_Cal.md). Không triển
+  khai calculator/chart trước measurement foundation và Measurement Preview.
+- Mỗi provider HTTP attempt được persist thành sidecar atomic; khóa chống trùng
+  là `(operation_id, attempt)`. Sidecar là nguồn sự thật,
+  `job.resource_usage` chỉ là aggregate rebuild được. Usage phải được finalize
+  trước parse OCR; invalid OCR JSON vẫn giữ usage/bytes/latency.
+- Parser usage chỉ nhận allowlist Chat Completions. Không đoán image token hoặc
+  alias provider. Missing/incomplete usage là unavailable và làm giảm coverage,
+  không thành zero hoặc partial total giả.
+- Readiness HTTP thật được đo như `scope=system`; cache/coalesce 30 giây không
+  tạo provider call giả. Điều này chỉ instrument probe hiện có, không mở thêm
+  provider call trong FastAPI.
+- Per-job operation nằm trong thư mục job; system operation/rollup/transaction/
+  snapshot nằm dưới `OCR_DATA_DIR/_sizing/`. `_sizing.json` chỉ giữ catalog có
+  revision. Không thêm database/JSONL/store ngoài `OCR_DATA_DIR`.
+- Rollup chỉ archive raw sắp bị xóa. Xóa job loại raw sidecar nhưng giữ rollup
+  đã khử định danh; mọi cleanup dùng Preview → Confirm, revision/checksum và
+  tombstone an toàn. Không auto-delete.
+- Job cũ không backfill hoặc rewrite. Mọi PDF có measurement hợp lệ đều có thể
+  dùng cho operational sizing; fixture chỉ tạo benchmark tái lập.
+- Tách `measurement_fingerprint` khỏi `benchmark_fingerprint`; không trộn config,
+  page range hoặc measurement scope không tương thích.
+- Cost lịch sử chỉ dùng provider usage + Price Profile versioned. `known_cost`
+  không được gọi `total_cost` khi billing chưa chắc chắn; self-host không hiện
+  chi phí bằng zero khi chưa có TCO.
+- Calculator thuộc backend, dùng nearest-rank và gate tối thiểu 20 compatible
+  jobs; cost forecast còn yêu cầu billing certainty ≥95%. Công thức chỉ cho
+  capacity screening; SLA đạt cần load test đo queue wait/end-to-end.
+- Worker resource sampler đo process/child CPU time, peak RSS, render time và
+  working disk; `/system-metrics` của FastAPI không được dùng để suy resource
+  của worker/provider host.
 
 ### Review và lifecycle action
 
@@ -335,6 +375,49 @@ không tương thích, hai waiting state sống qua worker restart, và browser 
 tra boundary bất kỳ, inline validation, revision conflict cùng Continue. Mục này vẫn mở cho bốn fixture/ground truth, difficult
 manual-boundary flow, live provider và deployment rollback evidence.
 
+### BE-X17
+
+**P1 — Token, cost và sizing — NOT STARTED.** Counterpart:
+[`FE-X17`](frontend_plan.md#fe-x17). Đặc tả chi tiết:
+[`Token_Cal.md`](Token_Cal.md).
+
+Triển khai theo thứ tự bắt buộc:
+
+1. `X17A` measurement foundation: attempt sidecar/lifecycle, usage parser,
+   readiness system scope, worker resource sampler, aggregate rebuild,
+   old-job compatibility và rollup-on-delete.
+2. `X17B` Measurement Preview: chạy một PDF thật, đối soát aggregate/sidecar,
+   two coverage metrics và lazy drill-down; chưa capacity/SLA verdict.
+3. `X17C` aggregation: time/profile/task/mode/page filters, page/document/job
+   units, nearest-rank và backend-aggregated series.
+4. `X17D` catalogs/calculator: Price/Workload/Hardware Profile, exchange-rate
+   suggestion allowlist và cost/storage/capacity/reliability calculation.
+5. `X17E` retention/snapshots: preview/apply cleanup, rollup deletion,
+   tombstone/recovery và bounded immutable snapshots.
+6. `X17F` evidence: bốn fixture làm reproducible baseline; tối thiểu 20
+   compatible jobs mới được capacity screening đầy đủ.
+
+Gate backend:
+
+- Persist `in_progress` trước HTTP và `final` trước OCR parse; restart biến
+  attempt dở thành `interrupted`, không auto-call lại và không double count.
+- `segmentation` không giả `document_id`; readiness dùng system scope; bytes là
+  application payload, không được gọi network traffic đo thật.
+- `resource_usage` rebuild từ sidecar; delete/archive/restart/backup giữ rollup
+  đúng và idempotent. Job legacy thiếu measurement vẫn đọc được, không rewrite.
+- Cost matching theo profile/model/effective time; profile đã dùng immutable/
+  archive-only. Tỷ giá fetch on-demand từ fixed allowlist, user xác nhận trước
+  khi persist; source lỗi không ảnh hưởng OCR.
+- Calculator từ chối verdict dưới sample/coverage gate, ngoài observed page
+  range hoặc khác fingerprint. Scale-out chỉ trả theoretical capacity units cho
+  tới khi cluster benchmark thật pass.
+- Pydantic/OpenAPI/generated types, focused persistence/recovery/math tests và
+  toàn bộ required local checks phải pass trước Preview. Một PDF/bốn fixture/
+  20-job gate phải ghi đúng cấp evidence, không nâng nhãn.
+
+`X17` là P1 độc lập và không thay thế `BE-X14` hay tự động trở thành blocker mới
+của Milestone C hiện tại. Chỉ evidence thật mới được chuyển trạng thái mục này.
+
 ## Thứ tự triển khai parity
 
 0. **Fixture-first:** ghép bốn fixture ngoài Git/data, khóa composition manifest,
@@ -347,6 +430,8 @@ manual-boundary flow, live provider và deployment rollback evidence.
    của `X13` và `X15`, chỉ dùng dữ liệu backend đã persist.
 4. **Giai đoạn 4 — đo lường:** `X14` chỉ còn benchmark từ sample live;
    corrected export không chặn Milestone C.
+5. **Giai đoạn 5 — sizing:** `X17A → X17F`, measurement-first; Preview một PDF
+   trước, aggregation/calculator/capacity sau sample gate.
 
 ## Milestone C: runbook và deployment rollback
 

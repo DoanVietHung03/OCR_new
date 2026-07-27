@@ -7,7 +7,9 @@ trong [`implementation_plan.md`](implementation_plan.md).
 **Trạng thái kiểm tra lại 2026-07-24:** Repair Gate `FE-X1`–`FE-X3` và counterpart backend đã
 pass local. `FE-X8`–`FE-X13` và phạm vi local của `FE-X15` đã pass; `FE-X14` còn
 chờ benchmark fingerprint. `FE-X7`/`FE-X16` còn chờ bốn fixture và restart thật.
-Các điều kiện còn thiếu nằm tại [`incomlpeted.md`](incomlpeted.md).
+`FE-X17` sizing đã khóa contract nhưng chưa triển khai; chi tiết nằm tại
+[`Token_Cal.md`](Token_Cal.md). Các external gate của Milestone C nằm tại
+[`incomlpeted.md`](incomlpeted.md).
 Milestone C là internal production-like pilot; live evidence vẫn
 ghi duy nhất trong `BE-C-EVIDENCE`.
 
@@ -15,7 +17,7 @@ ghi duy nhất trong `BE-C-EVIDENCE`.
 
 - Frontend sở hữu route, input, copy, rendering, interaction, accessibility và
   visual evidence; backend sở hữu schema, persistence và execution semantics.
-- Mỗi mục `FE-Xn` link thẳng tới `BE-Xn`. Chỉ đánh dấu hoàn thành khi hai phía
+- Mỗi mục `FE-X1`–`FE-X17` link thẳng tới counterpart backend. Chỉ đánh dấu hoàn thành khi hai phía
   pass hoặc một phía ghi rõ `N/A` cùng lý do.
 - Không chép lại backend contract dài trong file này. OpenAPI generated là nguồn
   chuẩn duy nhất cho public fields.
@@ -40,6 +42,7 @@ ghi duy nhất trong `BE-C-EVIDENCE`.
 | `FE-X14` | [`BE-X14`](implementation_plan.md#be-x14) | Report/benchmark không placeholder, export tải được |
 | `FE-X15` | [`BE-X15`](implementation_plan.md#be-x15) | URL state, density và utility native hoàn chỉnh |
 | `FE-X16` | [`BE-X16`](implementation_plan.md#be-x16) | Hồ sơ gộp được phân đoạn, xác nhận và review bền vững |
+| `FE-X17` | [`BE-X17`](implementation_plan.md#be-x17) | Measurement Preview dùng dữ liệu thật; chart/calculator tuân sample gate |
 
 ## Phạm vi và nguồn chuẩn
 
@@ -68,6 +71,7 @@ management và mutable local-only PDF nằm ngoài parity plan tại `FE-X6`.
 | Logs | `/logs` | Typed Safe Events |
 | Report | `/reports` | Operations/quality/benchmark thật hoặc unavailable |
 | Codes | `/codes` | Durable Code Catalog |
+| Sizing & Cost | `/sizing` | Measurement, token/cost, scenario, capacity và provenance |
 | Job detail | `/jobs/[id]?view=...` | Overview, review, artifacts, report và logs |
 | System Monitor | Dialog/deep-linkable state | Safe telemetry backend nhìn thấy |
 
@@ -79,7 +83,9 @@ terminal dừng polling và stale refresh giữ snapshot gần nhất kèm cản
 
 - Giữ hierarchy/density đã chứng minh: sidebar tối, card/panel giàu thông tin,
   badge, bảng gọn và modal có phân cấp; token tập trung trong CSS.
-- Chỉ dùng Next/React, CSS và native browser APIs; không UI kit/state manager.
+- Chỉ dùng Next/React, CSS và native browser APIs; exception duy nhất là Apache
+  ECharts được dynamic-import tại `/sizing`. Không UI kit, React chart wrapper
+  hoặc state manager.
 - Semantic HTML, skip link, focus ring, focus trap, keyboard navigation,
   `aria-live` có kiểm soát và `prefers-reduced-motion` phải tiếp tục hoạt động.
 - Text/ID/filename dài phải wrap hoặc truncate có affordance; không phá layout.
@@ -251,6 +257,53 @@ revision mới và Continue. Conflict reload/discard đã có UX giữ draft ho�
 Vẫn cần fixture thật, evidence cho boundary khó và review/approval độc lập trước
 khi đóng.
 
+### FE-X17
+
+**P1 — Sizing & Cost — NOT STARTED.** Counterpart:
+[`BE-X17`](implementation_plan.md#be-x17). Đặc tả chi tiết:
+[`Token_Cal.md`](Token_Cal.md).
+
+- Thêm permanent sidebar route `/sizing`, nhưng mở theo gate:
+  Measurement Preview một PDF trước; comparison từ 2 job, trend/scatter từ 5,
+  histogram/P95/capacity screening từ 20 compatible jobs. Chưa đủ mẫu hiện lý
+  do, không chart/zero/verdict giả.
+- Overview hiển thị page/document/job/system units, response usage coverage,
+  billing certainty, known/unknown cost và provenance hai lớp: nguồn giá trị +
+  chất lượng sample. Filter/view/timezone phải sống qua URL.
+- Document Explorer chỉ tải tree aggregate; operation detail lazy-load và
+  paginate tối đa 100. Segmentation không giả document ownership, readiness
+  hiển thị system overhead riêng.
+- Dùng generated types và backend-owned calculation. Browser chỉ gửi filter,
+  scenario/profile IDs/assumptions; local calculation khi nhập mang nhãn
+  `Preview`, không trở thành report chính thức.
+- Dùng đúng một `echarts` dependency, direct dynamic import chỉ tại route này,
+  tree-shaken components/renderer/ARIA. Không React wrapper. Chart có zoom/range,
+  tooltip/legend/series toggle và table HTML fallback; untrusted string không
+  đi vào HTML formatter.
+- Price Profile không yêu cầu user nhập usage. Exchange-rate suggestion chỉ lấy
+  khi user bấm, hiển thị từng nguồn/loại/time/direct link và bắt xác nhận; không
+  scrape Google, auto-average hoặc auto-update profile đã lưu.
+- Workload form chỉ nhập monthly volume + operating days/hours, một Processing
+  Mode, peak/reserve/SLA/success target/retention assumption. Combined dossier
+  dùng dossier volume + document/page averages; không cho input ngày/tháng mâu
+  thuẫn.
+- Capacity UI tách service time, throughput, reliability và SLA. Theoretical
+  capacity units luôn ghi unvalidated cho tới khi cluster benchmark thật; self-
+  host cost chưa có TCO phải hiện unavailable, không `0`.
+- Retention/snapshot action dùng Preview → Confirm, revision/checksum conflict.
+  Saved snapshot immutable, archive/hard-delete rõ ràng, list paginated, quota
+  1.000 × 256 KiB và cảnh báo 80%.
+- Export CSV table, JSON snapshot/provenance, PNG chart và print stylesheet;
+  luôn kèm filter/timezone/n/coverage/generated time.
+- Accessibility giữ keyboard/focus/reduced-motion, table fallback và semantic
+  status; route pass `1440×900`, `1366×768`, không overflow `390×844`.
+
+Frontend gate chỉ pass khi one-PDF Preview dùng provider measurement thật,
+aggregate khớp sidecar và unavailable/insufficient/partial cost hiển thị đúng.
+Bốn fixture chỉ là reproducible baseline; full capacity screening vẫn cần
+20-job/coverage gate. `FE-X17` không thay thế `FE-X14` hoặc block Milestone C
+hiện tại.
+
 ## Thứ tự triển khai parity
 
 0. **Fixture-first:** khóa composition manifest/page ranges trước khi xây UI.
@@ -260,6 +313,8 @@ khi đóng.
 3. **Workspace:** phần evidence/artifact/URL/visual utility của `FE-X13`/`FE-X15`.
 4. **Đo lường:** `FE-X14` chỉ còn benchmark từ sample live; corrected export
    không chặn Milestone C.
+5. **Sizing:** `FE-X17A → FE-X17F` theo backend counterpart; Preview trước,
+   chart/calculator/retention/snapshot mở dần theo data gate.
 
 ## Public-data mapping cần bảo vệ
 
@@ -279,6 +334,9 @@ khi đóng.
 | Reports/export | `GET /api/reports` và corrected artifact URL |
 | Codes | `/api/codes` CRUD |
 | System Monitor | `GET /api/system-metrics` |
+| Sizing overview/explorer | `/api/sizing/overview`, `/jobs`, job summary và paginated `/operations` |
+| Sizing catalogs/calculator | `/api/sizing/catalog`, `/calculate`, exchange-rate suggestion |
+| Sizing retention/snapshot | `/api/sizing/retention/*`, `/api/sizing/snapshots` |
 
 ## Regression checklist
 
@@ -296,6 +354,7 @@ khi đóng.
 | Segmentation/Bìa/logical documents | `X16` LOCAL COMPLETE; LIVE PENDING | Bốn fixture, confirm/restart/review và legacy read pass |
 | Progress/timeline/triage | PASS LOCAL `X12`–`X13` | Persisted counters/failure/timeline, backend triage, deep-link và missing artifact pass |
 | Report/export/URL | `X14` LOCAL COMPLETE; LIVE SAMPLE PENDING; `X15` PASS LOCAL | Benchmark fingerprint thật |
+| Token/cost/sizing | `X17` NOT STARTED | Measurement foundation → one-PDF Preview → 20-job capacity gate |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 
