@@ -99,7 +99,7 @@ export const previewSizingSnapshotDelete = (id: string) =>
 export const deleteSizingSnapshot = (id: string, payload: Schemas["DeleteSnapshotRequest"]) =>
   request<void>(`/api/sizing/snapshots/${encodeURIComponent(id)}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
 export const previewSizingRetention = (payload: Schemas["RetentionPreviewRequest"]) =>
-  request<{ plan_token: string; checksum: string; operation_count: number }>("/api/sizing/retention/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  request<{ plan_token: string; checksum: string; operation_count: number; rollup_count: number }>("/api/sizing/retention/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
 export const applySizingRetention = (payload: Schemas["RetentionApplyRequest"]) =>
   request<{ deleted_operations: number }>("/api/sizing/retention/apply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
 export const getExchangeRateSources = () => request<{ items: { id: string; label: string; currencies: string[]; url: string }[] }>("/api/sizing/exchange-rate-sources");

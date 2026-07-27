@@ -121,6 +121,7 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 .job-row > div:not(.actions), .job-row > span { display: grid; min-width: 0; gap: 3px; }
 .job-row b, .job-row small, .job-row time { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .job-row small, .job-row time { color: #6a7b91; font-size: .76rem; }
+.job-row > .status { max-width: 100%; white-space: normal; line-height: 1.15; text-align: center; }
 .job-row .actions { justify-content: flex-end; flex-wrap: wrap; gap: 5px; }
 .job-row .actions .button { min-height: 31px; padding: 5px 8px; font-size: .76rem; }
 .empty { padding: 34px; color: #65768e; text-align: center; }

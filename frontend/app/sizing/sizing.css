@@ -44,6 +44,9 @@
 .retention-warning { display: flex; align-items: center; gap: 12px; margin: -20px -20px 18px; border-radius: 12px 12px 0 0; padding: 14px 20px; color: #8d3028; background: #fff3f1; }
 .retention-warning > span { font-size: 1.25rem; }
 .retention-warning p { margin-top: 3px; color: #9a5a54; font-size: .8rem; }
+.retention-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-top: 18px; border: 1px solid #f0c8c3; border-radius: 8px; padding: 12px 14px; color: #6f302a; background: #fff8f7; }
+.retention-preview strong { flex-basis: 100%; color: #8d3028; }
+.retention-preview b { font-variant-numeric: tabular-nums; }
 .outline-danger { background: transparent; }
 .solid-danger { color: #fff; background: #b1271b; }
 .solid-danger:hover { background: #921e15; }

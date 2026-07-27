@@ -248,6 +248,8 @@ document ID hoặc content. UI nói rõ aggregate vẫn tồn tại sau khi job 
   hoặc dữ liệu chưa archive.
 - Rollup không auto-expire.
 - Xóa raw/rollup dùng Preview → Confirm, revision/checksum conflict.
+- Preview hiển thị operation/rollup count trước Confirm và bị hủy khi input ngày
+  hoặc checkbox thay đổi, tránh xác nhận một plan cũ không còn khớp form.
 - Rollup chỉ xóa theo khoảng ngày UTC nguyên ngày; có action xóa tất cả.
 - Benchmark rollup pin mặc định; muốn xóa phải chọn “Bao gồm benchmark đã ghim”.
 - Tombstone chỉ giữ thời điểm, date range, bucket/count và checksum an toàn.

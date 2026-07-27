@@ -307,6 +307,8 @@ khi đóng.
   capacity units luôn ghi unvalidated cho tới khi cluster benchmark thật; self-
   host cost chưa có TCO phải hiện unavailable, không `0`.
 - Retention/snapshot action dùng Preview → Confirm, revision/checksum conflict.
+  Preview phải render rõ operation/rollup count từ response và bị vô hiệu khi
+  date/checkbox thay đổi; không chỉ đưa count vào nút Confirm.
   Saved snapshot immutable, archive/hard-delete rõ ràng, list paginated, quota
   1.000 × 256 KiB và cảnh báo 80%.
 - Export CSV table, JSON snapshot/provenance, PNG chart và print stylesheet;
@@ -367,7 +369,7 @@ vẫn mở tại `X17F`.
 |---|---|---|
 | Shell/routes, visual parity, VI/EN, accessibility, responsive | PROTECT | Route/deep-link và ba viewport vẫn pass |
 | Provider/task upload | PASS LOCAL `X1` | Input chạy đúng backend task/page semantics |
-| Dashboard và Manage | PROTECT | Chỉ dùng persisted/typed data |
+| Dashboard và Manage | PROTECT | Chỉ dùng persisted/typed data; status dài không đè cột kế bên |
 | Rich job workspace | PASS LOCAL `X2` | Partial warning không che page/field tốt |
 | Review/crop | PROTECT | Correction/conflict/draft/crop reload pass |
 | Artifacts/timeline/logs | PASS LOCAL `X2` | Per-page safe diagnostics render đúng |

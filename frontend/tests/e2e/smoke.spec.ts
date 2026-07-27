@@ -143,6 +143,32 @@ test("desktop lifecycle modals and URL filters preserve backend semantics", asyn
   await page.setViewportSize({ width: 1366, height: 768 }); expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 });
 
+test("desktop jobs warning status stays inside its column", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const job = {
+    ...fixtureJob("completed_with_warnings"),
+    upload_name: "1040-ttg.signed.pdf + 14", expected_files: 15, uploaded_files: 15,
+    page_count: 51, total_pages: 29, completed_pages: 29, progress_stage: "completed",
+  };
+  await page.route("**/api/**", async (route) => {
+    const apiPath = new URL(route.request().url()).pathname;
+    if (apiPath === "/api/state") return route.fulfill({ json: state([job]) });
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.goto("/");
+  const row = page.locator(".job-row").filter({ hasText: job.upload_name });
+  const badge = row.locator(".status");
+  await expect(badge).toBeVisible();
+  expect(await badge.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBeTruthy();
+  const textRight = await badge.evaluate((element) => {
+    const range = document.createRange(); range.selectNodeContents(element);
+    return range.getBoundingClientRect().right;
+  });
+  const providerLeft = (await row.locator(":scope > span").nth(1).boundingBox())?.x;
+  expect(providerLeft).toBeDefined();
+  expect(textRight).toBeLessThanOrEqual(providerLeft!);
+});
+
 test("mobile English keeps PDF-only errors, instant language and closable monitor", async ({ page }) => {
   let uploadFails = true;
   await page.setViewportSize({ width: 390, height: 844 }); await page.addInitScript(() => localStorage.setItem("intellidoc.language", "en"));
@@ -549,5 +575,12 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await page.getByRole("button", { name: /Tính Preview|Calculate Preview/i }).click(); await expect(page.locator(".safe-json")).toContainText("insufficient_sample");
   await page.getByRole("button", { name: /Lưu snapshot|Save snapshot/i }).click();
   await page.getByRole("button", { name: /Retention/i }).click(); await expect(page.locator(".data-table tbody tr")).toHaveCount(1);
-  const dates = page.locator('input[type="date"]'); await dates.nth(0).fill("2026-01-01"); await dates.nth(1).fill("2026-12-31"); await page.getByRole("button", { name: /Preview xóa|Preview measurement/i }).click(); await page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i }).click(); await expect(page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i })).toHaveCount(0);
+  const dates = page.locator('input[type="date"]'); await dates.nth(0).fill("2026-01-01"); await dates.nth(1).fill("2026-12-31"); await page.getByRole("button", { name: /Preview xóa|Preview measurement/i }).click();
+  await expect(page.locator(".retention-preview-operations")).toHaveText("1");
+  await expect(page.locator(".retention-preview-rollups")).toHaveText("0");
+  await dates.nth(1).fill("2026-11-30");
+  await expect(page.locator(".retention-preview")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i })).toHaveCount(0);
+  await dates.nth(1).fill("2026-12-31"); await page.getByRole("button", { name: /Preview xóa|Preview measurement/i }).click();
+  await page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i }).click(); await expect(page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i })).toHaveCount(0);
 });
