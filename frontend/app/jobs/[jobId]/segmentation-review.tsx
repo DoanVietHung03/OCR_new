@@ -77,19 +77,19 @@ export default function SegmentationReview({ job, onJob, onError }: Props) {
     setBusy(true); onError("");
     try { onJob(await continueJob(job.id)); } catch (reason) { onError(reason instanceof Error ? reason.message : String(reason)); } finally { setBusy(false); }
   }
+  const sources = job.source_pdfs || [], multiSource = sources.length > 1;
 
-  return <section className="panel segmentation-review">
-    <div className="section-head"><div><p className="eyebrow">PDF → {label("Bìa → Văn bản", "Cover → Documents")}</p><h2>{label("Xác nhận cấu trúc hồ sơ", "Confirm document structure")}</h2></div>{job.segmentation_total_pages > 0 && <span>{job.segmentation_completed_pages}/{job.segmentation_total_pages}</span>}</div>
-    {(job.source_pdfs || []).length === 1 && <p>{label("Loại trừ dùng cho trang trắng/phân cách. Trang chưa phân loại phải được đổi thành Bìa, Văn bản hoặc Loại trừ.", "Excluded is for blank/separator pages. Unclassified pages must be changed to Cover, Document, or Excluded.")}</p>}
-    {(job.source_pdfs || []).length > 1 && (job.source_pdfs || []).some((source) => !source.confirmed) && <button className="button primary" disabled={busy || (job.source_pdfs || []).some((source) => !source.confirmed && Boolean(segmentationError(drafts[source.id] || [], source.page_count)))} onClick={confirmAll}>{label("Xác nhận tất cả PDF", "Confirm all PDFs")}</button>}
-    {(job.source_pdfs || []).map((source) => <article key={`${source.id}-${source.revision}`}>
+  return <section className={`panel segmentation-review ${multiSource ? "multi-source" : ""}`}>
+    <div className="section-head"><div><p className="eyebrow">PDF → {label("Bìa → Văn bản", "Cover → Documents")}</p><h2>{label("Xác nhận cấu trúc hồ sơ", "Confirm document structure")}</h2></div>{multiSource && sources.some((source) => !source.confirmed) ? <button className="button primary" disabled={busy || sources.some((source) => !source.confirmed && Boolean(segmentationError(drafts[source.id] || [], source.page_count)))} onClick={confirmAll}>{label("Xác nhận tất cả PDF", "Confirm all PDFs")}</button> : job.segmentation_total_pages > 0 && <span>{job.segmentation_completed_pages}/{job.segmentation_total_pages}</span>}</div>
+    {!multiSource && <p>{label("Loại trừ dùng cho trang trắng/phân cách. Trang chưa phân loại phải được đổi thành Bìa, Văn bản hoặc Loại trừ.", "Excluded is for blank/separator pages. Unclassified pages must be changed to Cover, Document, or Excluded.")}</p>}
+    <div className="segmentation-sources">{sources.map((source) => <article key={`${source.id}-${source.revision}`}>
       <h3>{source.file_name}</h3>
       <div className="source-pages">{(source.pages || []).map((page) => <a href={page.image_url} target="_blank" rel="noreferrer" key={page.source_page_index}><img src={page.image_url} alt={`${source.file_name} · ${page.source_page_index + 1}`} /><small>{page.source_page_index + 1} · {page.classification}</small></a>)}</div>
       <div className="segment-list">{(drafts[source.id] || []).map((segment, index) => <div key={segment.id || index}>
         <b>{segment.start_page + 1}–{segment.end_page + 1}</b>
         <select aria-label={label("Loại phân đoạn", "Segment type")} value={segment.logical_document_type} disabled={busy || source.confirmed} onChange={(event) => setType(source.id, index, event.target.value as Segment["logical_document_type"])}>
           <option value="dossier_cover">{label("Bìa", "Cover")}</option><option value="administrative_document">{label("Văn bản", "Document")}</option>
-          {(job.source_pdfs || []).length === 1 && <option value="excluded">{label("Loại trừ", "Excluded")}</option>}
+          {!multiSource && <option value="excluded">{label("Loại trừ", "Excluded")}</option>}
           {segment.logical_document_type === "unclassified" && <option value="unclassified" disabled>{label("Chưa phân loại — cần sửa", "Unclassified — must change")}</option>}
         </select>
         {segment.start_page > 0 && <button className="text-button" disabled={busy || source.confirmed} onClick={() => merge(source.id, index)}>{label("Gộp phần trước", "Merge previous")}</button>}
@@ -100,9 +100,9 @@ export default function SegmentationReview({ job, onJob, onError }: Props) {
       </div>)}</div>
       {conflict === source.id && <div className="conflict" role="alert"><p>{label("PDF đã được cập nhật ở nơi khác.", "This PDF was updated elsewhere.")}</p><button className="button secondary" disabled={busy} onClick={() => resolveConflict(source.id, true)}>{label("Giữ bản nháp", "Keep draft")}</button><button className="button secondary" disabled={busy} onClick={() => resolveConflict(source.id, false)}>{label("Tải lại và bỏ bản nháp", "Reload and discard")}</button></div>}
       {!source.confirmed && segmentationError(drafts[source.id] || [], source.page_count) && <small className="error" role="alert">{segmentationError(drafts[source.id] || [], source.page_count)}</small>}
-      {!source.confirmed && <button className="button primary" disabled={busy || Boolean(segmentationError(drafts[source.id] || [], source.page_count))} onClick={() => confirm(source.id, revisions[source.id] ?? source.revision)}>{label("Xác nhận PDF này", "Confirm this PDF")}</button>}
+      {!source.confirmed && <button className="button secondary confirm-source" disabled={busy || Boolean(segmentationError(drafts[source.id] || [], source.page_count))} onClick={() => confirm(source.id, revisions[source.id] ?? source.revision)}>{label("Xác nhận PDF này", "Confirm this PDF")}</button>}
       {source.confirmed && <span className="status completed">{label("Đã xác nhận", "Confirmed")}</span>}
-    </article>)}
+    </article>)}</div>
     {job.status === "segmentation_confirmed" && <button className="button primary" disabled={busy} onClick={resume}>{label("Tiếp tục trích xuất", "Continue extraction")}</button>}
   </section>;
 }

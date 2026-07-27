@@ -52,6 +52,8 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   await page.getByLabel(/Tác vụ VLM|VLM task/).selectOption("metadata");
   await page.getByLabel(/Phạm vi trang|Page scope/).selectOption("auto");
   await expect(page.locator(".page-scope-card .page-scope-details").getByLabel(/Giới hạn trang ứng viên|Candidate page limit/)).toBeVisible();
+  const optionHeights = await page.locator(".upload-option-card").evaluateAll((cards) => cards.map((card) => card.getBoundingClientRect().height));
+  expect(optionHeights.at(-1)).toBeGreaterThan(optionHeights[0] + 20);
   await page.getByRole("button", { name: /sẵn sàng|readiness/i }).click();
   await expect(page.locator(".upload-actions")).toContainText(/sẵn sàng|ready/i);
   await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles({ name: "smoke.pdf", mimeType: "application/pdf", buffer: pdf });
@@ -216,6 +218,18 @@ test("upload validates duplicate, limits and native drag-drop", async ({ page })
   await input.setInputFiles([{ name: "a.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "b.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "c.pdf", mimeType: "application/pdf", buffer: pdf }]); await expect(page.locator(".notice.error")).toContainText("giới hạn");
   await page.locator(".dropzone").evaluate((element) => { const transfer = new DataTransfer(); transfer.items.add(new File(["%PDF-1.7"], "DROP.PDF", { type: "" })); element.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer })); });
   await expect(page.locator(".file-list")).toContainText("DROP.PDF");
+});
+
+test("upload keeps fifteen selected files compact and clearable", async ({ page }) => {
+  await page.route("**/api/state**", (route) => route.fulfill({ json: state([]) }));
+  await page.goto("/upload");
+  await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles(Array.from({ length: 15 }, (_, index) => ({ name: `file-${index + 1}.pdf`, mimeType: "application/pdf", buffer: pdf })));
+  await expect(page.locator(".file-list-head")).toContainText("15");
+  await expect(page.locator(".file-list-head").getByRole("button", { name: /xóa tất cả|clear all/i })).toBeVisible();
+  const listSize = await page.locator(".file-list-items").evaluate((list) => ({ client: list.clientHeight, scroll: list.scrollHeight }));
+  expect(listSize.scroll).toBeGreaterThan(listSize.client);
+  await page.locator(".file-list-head").getByRole("button", { name: /xóa tất cả|clear all/i }).click();
+  await expect(page.locator(".file-list")).toHaveCount(0);
 });
 
 test("folder picker selects only a PDF folder through the existing upload flow", async ({ page }) => {
@@ -474,23 +488,33 @@ test("multi-PDF dossier can confirm the whole document structure at once", async
     pages: [{ source_page_index: 0, classification: logical_document_type === "dossier_cover" ? "cover" : "document_start", error: "", image_url: `/api/jobs/${id}/artifacts/${id}/page-1.png` }],
     proposal: [{ id: "segment-1", logical_document_type, start_page: 0, end_page: 0 }],
   });
-  const sources = [source("source-1", "Scan_0000.pdf", "dossier_cover"), source("source-2", "Scan_0001.pdf", "administrative_document")];
-  const job = { ...fixtureJob("awaiting_segmentation_review"), processing_mode: "combined_dossier", documents: [], source_pdfs: sources, segmentation_completed_pages: 2, segmentation_total_pages: 2 } as any;
+  const sources = Array.from({ length: 19 }, (_, index) => source(`source-${index + 1}`, `Scan_${String(index).padStart(4, "0")}.pdf`, index ? "administrative_document" : "dossier_cover"));
+  const job = { ...fixtureJob("awaiting_segmentation_review"), processing_mode: "combined_dossier", documents: [], source_pdfs: sources, segmentation_completed_pages: 19, segmentation_total_pages: 19, completed_pages: 19, total_pages: 19, progress_stage: "pages awaiting review" } as any;
   const confirmed: string[] = [];
   await page.route("**/api/**", async (route) => {
     const request = route.request(), apiPath = new URL(request.url()).pathname;
     if (apiPath === `/api/jobs/${id}`) return route.fulfill({ json: job });
     if (apiPath.endsWith("/segmentation/confirm")) {
       confirmed.push(apiPath.split("/")[5]);
-      return route.fulfill({ json: { ...job, status: confirmed.length === 2 ? "segmentation_confirmed" : "awaiting_segmentation_review" } });
+      return route.fulfill({ json: { ...job, status: confirmed.length === sources.length ? "segmentation_confirmed" : "awaiting_segmentation_review" } });
     }
     if (apiPath.includes("/artifacts/")) return route.fulfill({ status: 200, contentType: "image/svg+xml", body: svg });
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
   await page.goto(`/jobs/${id}`);
   await expect(page.getByLabel(/loại phân đoạn|segment type/i).first().locator("option")).toHaveCount(2);
+  await expect(page.locator(".job-header .status")).toHaveCSS("background-color", "rgb(255, 241, 204)");
+  await expect(page.locator(".job-progress")).toHaveClass(/needs-review/);
+  await expect(page.locator(".job-progress progress")).toHaveCSS("accent-color", "rgb(217, 147, 18)");
+  await expect(page.locator(".job-facts").getByRole("button", { name: /hủy|cancel/i })).toHaveCount(0);
+  await expect(page.locator(".job-lifecycle-actions").getByRole("button", { name: /hủy|cancel/i })).toBeVisible();
+  await expect(page.locator(".confirm-source")).toHaveCount(19);
+  await expect(page.locator(".confirm-source.primary")).toHaveCount(0);
+  const sourceListSize = await page.locator(".segmentation-sources").evaluate((list) => ({ client: list.clientHeight, scroll: list.scrollHeight }));
+  expect(sourceListSize.scroll).toBeGreaterThan(sourceListSize.client);
   await page.getByRole("button", { name: /xác nhận tất cả PDF|confirm all PDFs/i }).click();
-  expect(confirmed).toEqual(["source-1", "source-2"]);
+  await expect.poll(() => confirmed.length).toBe(sources.length);
+  expect(confirmed).toEqual(sources.map((item) => item.id));
 });
 
 test("rerun keeps the snapshot and exposes both segmentation choices", async ({ page }) => {

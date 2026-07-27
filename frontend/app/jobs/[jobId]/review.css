@@ -2,10 +2,10 @@
 .job-header { margin-bottom: 16px; }
 .job-header > div { min-width: 0; }
 .job-header .eyebrow { overflow: hidden; max-width: 78vw; text-overflow: ellipsis; white-space: nowrap; }
-.job-facts { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)) auto; gap: 1px; overflow: hidden; margin-bottom: 10px; }
+.job-facts { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 1px; overflow: hidden; margin-bottom: 10px; }
 .job-facts > div { display: grid; align-content: center; gap: 3px; min-height: 90px; padding: 14px 16px; border-right: 1px solid #e2e8f0; }
 .job-facts span, .job-facts small { color: #65778e; font-size: .75rem; }
-.job-facts .job-actions { display: flex; min-width: 210px; align-items: center; justify-content: flex-end; flex-wrap: wrap; border-right: 0; }
+.job-lifecycle-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 8px 0 10px; }
 .lifecycle-note { margin: 10px 2px 18px; color: #63748a; font-size: .84rem; }
 .document-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 14px 0; padding-bottom: 4px; }
 .document-tabs button { display: grid; min-width: 180px; grid-template-columns: 28px 1fr; gap: 2px 8px; align-items: center; border: 1px solid #ced8e5; border-radius: 9px; padding: 9px; color: #405572; background: #fff; text-align: left; }
@@ -81,6 +81,9 @@
 .timeline p { display: grid; grid-template-columns: minmax(150px, auto) 1fr auto; gap: .75rem; margin: 0; padding: .65rem; border-bottom: 1px solid #dde4ec; }
 .job-progress { align-items: center; display: grid; grid-template-columns: auto 1fr auto; gap: .75rem; margin-top: 12px; padding: 12px 18px; }
 .job-progress progress, .job-row progress { width: 100%; }
+.job-progress.needs-review progress { accent-color: #d99312; }
+.job-progress.needs-review progress::-webkit-progress-value { background: #d99312; }
+.job-progress.needs-review progress::-moz-progress-bar { background: #d99312; }
 .failure-card { align-items: center; display: flex; flex-wrap: wrap; gap: .75rem; }
 .detail-tabs { display: flex; gap: 6px; margin: 18px 0; overflow-x: auto; border-bottom: 1px solid #d7e0ec; }
 .detail-tabs button { border: 0; border-bottom: 3px solid transparent; padding: 11px 14px; color: #60728a; background: transparent; font-weight: 750; white-space: nowrap; }
@@ -105,7 +108,6 @@
 
 @media (max-width: 1100px) {
   .job-facts { grid-template-columns: repeat(2, 1fr); }
-  .job-facts .job-actions { min-width: 0; grid-column: 1 / -1; justify-content: flex-start; }
   .review-grid { grid-template-columns: 1fr; }
   .editor-panel { max-height: none; }
 }
@@ -118,6 +120,14 @@
   .approve-bar { align-items: stretch; flex-direction: column; }
 }
 .segmentation-review article { border-top: 1px solid var(--border); padding: 1rem 0; }
+.segmentation-sources { max-height: 620px; overflow-y: auto; }
+.multi-source article { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, auto) auto; gap: .5rem 1rem; align-items: center; padding: .7rem 0; }
+.multi-source article h3 { margin: 0; }
+.multi-source .source-pages { grid-column: 1; margin: 0; }
+.multi-source .source-pages img { width: 48px; }
+.multi-source .source-pages a { min-width: 48px; }
+.multi-source .segment-list { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+.multi-source .confirm-source, .multi-source article > .status { grid-column: 3; grid-row: 1 / span 2; }
 .source-pages { display: flex; gap: .75rem; overflow-x: auto; margin: .75rem 0; }
 .source-pages a { color: inherit; min-width: 92px; text-decoration: none; }
 .source-pages img { aspect-ratio: 3 / 4; display: block; object-fit: cover; width: 92px; }
@@ -129,3 +139,9 @@
 .evidence-preview { max-height: 65vh; overflow: auto; text-align: center; }
 .evidence-preview.fit img { max-height: 65vh; max-width: 100%; }
 .evidence-preview.actual img { max-width: none; }
+
+@media (max-width: 760px) {
+  .multi-source article { grid-template-columns: 1fr; }
+  .multi-source .source-pages, .multi-source .segment-list, .multi-source .confirm-source, .multi-source article > .status { grid-column: 1; grid-row: auto; }
+  .job-lifecycle-actions { justify-content: flex-start; }
+}

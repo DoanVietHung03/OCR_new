@@ -128,6 +128,7 @@ export default function Home() {
 
   if (!loaded && loadError) return <AppShell onNew={openUpload}><section className="panel empty" role="alert"><p>{loadError}</p><button className="button secondary" onClick={refresh}>{text("retry")}</button></section></AppShell>;
   const terminalIds = state.jobs.filter((job) => TERMINAL_JOB_STATUSES.has(job.status)).map((job) => job.id);
+  const selectedFileBytes = files.reduce((total, file) => total + file.size, 0);
 
   return <AppShell onNew={openUpload}>
     <header className="page-header"><div><p className="eyebrow">{text("title")}</p><h1>{text(uploadOnly ? "upload" : "jobs")}</h1><p>{text(uploadOnly ? "uploadSubtitle" : "subtitle")}</p></div>{!uploadOnly && <button className="button primary" onClick={openUpload}>＋ {text("newOcr")}</button>}</header>
@@ -148,7 +149,7 @@ export default function Home() {
         <span className="drop-icon">⇧</span><strong>{text("dropFiles")}</strong><small>{text("selectedFiles", { count: files.length })}</small>
         <div className="dropzone-links"><button className="text-button" disabled={busy} onClick={() => fileInput.current?.click()}>{text("chooseFiles")}</button><span aria-hidden="true">·</span><button className="text-button" disabled={busy} onClick={() => folderInput.current?.click()}>{text("chooseFolder")}</button></div>
       </div>
-      {!!files.length && <div className="file-list">{files.map((file) => <div key={file.name}><span><b>{file.name}</b><small>{size(file.size)}</small></span><button aria-label={text("removeFile", { name: file.name })} disabled={busy} onClick={() => choose(files.filter((item) => item !== file))}>×</button></div>)}<button className="text-button" disabled={busy} onClick={() => setFiles([])}>{text("clear")}</button></div>}
+      {!!files.length && <div className="file-list"><div className="file-list-head"><b>{text("selectedFiles", { count: files.length })} · {size(selectedFileBytes)}</b><button className="button secondary" disabled={busy} onClick={() => setFiles([])}>{language() === "vi" ? "Xóa tất cả" : "Clear all"}</button></div><div className="file-list-items">{files.map((file) => <div key={file.name}><span><b>{file.name}</b><small>{size(file.size)}</small></span><button aria-label={text("removeFile", { name: file.name })} disabled={busy} onClick={() => choose(files.filter((item) => item !== file))}>×</button></div>)}</div></div>}
       {external && <label className="consent"><input type="checkbox" checked={consent} disabled={busy} onChange={(event) => setConsent(event.target.checked)} />{text("consent")}</label>}
       <div className="upload-actions"><div><span className={`status ${engine?.status || "not_configured"}`}>{statusText(engine?.status || "not_configured")}</span><small>{engineMessage || text("configuredHint")}</small></div><button className="button secondary" disabled={!engine || busy} onClick={() => engine && checkEngine(engine.id).then((result) => setEngineMessage(statusText(result.status))).catch((reason) => setEngineMessage(message(reason)))}>{text("checkEngine")}</button><button className="button primary" disabled={busy || !files.length || !configured || (external && !consent)} onClick={upload}>{progress || text("start")}</button></div>
     </section>}

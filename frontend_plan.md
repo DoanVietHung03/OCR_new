@@ -125,7 +125,9 @@ Route Upload giữ một card: bỏ tiêu đề lặp, đặt chọn tệp/thư 
 nhỏ trong dropzone, biểu diễn profile duy nhất bằng trạng thái khóa do máy chủ
 quản lý và tách consent bằng nền riêng. `vlm_max_pages` chỉ hiện cho
 `metadata + auto`, nested cùng note ngay trong field-card Phạm vi trang; cả bốn
-control cấu hình dùng cùng surface/padding. Focus keyboard vẫn nhìn thấy nhưng
+control cấu hình dùng cùng surface/padding và tự co theo nội dung, không kéo cao
+cả hàng. Danh sách nhiều PDF có tổng số file/dung lượng, Clear all và vùng cuộn
+giới hạn với hairline giữa các dòng. Focus keyboard vẫn nhìn thấy nhưng
 Bắt đầu OCR là CTA màu chính duy nhất của form.
 
 ## Kế hoạch đang mở
@@ -253,6 +255,9 @@ lặp đã bỏ. Benchmark có fingerprint thật còn theo
   cho mọi source hợp lệ chưa xác nhận; không thêm bulk API hoặc bỏ qua conflict.
   Selector nhiều source chỉ có Bìa/Văn bản. Một source có thể chọn Excluded cho
   trang trắng/phân cách; Unclassified chỉ hiện như trạng thái bắt buộc sửa.
+- Trạng thái chờ review dùng badge và progress màu cảnh báo; lifecycle action nằm
+  ngoài khối số liệu. Danh sách nhiều source có chiều cao giới hạn, dòng gọn và
+  nút xác nhận từng PDF là secondary; Xác nhận tất cả là primary duy nhất.
 - Sau khi mọi source confirmed, happy path tiếp tục OCR; provider unavailable giữ
   durable `segmentation_confirmed` và hiện action Continue. State chờ sống qua
   reload/restart; Cancel chuyển terminal rồi mới cho Delete.
