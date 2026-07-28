@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, Fragment, useEffect, useState } from "react";
 import {
   ApiError, applySizingRetention, calculateSizing, createSizingSnapshot,
@@ -172,7 +173,7 @@ export default function SizingPage() {
   }
 
   return <AppShell>
-    <header className="page-header"><div><p className="eyebrow">X17 · Measurement first</p><h1>{t.title}</h1><p>{t.subtitle}</p></div><button className="button secondary" onClick={load}>{t.refresh}</button></header>
+    <header className="page-header"><div><p className="eyebrow">X17 · Measurement first</p><h1>{t.title}</h1><p>{t.subtitle}</p><Link className="context-help" href="/guide/reference#sizing-cost">{locale === "vi" ? "Xem hướng dẫn" : "View guidance"} →</Link></div><button className="button secondary" onClick={load}>{t.refresh}</button></header>
     {error && <div className="notice error" role="alert">{error}</div>}
     <nav className="code-tabs sizing-tabs" aria-label={t.title}>{(["overview", "explorer", "calculator", "retention"] as View[]).map((item) => <button key={item} className={view === item ? "active" : ""} onClick={() => setView(item)}>{t[item]}</button>)}</nav>
 

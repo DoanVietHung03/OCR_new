@@ -27,6 +27,11 @@ locally actionable `X15` scope pass. `X7`/`X16` remain IN PROGRESS at the overal
 gate only because fixture/live acceptance is missing; `X14` still needs real
 benchmark fingerprints. The locally actionable `X17A`–`X17E` scope is
 implemented; `X17F` still needs real provider/fixture/server evidence.
+The frontend-only `X18` guide/reference scope is implemented with two static
+VI/EN routes, seven contextual links, and five sanitized captures. Its
+production build and non-browser checks pass; Playwright reached all 25 tests
+without a reported test failure but Windows teardown still needs a clean
+non-timeout confirmation before `X18` is called `LOCAL COMPLETE`.
 `incomlpeted.md` lists every external condition still required.
 
 The 2026-07-27 OpenAI-compatible reliability update preserves the minimal
@@ -62,6 +67,8 @@ revision conflict, and Continue in the browser gate.
 - `incomlpeted.md`: external fixture/infrastructure/operator dependencies and
   their completion conditions.
 - `docs/ui-parity/`: sanitized 1440/1366/mobile PNG captures.
+- `frontend/public/guide/`: five sanitized task-focused user-guide captures.
+- `User_guide.md`: canonical `FE-X18` content and acceptance contract.
 
 ## Architecture invariants
 
@@ -153,8 +160,12 @@ revision conflict, and Continue in the browser gate.
   production is a separate architecture request.
 - The primary UI persona is an operations reviewer completing upload → monitor
   → review/correct/approve. The frontend provides permanent Jobs, Upload, Manage,
-  Logs, Report, Codes, and Sizing navigation with real routes and data; System Monitor
+  Logs, Report, Codes, Sizing, and User guide navigation with real routes and data; System Monitor
   remains a global dialog/deep-linkable state.
+- `/guide` and `/guide/reference` are static VI/EN help routes. They do not fetch
+  API data or persist state beyond the existing language setting. Keep exactly
+  seven contextual help placements; Review and Structure open a new tab so
+  drafts remain safe.
 - `/corrections` saves and approves in one call. UI with drafts must say “Save
   and approve”; do not invent an unapproved saved-correction state. Unknown or
   non-scalar legacy fields remain visible but read-only.

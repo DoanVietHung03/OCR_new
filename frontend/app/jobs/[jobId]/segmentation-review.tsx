@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApiError, confirmSegmentation, continueJob, getJob, Job, Segment } from "../../../lib/api";
 import { language } from "../../../lib/i18n";
@@ -80,7 +81,7 @@ export default function SegmentationReview({ job, onJob, onError }: Props) {
   const sources = job.source_pdfs || [], multiSource = sources.length > 1;
 
   return <section className={`panel segmentation-review ${multiSource ? "multi-source" : ""}`}>
-    <div className="section-head"><div><p className="eyebrow">PDF → {label("Bìa → Văn bản", "Cover → Documents")}</p><h2>{label("Xác nhận cấu trúc hồ sơ", "Confirm document structure")}</h2></div>{multiSource && sources.some((source) => !source.confirmed) ? <button className="button primary" disabled={busy || sources.some((source) => !source.confirmed && Boolean(segmentationError(drafts[source.id] || [], source.page_count)))} onClick={confirmAll}>{label("Xác nhận tất cả PDF", "Confirm all PDFs")}</button> : job.segmentation_total_pages > 0 && <span>{job.segmentation_completed_pages}/{job.segmentation_total_pages}</span>}</div>
+    <div className="section-head"><div><p className="eyebrow">PDF → {label("Bìa → Văn bản", "Cover → Documents")}</p><h2>{label("Xác nhận cấu trúc hồ sơ", "Confirm document structure")}</h2><Link className="context-help" href="/guide#structure-review" target="_blank" rel="noreferrer">{label("Xem hướng dẫn (mở tab mới)", "View guidance (opens a new tab)")} →</Link></div>{multiSource && sources.some((source) => !source.confirmed) ? <button className="button primary" disabled={busy || sources.some((source) => !source.confirmed && Boolean(segmentationError(drafts[source.id] || [], source.page_count)))} onClick={confirmAll}>{label("Xác nhận tất cả PDF", "Confirm all PDFs")}</button> : job.segmentation_total_pages > 0 && <span>{job.segmentation_completed_pages}/{job.segmentation_total_pages}</span>}</div>
     {!multiSource && <p>{label("Loại trừ dùng cho trang trắng/phân cách. Trang chưa phân loại phải được đổi thành Bìa, Văn bản hoặc Loại trừ.", "Excluded is for blank/separator pages. Unclassified pages must be changed to Cover, Document, or Excluded.")}</p>}
     <div className="segmentation-sources">{sources.map((source) => <article key={`${source.id}-${source.revision}`}>
       <h3>{source.file_name}</h3>

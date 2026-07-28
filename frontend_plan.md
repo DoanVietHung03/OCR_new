@@ -2,7 +2,9 @@
 
 Đây là nguồn chuẩn duy nhất cho frontend Next.js, workflow người dùng, visual
 parity và browser evidence. Backend contract, worker, cutover và Milestone C nằm
-trong [`implementation_plan.md`](implementation_plan.md).
+trong [`implementation_plan.md`](implementation_plan.md). Riêng nội dung chi
+tiết của `FE-X18` thuộc [`User_guide.md`](User_guide.md); file này chỉ sở hữu
+status, gate và backlink của mục đó.
 
 **Trạng thái kiểm tra lại 2026-07-24:** Repair Gate `FE-X1`–`FE-X3` và counterpart backend đã
 pass local. `FE-X8`–`FE-X13` và phạm vi local của `FE-X15` đã pass; `FE-X14` còn
@@ -11,6 +13,10 @@ Phần local của `FE-X17A`–`FE-X17E` đã triển khai; Preview/provider/fix
 và capacity evidence vẫn mở tại `FE-X17F`. Chi tiết nằm tại
 [`Token_Cal.md`](Token_Cal.md). Các external gate của Milestone C nằm tại
 [`incomlpeted.md`](incomlpeted.md).
+
+**User guide 2026-07-28:** scope `FE-X18` đã khóa nhưng chưa triển khai. Đặc tả
+chi tiết nằm tại [`User_guide.md`](User_guide.md); backend counterpart
+[`BE-X18`](implementation_plan.md#be-x18) là `N/A`.
 
 **Sidebar re-decoration 2026-07-28:** information architecture mới đã triển khai
 và hoàn thành local gate: `62` backend tests, `24` browser checks, typecheck,
@@ -34,7 +40,7 @@ ghi duy nhất trong `BE-C-EVIDENCE`.
 
 - Frontend sở hữu route, input, copy, rendering, interaction, accessibility và
   visual evidence; backend sở hữu schema, persistence và execution semantics.
-- Mỗi mục `FE-X1`–`FE-X17` link thẳng tới counterpart backend. Chỉ đánh dấu hoàn thành khi hai phía
+- Mỗi mục `FE-X1`–`FE-X18` link thẳng tới counterpart backend. Chỉ đánh dấu hoàn thành khi hai phía
   pass hoặc một phía ghi rõ `N/A` cùng lý do.
 - Không chép lại backend contract dài trong file này. OpenAPI generated là nguồn
   chuẩn duy nhất cho public fields.
@@ -60,6 +66,7 @@ ghi duy nhất trong `BE-C-EVIDENCE`.
 | `FE-X15` | [`BE-X15`](implementation_plan.md#be-x15) | URL state, density và utility native hoàn chỉnh |
 | `FE-X16` | [`BE-X16`](implementation_plan.md#be-x16) | Hồ sơ gộp được phân đoạn, xác nhận và review bền vững |
 | `FE-X17` | [`BE-X17`](implementation_plan.md#be-x17) | Measurement Preview dùng dữ liệu thật; chart/calculator tuân sample gate |
+| `FE-X18` | [`BE-X18`](implementation_plan.md#be-x18) | Workflow guide và parameter reference VI/EN khớp UI, không thêm backend |
 
 ## Phạm vi và nguồn chuẩn
 
@@ -68,6 +75,7 @@ Thứ tự ưu tiên khi có mâu thuẫn:
 1. Invariant và public contract trong `implementation_plan.md`.
 2. OpenAPI do FastAPI sinh.
 3. File này cho workflow/visual frontend.
+4. `User_guide.md` cho content/IA/acceptance chi tiết của `FE-X18`.
 
 Frontend phải dùng dữ liệu thật hoặc hiển thị
 “không có dữ liệu”. Cấm URL/key/header provider, raw response, stack trace,
@@ -89,6 +97,7 @@ management và mutable local-only PDF nằm ngoài parity plan tại `FE-X6`.
 | Tổng quan vận hành | `/reports` | Việc cần xử lý, chất lượng và hiệu suất thật hoặc unavailable |
 | Code catalog | `/codes` | Durable Code Catalog trong nhóm Công cụ hệ thống |
 | Sizing & Cost | `/sizing` | Measurement, token/cost, scenario, capacity và provenance |
+| User guide (planned `FE-X18`) | `/guide`, `/guide/reference` | Workflow OCR và reference mọi tham số user-visible trong phạm vi V1 |
 | Job detail | `/jobs/[id]?view=...` | Overview, review, artifacts, report và logs |
 | System Monitor | Dialog/deep-linkable state | Safe telemetry backend nhìn thấy; mở từ Công cụ hệ thống |
 
@@ -111,6 +120,8 @@ Backend counterpart:
 
 - Sidebar chính luôn hiện đúng thứ tự: `Jobs`, `New OCR`,
   `Tổng quan vận hành`, `Sizing & Cost`.
+- Khi `FE-X18` được triển khai, thêm `Hướng dẫn sử dụng` / `User guide` ngay sau
+  `Sizing & Cost`; thứ tự bốn mục hiện có không đổi.
 - `Công cụ hệ thống` nằm cuối sidebar, mặc định thu gọn, không persist trạng thái
   vào `localStorage`; nhóm này chứa `Processing logs`, `Code catalog` và
   `System Monitor`.
@@ -427,6 +438,46 @@ CSV/JSON/PNG/print export. UI gate `1/2/5/20` không dựng chart, zero hay verd
 giả khi thiếu dữ liệu. Preview trên PDF/provider thật và full capacity screening
 vẫn mở tại `X17F`.
 
+### FE-X18
+
+**P1 — User guide và parameter reference — IMPLEMENTED; FULL GATE PENDING.**
+Counterpart: [`BE-X18`](implementation_plan.md#be-x18) (`N/A`). Đặc tả chi tiết
+và acceptance duy nhất: [`User_guide.md`](User_guide.md).
+
+- Thêm route tĩnh `/guide` cho workflow task-first và `/guide/reference` cho mọi
+  tham số/giá trị user-visible thuộc Upload, Processing, Job, Structure, OCR
+  result, Review, Report/Artifacts và Sizing/Cost.
+- Sidebar chỉ thêm `Hướng dẫn sử dụng` / `User guide` sau `Sizing & Cost`;
+  reference không có item riêng. Hai route không fetch API, không thêm persisted
+  state ngoài language hiện có và vẫn đọc được khi backend lỗi.
+- Tutorial chính dùng một Văn bản hành chính với `Metadata` + `Tự động`; Bìa và
+  Hồ sơ gộp là nhánh sau. Browser tips thu gọn, không biến guide thành khóa học
+  tin học.
+- VI/EN parity đầy đủ; đúng 7 contextual help, 5 ảnh sanitized và parameter
+  entry sáu phần. Dynamic provider/price/measurement/capacity chỉ được giải thích,
+  không sao chép vào guide tĩnh.
+- Sizing reference phải giữ semantics `Unavailable`, fingerprint và gate
+  `1/2/5/20`; có công thức/ví dụ giả lập nhưng không đưa benchmark hoặc verdict
+  mua sắm khi thiếu evidence.
+- Dùng TypeScript data, semantic HTML, native anchor/details và CSS hiện có;
+  không thêm MDX, CMS, search, tour, analytics hoặc dependency.
+- Chỉ đánh dấu `LOCAL COMPLETE` khi cả hai route, VI/EN, 7 link, 5 ảnh,
+  accessibility tại ba viewport và full regression gate cùng pass. Không có
+  user-testing gate riêng.
+
+`FE-X18` là P1 frontend-only, không block Milestone C và không thay đổi trạng
+thái live evidence của `FE-X17`.
+
+Đã hoàn thành hai route tĩnh `/guide` và `/guide/reference`, VI/EN dùng language
+state hiện có, đúng một sidebar item, đúng 7 contextual help và 5 ảnh fixture
+sanitized. Reference có 9 nhóm, 38 entry với anchor ổn định và sáu phần nội
+dung; guide không gọi API, không thêm dependency/schema/persistence. Gate local
+đạt 62 backend tests, typecheck, production build/prerender, OpenAPI check,
+compileall và diff check. Browser runner thực thi đủ 25 test không báo test lỗi
+nhưng tiến trình teardown trên Windows không thoát trước timeout; vì vậy bằng
+chứng browser full-suite vẫn được ghi rõ là teardown pending, không dùng để
+thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
+
 ## Thứ tự triển khai parity
 
 0. **Fixture-first:** khóa composition manifest/page ranges trước khi xây UI.
@@ -438,6 +489,8 @@ vẫn mở tại `X17F`.
    không chặn Milestone C.
 5. **Sizing:** `FE-X17A → FE-X17F` theo backend counterpart; Preview trước,
    chart/calculator/retention/snapshot mở dần theo data gate.
+6. **User guide:** `FE-X18`; audit UI/OpenAPI trước, rồi triển khai đồng thời
+   workflow guide, parameter reference, VI/EN, contextual help và evidence ảnh.
 
 ## Public-data mapping cần bảo vệ
 
@@ -479,6 +532,7 @@ vẫn mở tại `X17F`.
 | Report/export/URL | `X14` LOCAL COMPLETE; LIVE SAMPLE PENDING; `X15` PASS LOCAL | Benchmark fingerprint thật |
 | Sidebar re-decoration | LOCAL COMPLETE 2026-07-28 (`X14`/`X15`) | Navigation mới, actionable report, exact deep-link, partial error và ba viewport pass |
 | Token/cost/sizing | `X17A`–`X17E` LOCAL COMPLETE; `X17F` LIVE PENDING | One-PDF/provider Preview → bốn fixture → 20-job capacity gate |
+| User guide/reference | `X18` IMPLEMENTED; browser teardown pending | Hai route tĩnh, inventory đủ, VI/EN, 7 contextual link, 5 ảnh và accessibility; xác nhận runner thoát sạch sau 25 test |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 

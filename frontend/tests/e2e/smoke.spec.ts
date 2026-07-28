@@ -193,6 +193,7 @@ test("mobile English keeps PDF-only errors, instant language and closable monito
   await page.getByRole("button", { name: "Start OCR" }).click();
   await expect(page.locator(".notice.error")).toContainText("Worker unavailable");
   await expect(page.locator('input[type="file"]:not([webkitdirectory])')).toHaveValue(/bad\.pdf$/); await expect(page.getByLabel("VLM task")).toHaveValue("metadata"); await expect(page.getByLabel("Page scope")).toHaveValue("auto"); await expect(page.getByLabel("Candidate page limit")).toHaveValue("2");
+  if (process.env.UPDATE_GUIDE_BASELINE === "1") { await page.setViewportSize({ width: 1440, height: 900 }); await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "public/guide/upload.png"), fullPage: true }); await page.setViewportSize({ width: 390, height: 844 }); }
   await page.locator(".menu-toggle").click(); await page.getByRole("button", { name: /system tools/i }).click(); await page.getByRole("button", { name: /system monitor/i }).click();
   await expect(page.locator("#primary-navigation")).not.toHaveClass(/open/); await expect(page.locator(".monitor-modal")).toBeVisible(); await page.locator(".monitor-modal").getByRole("button", { name: "Close" }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
@@ -307,6 +308,7 @@ test("partial page warning keeps usable review fields visible", async ({ page })
   await page.goto(`/jobs/${id}?view=review`);
   await expect(page.locator(".partial-warning")).toContainText(/2\/3/);
   await expect(page.locator(".field-card")).toBeVisible();
+  if (process.env.UPDATE_GUIDE_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "public/guide/job-detail.png"), fullPage: true }); await page.locator(".review-grid").screenshot({ path: path.resolve(process.cwd(), "public/guide/review.png") }); }
   await expect(page.locator(".field-card")).toContainText("Provider không trả vùng định vị");
   await page.getByRole("button", { name: "Xem trang nguồn" }).click();
   await expect(page.locator('.page-numbers button[aria-current="page"]')).toHaveText("2");
@@ -495,6 +497,7 @@ test("combined dossier keeps revisioned segmentation review in the job detail", 
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
   await page.goto(`/jobs/${id}`); await expect(page.getByRole("heading", { name: /xác nhận cấu trúc hồ sơ|confirm document structure/i })).toBeVisible();
+  if (process.env.UPDATE_GUIDE_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "public/guide/structure.png"), fullPage: true }); }
   const types = page.getByLabel(/loại phân đoạn|segment type/i), confirm = page.getByRole("button", { name: /xác nhận PDF này|confirm this PDF/i });
   await types.nth(1).selectOption("excluded"); await expect(confirm).toBeEnabled();
   await types.nth(1).selectOption("administrative_document");
@@ -625,6 +628,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
     return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
   });
   await page.goto("/sizing"); await expect(page.getByText("12")).toBeVisible();
+  if (process.env.UPDATE_GUIDE_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "public/guide/sizing.png"), fullPage: true }); }
   await page.getByRole("button", { name: /Document Explorer/i }).click(); const attempts = page.getByRole("button", { name: /Xem attempts|View attempts/i }); await attempts.nth(0).click(); await attempts.nth(1).click(); await expect(page.locator(".attempts-table")).toHaveCount(2); await expect(page.locator(".attempts-table").first()).toContainText("complete");
   await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await page.getByRole("button", { name: /Tính Preview|Calculate Preview/i }).click(); await expect(page.locator(".safe-json")).toContainText("insufficient_sample");
   await page.getByRole("button", { name: /Lưu snapshot|Save snapshot/i }).click();
@@ -637,4 +641,30 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   await expect(page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i })).toHaveCount(0);
   await dates.nth(1).fill("2026-12-31"); await page.getByRole("button", { name: /Preview xóa|Preview measurement/i }).click();
   await page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i }).click(); await expect(page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i })).toHaveCount(0);
+});
+
+test("static user guide keeps routes, anchors, language and mobile reflow without API", async ({ page }) => {
+  let apiCalls = 0;
+  await page.route("**/api/**", (route) => { apiCalls += 1; return route.abort(); });
+  await page.goto("/guide");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hướng dẫn sử dụng");
+  await expect(page.locator("#primary-navigation").getByRole("link", { name: "Hướng dẫn sử dụng" })).toHaveClass(/active/);
+  await expect(page.locator(".guide-section")).toHaveCount(11);
+  await expect(page.locator(".guide-section figure img")).toHaveCount(5);
+  await expect(page.getByRole("link", { name: "Bắt đầu OCR đầu tiên" })).toBeVisible();
+  await expect(page.locator('a[href="/documents?triage=needs_review"]')).toBeVisible();
+  await expect(page.locator('a[href="/?status=active"]')).toBeVisible();
+  await page.getByRole("button", { name: "EN", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("User guide");
+  await page.goto("/guide/reference#sizing-cost");
+  await expect(page.locator("#sizing-cost")).toBeVisible();
+  await expect(page.locator(".reference-entry")).toHaveCount(38);
+  await expect(page.locator("#sample-gates")).toContainText("1/2/5/20");
+  await expect(page.locator("#term-unavailable")).toContainText("Different from zero");
+  await expect(page.locator("#primary-navigation a[href='/guide']")).toHaveCount(1);
+  await expect(page.locator("#primary-navigation a[href='/guide/reference']")).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".guide-mobile-toc")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  expect(apiCalls).toBe(0);
 });

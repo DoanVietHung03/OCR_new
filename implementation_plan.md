@@ -35,11 +35,15 @@ Milestone C là
 sau local contract gate và evidence strong-server. Runtime được vận hành duy nhất
 bởi stack Next.js/FastAPI/Celery.
 
+**User guide 2026-07-28:** scope frontend `FE-X18` đã khóa nhưng chưa triển khai.
+Backend counterpart `BE-X18` là `N/A`; đặc tả chi tiết nằm tại
+[`User_guide.md`](User_guide.md).
+
 ## Cách dùng hai kế hoạch
 
 - Backend sở hữu schema, validation, persistence, worker, provider, deployment
   và evidence vận hành; frontend không chép lại các contract này.
-- Mỗi mục giao nhau dùng mã `X1`–`X17` và backlink đối xứng. Một mục chỉ được đóng
+- Mỗi mục giao nhau dùng mã `X1`–`X18` và backlink đối xứng. Một mục chỉ được đóng
   khi counterpart đã pass hoặc ghi rõ `N/A` cùng lý do.
 - Public schema thay đổi bắt buộc kiểm tra `BE-X3` và `FE-X3`.
 - Checkbox/test local không thay thế evidence provider/worker thật trong
@@ -66,6 +70,7 @@ bởi stack Next.js/FastAPI/Celery.
 | `X15` | Native URL/interaction support | [`FE-X15`](frontend_plan.md#fe-x15) | Public data hỗ trợ state/utility thật, không dependency mới |
 | `X16` | Source PDF và logical documents | [`FE-X16`](frontend_plan.md#fe-x16) | Hồ sơ gộp được phân đoạn, xác nhận và review bền vững |
 | `X17` | Provider measurement, sizing contract và durable analytics | [`FE-X17`](frontend_plan.md#fe-x17) | Measurement Preview dùng dữ liệu thật; calculator/capacity chỉ mở sau sample gate |
+| `X18` | `N/A` — guide tĩnh, không backend/schema | [`FE-X18`](frontend_plan.md#fe-x18) | Hai route guide/reference khớp contract hiện có và full regression không drift |
 
 ## Domain contract
 
@@ -457,6 +462,27 @@ và `/sizing` drill-down/chart/export. Gate `1/2/5/20` vẫn hiển thị
 bốn fixture, backup/restart, tối thiểu 20 compatible jobs và cluster scale-out
 thuộc `X17F`/live evidence trong [`incomlpeted.md`](incomlpeted.md).
 
+### BE-X18
+
+**N/A — User guide frontend-only; counterpart IMPLEMENTED, FULL GATE PENDING.** Counterpart:
+[`FE-X18`](frontend_plan.md#fe-x18). Đặc tả chi tiết:
+[`User_guide.md`](User_guide.md).
+
+- `/guide` và `/guide/reference` là route tĩnh, không fetch API.
+- Không thêm endpoint, Pydantic/OpenAPI schema, database, durable field,
+  permission hoặc backend behavior.
+- Nội dung chỉ giải thích public contract/user-visible value hiện có; giá trị
+  provider, measurement, price, exchange và capacity động tiếp tục thuộc các
+  màn hình/API đang sở hữu dữ liệu.
+- Backend tests và OpenAPI check chỉ là regression evidence chứng minh không
+  drift; không viết backend behavior để phục vụ guide.
+- `BE-X18` không block Milestone C và không thay đổi evidence gate của `BE-X17`.
+
+Regression backend giữ nguyên và pass 62 tests; OpenAPI không drift. Frontend
+đã triển khai route/content/contextual help/ảnh theo `FE-X18`; browser full-suite
+đã chạy tới đủ 25 test không báo test lỗi nhưng Windows teardown chưa thoát sạch
+trước timeout, nên không suy diễn đây là live/provider evidence.
+
 <a id="sidebar-re-decoration-backend"></a>
 ## Sidebar re-decoration — backend counterpart
 
@@ -519,6 +545,8 @@ Python compileall và `git diff --check`.
    corrected export không chặn Milestone C.
 6. **Giai đoạn 6 — sizing:** `X17A → X17F`, measurement-first; Preview một PDF
    trước, aggregation/calculator/capacity sau sample gate.
+7. **Giai đoạn 7 — user guide:** `BE-X18` giữ `N/A`; chỉ chạy backend/OpenAPI
+   regression cùng frontend `FE-X18`, không mở rộng public contract.
 
 ## Milestone C: runbook và deployment rollback
 

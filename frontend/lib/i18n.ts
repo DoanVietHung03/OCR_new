@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 const vi = {
   partialPages: "{success}/{total} trang thành công",
-  title: "IntelliDoc OCR", jobs: "Công việc", newOcr: "OCR mới", systemMonitor: "Giám sát hệ thống",
+  title: "IntelliDoc OCR", jobs: "Công việc", newOcr: "OCR mới", guide: "Hướng dẫn sử dụng", help: "Xem hướng dẫn", systemMonitor: "Giám sát hệ thống",
   manage: "Hàng đợi rà soát", processingLogs: "Nhật ký xử lý", codes: "Danh mục mã", admin: "Quản trị", systemTools: "Công cụ hệ thống",
   subtitle: "Theo dõi, kiểm tra và hiệu chỉnh kết quả OCR.", filteredResults: "Kết quả đang lọc",
   upload: "Tải PDF", uploadSubtitle: "Cấu hình và khởi chạy một công việc OCR PDF.", uploadHint: "Kéo thả hoặc chọn tối đa {files} PDF, tổng cộng {size}.", dropFiles: "Thả PDF vào đây", chooseFiles: "Chọn tệp", chooseFolder: "Chọn thư mục",
@@ -57,7 +57,7 @@ const vi = {
 type TextKey = keyof typeof vi;
 const en: Record<TextKey, string> = {
   partialPages: "{success}/{total} pages succeeded",
-  title: "IntelliDoc OCR", jobs: "Jobs", newOcr: "New OCR", systemMonitor: "System Monitor",
+  title: "IntelliDoc OCR", jobs: "Jobs", newOcr: "New OCR", guide: "User guide", help: "View guidance", systemMonitor: "System Monitor",
   manage: "Review queue", processingLogs: "Processing logs", codes: "Code catalog", admin: "Administration", systemTools: "System tools",
   subtitle: "Track, review, and correct OCR results.", filteredResults: "Filtered results",
   upload: "Upload PDF", uploadSubtitle: "Configure and start a PDF OCR job.", uploadHint: "Drop or choose up to {files} PDFs, {size} total.", dropFiles: "Drop PDFs here", chooseFiles: "Choose files", chooseFolder: "Choose folder",

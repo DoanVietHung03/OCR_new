@@ -44,7 +44,7 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
     <div className="meter"><i style={{ width: `${Math.max(0, Math.min(100, value || 0))}%` }} /></div>
   </article>;
   const active = (href: string) => href === "/" ? pathname === "/" || pathname.startsWith("/jobs/") : pathname.startsWith(href);
-  const nav = [["/", "▦", text("jobs")], ["/upload", "⇧", text("newOcr")], ["/reports", "▥", text("report")], ["/sizing", "◇", text("sizing")]];
+  const nav = [["/", "▦", text("jobs")], ["/upload", "⇧", text("newOcr")], ["/reports", "▥", text("report")], ["/sizing", "◇", text("sizing")], ["/guide", "?", text("guide")]];
   const tools = [["/logs", "▤", text("processingLogs")], ["/codes", "▧", text("codes")]];
   const operationStates = metrics?.operations?.states || {};
   const updateMonitor = (open: boolean) => { const query = new URLSearchParams(location.search); if (open) query.set("monitor", "1"); else query.delete("monitor"); history[open ? "pushState" : "replaceState"](null, "", `${location.pathname}${query.size ? `?${query}` : ""}`); setMonitorOpen(open); };

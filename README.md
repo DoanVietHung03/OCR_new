@@ -15,7 +15,9 @@ Milestone C chỉ là internal production-like pilot,
 không phải customer-production approval.
 
 Giao diện Next.js có route Jobs, Upload, Manage/Documents, Logs, Reports,
-Codes, Sizing & Cost và job workspace. Dữ liệu giàu gồm Provider Profile, OCR text/quality/
+Codes, Sizing & Cost, [Hướng dẫn sử dụng](http://localhost:54846/guide),
+[Tra cứu tham số](http://localhost:54846/guide/reference) và job workspace.
+Dữ liệu giàu gồm Provider Profile, OCR text/quality/
 evidence/suggestion, artifact manifest, Safe Events, report/benchmark nullable,
 Code Catalog `_codes.json` và System Monitor allowlist. Mọi số liệu đều lấy từ
 API/dữ liệu bền vững hoặc hiển thị unavailable trung thực.
@@ -49,6 +51,8 @@ provider production-like thật.
   bằng chứng Milestone C.
 - `frontend_plan.md`: nguồn chuẩn frontend, workflow, regression gate
   và mapping ảnh parity.
+- `User_guide.md`: đặc tả nội dung/acceptance cho guide; nội dung sử dụng trực
+  tiếp nằm tại `/guide` và `/guide/reference`, không phụ thuộc backend.
 - `incomlpeted.md`: các việc còn phụ thuộc fixture, provider, strong server hoặc
   xác nhận operator, kèm điều kiện nghiệm thu.
 - `docs/ui-parity/`: ảnh ẩn danh tại 1440×900, 1366×768 và 390×844.
