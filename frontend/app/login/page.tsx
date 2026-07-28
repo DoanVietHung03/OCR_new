@@ -52,7 +52,6 @@ export default function LoginPage() {
       </div>
       <p className="eyebrow">{vi ? "TRUY CẬP DEMO NỘI BỘ" : "INTERNAL DEMO ACCESS"}</p>
       <h1>{vi ? "Đăng nhập" : "Sign in"}</h1>
-      <p>{vi ? "Dùng tài khoản OCR được chia sẻ để tiếp tục." : "Use the shared OCR account to continue."}</p>
       <form onSubmit={submit}>
         <label>{vi ? "Tên đăng nhập" : "Username"}<input autoComplete="username" autoFocus required value={username} onChange={(event) => setUsername(event.target.value)} /></label>
         <label>{vi ? "Mật khẩu" : "Password"}<span className="password-input"><input type={visible ? "text" : "password"} autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} onKeyDown={caps} onKeyUp={caps} onBlur={() => setCapsLock(false)} /><button type="button" aria-label={vi ? "Hiện hoặc ẩn mật khẩu" : "Show or hide password"} onClick={() => setVisible((value) => !value)}>{visible ? "◉" : "◎"}</button></span></label>
