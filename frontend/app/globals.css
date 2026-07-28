@@ -221,6 +221,10 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 .guide-section:target, .reference-entry:target { outline: 3px solid #b7d5fa; outline-offset: 2px; }
 .guide-section > p, .guide-section li { color: #465a73; line-height: 1.65; }
 .guide-section ol, .guide-section ul { padding-left: 22px; }
+.guide-plain, .guide-example { margin: 16px 0; border-radius: 8px; padding: 12px 14px; }
+.guide-plain { background: #f2f6fb; color: #29445f; }
+.guide-example { border: 1px solid #cfe3d8; background: #f2faf5; color: #315b43; }
+.guide-plain p, .guide-example p { margin: 5px 0 0; line-height: 1.65; }
 .guide-callout { border-left: 4px solid #4081c4; padding: 11px 13px; color: #244c76 !important; background: #edf6ff; }
 .guide-section figure { margin: 22px 0 8px; }
 .guide-section figure img { width: 100%; height: auto; border: 1px solid #dce4ee; border-radius: 10px; }

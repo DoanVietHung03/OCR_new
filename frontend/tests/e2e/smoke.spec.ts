@@ -657,6 +657,10 @@ test("static user guide keeps routes, anchors, language and mobile reflow withou
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hướng dẫn sử dụng");
   await expect(page.locator("#primary-navigation").getByRole("link", { name: "Hướng dẫn sử dụng" })).toHaveClass(/active/);
   await expect(page.locator(".guide-section")).toHaveCount(11);
+  await expect(page.locator(".guide-plain")).toHaveCount(11);
+  await expect(page.locator(".guide-example")).toHaveCount(11);
+  await expect(page.locator("#ocr-basics .guide-plain")).toContainText("máy tự tin đến đâu");
+  await expect(page.locator("#structure-review .guide-example")).toContainText("trang 2–4");
   await expect(page.locator(".guide-section figure img")).toHaveCount(5);
   await expect(page.getByRole("link", { name: "Bắt đầu OCR đầu tiên" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Xem công việc", exact: true })).toHaveCount(0);

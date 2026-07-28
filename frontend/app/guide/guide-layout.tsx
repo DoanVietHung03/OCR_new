@@ -4,12 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import AppShell from "../app-shell";
-import { guideImages, guideSections, referenceGroups } from "./content";
+import { guideHelp, guideImages, guideSections, referenceGroups } from "./content";
 import { useLanguage } from "../../lib/i18n";
 
 const labels = {
-  vi: { toc: "Mục lục", note: "Lưu ý", meaning: "Ý nghĩa", when: "Khi cần quan tâm", values: "Giá trị và tác động", example: "Ví dụ", caution: "Cẩn trọng", reference: "Tra cứu tham số" },
-  en: { toc: "Contents", note: "Note", meaning: "Meaning", when: "When it matters", values: "Values and impact", example: "Example", caution: "Caution", reference: "Parameter reference" },
+  vi: { toc: "Mục lục", plain: "Hiểu đơn giản", note: "Lưu ý", meaning: "Ý nghĩa", when: "Khi cần quan tâm", values: "Giá trị và tác động", example: "Ví dụ", caution: "Cẩn trọng", reference: "Tra cứu tham số" },
+  en: { toc: "Contents", plain: "In plain language", note: "Note", meaning: "Meaning", when: "When it matters", values: "Values and impact", example: "Example", caution: "Caution", reference: "Parameter reference" },
 };
 
 export function GuideFrame({ reference = false, children }: { reference?: boolean; children: ReactNode }) {
@@ -65,9 +65,12 @@ export function GuideBody() {
   const imageBySection = new Map<string, (typeof guideImages)[number]>(guideImages.map((image) => [image.section, image]));
   return <>{guideSections.map((section) => {
     const image = imageBySection.get(section.id);
+    const help = guideHelp[section.id];
     return <section className="guide-section" id={section.id} tabIndex={-1} key={section.id}>
       <h2>{section.title[locale]}</h2><p>{section.summary[locale]}</p>
+      <div className="guide-plain"><b>{l.plain}</b><p>{help.plain[locale]}</p></div>
       <ol>{section.steps.map((step, index) => <li key={index}>{step[locale]}</li>)}</ol>
+      <div className="guide-example"><b>{l.example}</b><p>{help.example[locale]}</p></div>
       {section.note && <p className="guide-callout"><b>{l.note}:</b> {section.note[locale]}</p>}
       {image && <figure><Image src={`/guide/${image.file}`} width={1200} height={750} alt={image.alt[locale]} /><figcaption>{image.caption[locale]}</figcaption></figure>}
       {["choose-mode", "job-status", "review-approve", "results"].includes(section.id) && <Link href={`/guide/reference#${section.id === "choose-mode" ? "processing" : section.id === "job-status" ? "job" : section.id === "review-approve" ? "review" : "reports-artifacts"}`}>{l.reference} →</Link>}
