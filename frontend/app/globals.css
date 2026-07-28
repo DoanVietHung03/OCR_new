@@ -202,14 +202,16 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 .login-card header { display: flex; align-items: center; gap: 10px; margin-bottom: 34px; color: #132b4e; }
 .login-card header div { display: grid; }
 .login-card header small { color: #1768d4; font-weight: 800; }
-.login-card h1 { margin: 5px 0 8px; }
+.login-card h1 { margin: 5px 0 8px; text-align: center; }
 .login-card > p:not(.eyebrow) { color: #60728a; }
 .login-language { position: absolute; top: 28px; right: 28px; }
 .login-card form, .auth-modal form { display: grid; gap: 16px; margin-top: 24px; }
 .login-card label, .auth-modal label { display: grid; gap: 7px; color: #334c69; font-weight: 750; }
 .login-card input, .auth-modal input { width: 100%; min-height: 43px; border: 1px solid #c8d2df; border-radius: 8px; padding: 9px 11px; font: inherit; }
+.login-card .password-input input { padding-right: 52px; }
 .password-input { position: relative; }
-.password-input button { position: absolute; top: 4px; right: 4px; min-width: 36px; min-height: 35px; border: 0; background: transparent; cursor: pointer; }
+.password-input button { position: absolute; top: 50%; right: 8px; display: grid; width: 36px; height: 36px; place-items: center; border: 0; padding: 0; color: #173555; background: transparent; transform: translateY(-50%); cursor: pointer; }
+.password-input button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .login-card .button { justify-content: center; width: 100%; }
 .warning { color: #8b5c08; }
 
