@@ -12,6 +12,13 @@ và capacity evidence vẫn mở tại `FE-X17F`. Chi tiết nằm tại
 [`Token_Cal.md`](Token_Cal.md). Các external gate của Milestone C nằm tại
 [`incomlpeted.md`](incomlpeted.md).
 
+**Sidebar re-decoration 2026-07-28:** information architecture mới đã triển khai
+và hoàn thành local gate: `62` backend tests, `24` browser checks, typecheck,
+production build, OpenAPI generation/check, compileall và diff check đều pass.
+Phạm vi và acceptance nằm tại
+[`Sidebar re-decoration`](#sidebar-re-decoration), backend counterpart nằm trong
+[`implementation_plan.md`](implementation_plan.md#sidebar-re-decoration-backend).
+
 **Reliability recheck 2026-07-27:** backend `61 passed`, browser `21 passed`,
 typecheck/build/OpenAPI/compile/diff đều pass. Thay đổi retry là nội bộ backend,
 không đổi public API hay frontend contract; fixture/provider/server evidence
@@ -77,17 +84,100 @@ management và mutable local-only PDF nằm ngoài parity plan tại `FE-X6`.
 |---|---|---|
 | Jobs | `/` | Dashboard, search/filter/sort/page và lifecycle action |
 | Upload | `/upload` | PDF selection, Processing Mode, Provider Profile, task/page scope, consent |
-| Manage | `/documents` | Document index xuyên job |
-| Logs | `/logs` | Typed Safe Events |
-| Report | `/reports` | Operations/quality/benchmark thật hoặc unavailable |
-| Codes | `/codes` | Durable Code Catalog |
+| Hàng đợi rà soát | `/documents` | Document index xuyên job; mở từ CTA theo ngữ cảnh |
+| Processing logs | `/logs` | Typed Safe Events trong nhóm Công cụ hệ thống |
+| Tổng quan vận hành | `/reports` | Việc cần xử lý, chất lượng và hiệu suất thật hoặc unavailable |
+| Code catalog | `/codes` | Durable Code Catalog trong nhóm Công cụ hệ thống |
 | Sizing & Cost | `/sizing` | Measurement, token/cost, scenario, capacity và provenance |
 | Job detail | `/jobs/[id]?view=...` | Overview, review, artifacts, report và logs |
-| System Monitor | Dialog/deep-linkable state | Safe telemetry backend nhìn thấy |
+| System Monitor | Dialog/deep-linkable state | Safe telemetry backend nhìn thấy; mở từ Công cụ hệ thống |
 
 Search/filter/sort/page, selected document/page và job tab phải khôi phục được
 qua URL khi refresh/back/forward. Polling chỉ chạy khi job active hoặc monitor mở;
 terminal dừng polling và stale refresh giữ snapshot gần nhất kèm cảnh báo.
+
+<a id="sidebar-re-decoration"></a>
+## Sidebar re-decoration
+
+**LOCAL COMPLETE 2026-07-28.** Đây là scope mới của `FE-X14`/`FE-X15`; local
+evidence riêng của scope gồm `62` backend tests, `24` browser checks, typecheck,
+production build, OpenAPI generation/check, compileall và diff check. UI đã được
+kiểm tra trực quan tại `1440×900` và `390×844`; regression check khóa layout
+`1366×768`, mobile no-overflow, disclosure/menu và exact deep-link.
+Backend counterpart:
+[`Sidebar re-decoration — backend counterpart`](implementation_plan.md#sidebar-re-decoration-backend).
+
+### Navigation
+
+- Sidebar chính luôn hiện đúng thứ tự: `Jobs`, `New OCR`,
+  `Tổng quan vận hành`, `Sizing & Cost`.
+- `Công cụ hệ thống` nằm cuối sidebar, mặc định thu gọn, không persist trạng thái
+  vào `localStorage`; nhóm này chứa `Processing logs`, `Code catalog` và
+  `System Monitor`.
+- Bỏ `Manage` khỏi sidebar nhưng giữ route `/documents` và toàn bộ API. Jobs và
+  Tổng quan vận hành mở route này bằng CTA `Tài liệu cần rà soát (N)`.
+- Đổi nhãn `/documents` thành `Hàng đợi rà soát` / `Review queue`;
+  `/reports` thành `Tổng quan vận hành` / `Operations overview`; giữ nguyên
+  `/reports`, `/documents`, `/logs`, `/codes` để không phá bookmark/deep-link.
+- Mobile dùng cùng hierarchy; chọn route hoặc mở Monitor phải đóng menu.
+
+### Tổng quan vận hành
+
+- Header ghi rõ `Phạm vi: toàn bộ dữ liệu hiện còn được lưu`, thời điểm cập nhật
+  gần nhất và action `Làm mới`; trang không polling.
+- Thứ tự nội dung cố định:
+  1. `Cần xử lý ngay`: tài liệu cần rà soát, job đang xử lý, lỗi và cảnh báo
+     gần đây; mỗi thẻ có link riêng tới danh sách đã lọc.
+  2. `Chất lượng OCR`: tỷ lệ tài liệu đã duyệt, evidence coverage, số field đã
+     chỉnh sửa và số tài liệu có warning.
+  3. `Hiệu suất`: thời gian trung bình, pages/minute và bảng so sánh theo
+     Provider Profile.
+- Benchmark không còn render tại `/reports`; route này dẫn người dùng sang
+  `Sizing & Cost`. Chưa thêm chart hoặc time-range filter khi backend chưa có
+  dữ liệu time-series/range thật.
+- Tỷ lệ duyệt được tính từ `approved_documents / documents`; mẫu số bằng zero
+  phải là unavailable, không phải `0%`.
+
+### Data, CTA và URL state
+
+- `/reports` gọi song song `GET /api/reports` và `GET /api/documents`; chỉ dùng
+  `triage_counts` từ response document, không thêm field trùng vào
+  `ReportsResponse`.
+- CTA đã khóa:
+  - cần rà soát → `/documents?triage=needs_review`;
+  - job đang xử lý → `/?status=active`;
+  - lỗi → `/logs?severity=error`;
+  - cảnh báo → `/logs?severity=warning`.
+- `/logs` phải đọc/ghi `severity`, `category`, `job_id`,
+  `provider_profile_id`, `document_id`, `page_index` và `page` trong URL; refresh,
+  back và forward khôi phục đúng filter.
+- `active` là filter tổng hợp do backend định nghĩa, không phải job status được
+  persist. Frontend không tự liệt kê hoặc suy đoán tập active states.
+
+### Loading, error và responsive
+
+- Chưa có job: hiển thị `Chưa có dữ liệu vận hành` cùng CTA `Tạo OCR mới`, không
+  dựng lưới toàn số zero. Có dữ liệu nhưng không có việc khẩn cấp: hiển thị
+  `Không có việc cần xử lý`.
+- Report và triage có loading/error/retry độc lập. Refresh lỗi phải giữ dữ liệu
+  gần nhất và gắn nhãn `Có thể đã cũ`; nullable/insufficient giữ `—` kèm lý do,
+  không biến thành zero hay verdict giả.
+- Desktop `1440×900`/`1366×768`: nhóm cần xử lý là một hàng thẻ; Chất lượng và
+  Hiệu suất chia hai cột; bảng Provider Profile chiếm toàn chiều rộng bên dưới.
+- Mobile `390×844`: mọi section thành một cột; bảng cuộn trong container và
+  không làm trang overflow ngang.
+- Card chỉ trình bày dữ liệu; CTA là link riêng có focus rõ. Nút Công cụ hệ thống
+  dùng `aria-expanded`, thao tác được bằng bàn phím và không cần animation phức tạp.
+
+### Acceptance
+
+- Sidebar chính chỉ còn bốn mục; nhóm Công cụ hệ thống mặc định đóng và không
+  làm mất route/action hiện có.
+- Bốn CTA mở đúng URL và đúng dữ liệu đã lọc; reload/back/forward giữ state.
+- Partial API failure không làm trắng trang; empty/stale/unavailable render đúng
+  contract và không fabricate dữ liệu.
+- VI/EN, keyboard/focus, `1440×900`, `1366×768`, `390×844`, typecheck, build,
+  browser smoke, OpenAPI check và `git diff --check` đều pass.
 
 ## Visual và interaction invariant
 
@@ -234,6 +324,9 @@ sách suggestion/evidence; workspace hiển thị source, confidence và reason 
 được ẩn, corrected JSON xuất hiện trong Artifacts sau reload và tab Report trùng
 lặp đã bỏ. Benchmark có fingerprint thật còn theo
 [`incomlpeted.md`](incomlpeted.md).
+Scope `Sidebar re-decoration` đã `LOCAL COMPLETE 2026-07-28` bằng gate riêng:
+sidebar bốn mục, System tools disclosure, actionable report, exact URL state,
+partial failure, ba viewport, `62` backend tests và `24` browser checks.
 
 ### FE-X16
 
@@ -350,18 +443,18 @@ vẫn mở tại `X17F`.
 
 | UI block | Public source |
 |---|---|
-| Dashboard | `GET /api/state` |
+| Dashboard | `GET /api/state`, gồm filter tổng hợp `status=active` |
 | Provider configuration | `GET /api/provider-profiles`, engine readiness endpoint |
 | Upload | limits, `processing_mode` và create/upload/start endpoints |
 | Segmentation | `source_pdfs[]`, per-source confirm, `/continue` và revision conflict |
 | Lifecycle action | cancel, typed rerun mode, delete-preview và bulk-delete |
 | Review | `GET /api/jobs/{id}` và `/corrections`: expected fields, evidence, blocker/risk |
 | Crop | page artifact và `/manual-crop` |
-| Manage | `GET /api/documents`: triage aggregate và deep-link target |
+| Hàng đợi rà soát | `GET /api/documents`: triage aggregate và deep-link target |
 | Artifacts | `GET /api/jobs/{id}/artifacts` |
 | Progress/failure | persisted job snapshot từ `GET /api/state` và `GET /api/jobs/{id}` |
-| Logs/timeline | `GET /api/events`, durable safe events |
-| Reports/export | `GET /api/reports` và corrected artifact URL |
+| Logs/timeline | `GET /api/events`, durable safe events và URL-persisted filters |
+| Tổng quan vận hành/export | `GET /api/reports`, `GET /api/documents` và corrected artifact URL |
 | Codes | `/api/codes` CRUD |
 | System Monitor | `GET /api/system-metrics` |
 | Sizing overview/explorer | `/api/sizing/overview`, `/jobs`, job summary và paginated `/operations` |
@@ -384,6 +477,7 @@ vẫn mở tại `X17F`.
 | Segmentation/Bìa/logical documents | `X16` LOCAL COMPLETE; LIVE PENDING | Bốn fixture, confirm/restart/review và legacy read pass |
 | Progress/timeline/triage | PASS LOCAL `X12`–`X13` | Persisted counters/failure/timeline, backend triage, deep-link và missing artifact pass |
 | Report/export/URL | `X14` LOCAL COMPLETE; LIVE SAMPLE PENDING; `X15` PASS LOCAL | Benchmark fingerprint thật |
+| Sidebar re-decoration | LOCAL COMPLETE 2026-07-28 (`X14`/`X15`) | Navigation mới, actionable report, exact deep-link, partial error và ba viewport pass |
 | Token/cost/sizing | `X17A`–`X17E` LOCAL COMPLETE; `X17F` LIVE PENDING | One-PDF/provider Preview → bốn fixture → 20-job capacity gate |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |

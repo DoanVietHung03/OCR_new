@@ -13,9 +13,30 @@ export default function LogsPage() {
   const [data, setData] = useState(empty); const [severity, setSeverity] = useState("all");
   const [category, setCategory] = useState("all"); const [jobId, setJobId] = useState("");
   const [providerProfile, setProviderProfile] = useState(""); const [documentId, setDocumentId] = useState(""); const [pageIndex, setPageIndex] = useState("");
-  const [page, setPage] = useState(1); const [error, setError] = useState("");
+  const [page, setPage] = useState(1); const [error, setError] = useState(""); const [urlReady, setUrlReady] = useState(false);
   const load = useCallback(() => getEvents({ severity, category, job_id: jobId || undefined, provider_profile_id: providerProfile || undefined, document_id: documentId || undefined, page_index: pageIndex === "" ? undefined : Number(pageIndex), page }).then((value) => { setData(value); setError(""); }).catch((reason) => setError(safeError(reason instanceof ApiError ? reason.code || reason.message : String(reason)))), [severity, category, jobId, providerProfile, documentId, pageIndex, page]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const sync = () => {
+      const params = new URLSearchParams(location.search);
+      setSeverity(params.get("severity") || "all"); setCategory(params.get("category") || "all");
+      setJobId(params.get("job_id") || ""); setProviderProfile(params.get("provider_profile_id") || "");
+      setDocumentId(params.get("document_id") || ""); setPageIndex(params.get("page_index") || "");
+      setPage(Math.max(1, Number(params.get("page")) || 1)); setUrlReady(true);
+    };
+    sync(); window.addEventListener("popstate", sync); return () => window.removeEventListener("popstate", sync);
+  }, []);
+  useEffect(() => { if (urlReady) void load(); }, [load, urlReady]);
+  useEffect(() => {
+    if (!urlReady) return;
+    const params = new URLSearchParams(location.search);
+    ["severity", "category", "job_id", "provider_profile_id", "document_id", "page_index", "page"].forEach((key) => params.delete(key));
+    if (severity !== "all") params.set("severity", severity); if (category !== "all") params.set("category", category);
+    if (jobId) params.set("job_id", jobId); if (providerProfile) params.set("provider_profile_id", providerProfile);
+    if (documentId) params.set("document_id", documentId); if (pageIndex !== "") params.set("page_index", pageIndex);
+    if (page > 1) params.set("page", String(page));
+    const next = `/logs${params.size ? `?${params}` : ""}`;
+    if (`${location.pathname}${location.search}` !== next) history.pushState(null, "", next);
+  }, [severity, category, jobId, providerProfile, documentId, pageIndex, page, urlReady]);
   const serialized = JSON.stringify(data.items, null, 2);
   const download = () => { const url = URL.createObjectURL(new Blob([serialized], { type: "application/json" })); const link = document.createElement("a"); link.href = url; link.download = "safe-events.json"; link.click(); URL.revokeObjectURL(url); };
 

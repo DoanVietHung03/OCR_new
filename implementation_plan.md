@@ -13,6 +13,13 @@ bốn fixture, provider/restart thật. Phần có thể kiểm tra local của 
 Chi tiết nằm tại [`Token_Cal.md`](Token_Cal.md). Các
 external gate của Milestone C tập trung tại [`incomlpeted.md`](incomlpeted.md).
 
+**Sidebar re-decoration 2026-07-28:** frontend và backend counterpart tối thiểu
+đã hoàn thành local gate. `status=active` dùng chung policy `ACTIVE`, giữ
+aggregate/deep-link nhất quán; `62` backend tests, `24` browser checks,
+typecheck/build, OpenAPI generation/check, compileall và diff check đều pass.
+Contract nằm tại
+[`Sidebar re-decoration — backend counterpart`](#sidebar-re-decoration-backend).
+
 **Reliability recheck 2026-07-27:** giữ nguyên minimal OpenAI Chat Completions
 payload, timeout mặc định 180 giây và tối đa hai attempt cho mỗi page operation
 đủ điều kiện retry. Local gate pass 61 backend tests, 21 browser checks,
@@ -342,6 +349,10 @@ group theo Provider Profile; benchmark thiếu sample trả `null`; approval ghi
 atomic corrected JSON và Artifact Manifest tải được; bỏ self-link `report_url`.
 Fingerprint/sample thật còn lại được theo dõi tại
 [`incomlpeted.md`](incomlpeted.md).
+Scope presentation/deep-link mới tại
+[`Sidebar re-decoration`](frontend_plan.md#sidebar-re-decoration) đã
+`LOCAL COMPLETE 2026-07-28` bằng evidence riêng: active aggregate/filter,
+actionable report, URL persistence, responsive regression và full local gate.
 
 ### BE-X16
 
@@ -446,6 +457,51 @@ và `/sizing` drill-down/chart/export. Gate `1/2/5/20` vẫn hiển thị
 bốn fixture, backup/restart, tối thiểu 20 compatible jobs và cluster scale-out
 thuộc `X17F`/live evidence trong [`incomlpeted.md`](incomlpeted.md).
 
+<a id="sidebar-re-decoration-backend"></a>
+## Sidebar re-decoration — backend counterpart
+
+**LOCAL COMPLETE 2026-07-28.** Counterpart:
+[`frontend_plan.md#sidebar-re-decoration`](frontend_plan.md#sidebar-re-decoration).
+Đây là phần backend tối thiểu của `BE-X14`/`BE-X15`; navigation, copy, layout và
+URL state thuộc frontend.
+
+Evidence: focused active-filter/API checks pass; full gate pass `62` backend
+tests, `24` browser checks, frontend typecheck/build, OpenAPI generation/check,
+Python compileall và `git diff --check`.
+
+### Public-data contract
+
+- Không thêm endpoint, database hoặc field mới vào `ReportsResponse`.
+  `/reports` tiếp tục dùng `GET /api/reports`; số tài liệu cần rà soát lấy từ
+  field `triage_counts` trong response của `GET /api/documents`.
+- `GET /api/state?status=active` là filter tổng hợp chỉ tại read path:
+  chọn job có persisted status thuộc `ACTIVE`. Chuỗi `active` không được persist
+  thành job status và các exact-status filter hiện có giữ nguyên.
+- Một helper/policy backend dùng chung phải sở hữu semantics active để
+  `GET /api/state.metrics.active_jobs`, `GET /api/reports.operations.active_jobs`
+  và `status=active` không lệch nhau. Các waiting state
+  `awaiting_segmentation_review`/`segmentation_confirmed` không được đổi thành
+  active execution state.
+- `GET /api/events` đã sở hữu các filter `severity`, `category`, `job_id`,
+  `provider_profile_id`, `document_id`, `page_index` và `page`; thay đổi URL
+  persistence của `/logs` không yêu cầu backend endpoint khác.
+- Report vẫn aggregate toàn bộ job đang được lưu. Không thêm time-range,
+  time-series, chart data hoặc benchmark giả để phục vụ re-decoration.
+- Giữ old-job readability, không rewrite persisted job và không đổi filesystem
+  layout, artifact URL, safe-event redaction hay Code Catalog persistence.
+
+### Backend acceptance
+
+- Focused API test chứng minh `status=active` gồm mọi status trong `ACTIVE`, loại
+  exact/waiting/terminal status ngoài tập, phân trang đúng và không ảnh hưởng
+  `status=all` hoặc exact-status filter.
+- `state.metrics.active_jobs`, `reports.operations.active_jobs` và số item của
+  active filter khớp trên cùng durable fixture.
+- `/api/documents` triage và `/api/events` filter tiếp tục trả typed/sanitized
+  data; partial frontend failure không yêu cầu backend tổng hợp response mới.
+- OpenAPI generation/check, backend tests, frontend counterpart checks,
+  compileall và `git diff --check` pass trước khi đánh dấu hoàn thành.
+
 ## Thứ tự triển khai parity
 
 0. **Fixture-first:** ghép bốn fixture ngoài Git/data, khóa composition manifest,
@@ -456,9 +512,12 @@ thuộc `X17F`/live evidence trong [`incomlpeted.md`](incomlpeted.md).
    progress/failure/timeline trước, triage/deep-link sau.
 3. **Giai đoạn 3 — workspace:** frontend evidence/artifact/URL/visual utilities
    của `X13` và `X15`, chỉ dùng dữ liệu backend đã persist.
-4. **Giai đoạn 4 — đo lường:** `X14` chỉ còn benchmark từ sample live;
+4. **Giai đoạn 4 — navigation/report — LOCAL COMPLETE 2026-07-28:** đã hoàn thành
+   [`Sidebar re-decoration`](frontend_plan.md#sidebar-re-decoration), centralized
+   active filter và exact deep-link trước khi đóng scope mới của `X14`/`X15`.
+5. **Giai đoạn 5 — đo lường:** `X14` chỉ còn benchmark từ sample live;
    corrected export không chặn Milestone C.
-5. **Giai đoạn 5 — sizing:** `X17A → X17F`, measurement-first; Preview một PDF
+6. **Giai đoạn 6 — sizing:** `X17A → X17F`, measurement-first; Preview một PDF
    trước, aggregation/calculator/capacity sau sample gate.
 
 ## Milestone C: runbook và deployment rollback

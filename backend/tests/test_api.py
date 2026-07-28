@@ -650,6 +650,23 @@ def test_documents_events_and_reports_are_real_safe_projections(tmp_path, monkey
     }
 
 
+def test_active_state_filter_matches_metrics_and_reports(tmp_path, monkeypatch):
+    from app.services.jobs import ACTIVE
+
+    store = use_store(tmp_path, monkeypatch)
+    statuses = [*sorted(ACTIVE), "awaiting_segmentation_review", "segmentation_confirmed", "completed"]
+    for status in statuses:
+        job = store.create({"file_count": 1, "upload_name": f"{status}.pdf"})
+        store.update(job["id"], status=status)
+
+    active = client.get("/api/state?status=active&page_size=100").json()
+    assert {job["status"] for job in active["jobs"]} == ACTIVE
+    assert active["pagination"]["total"] == len(ACTIVE)
+    assert client.get("/api/state").json()["metrics"]["active_jobs"] == len(ACTIVE)
+    assert client.get("/api/reports").json()["operations"]["active_jobs"] == len(ACTIVE)
+    assert client.get("/api/state?status=awaiting_segmentation_review").json()["pagination"]["total"] == 1
+
+
 def test_state_supports_stable_sort_and_job_timestamps(tmp_path, monkeypatch):
     store = use_store(tmp_path, monkeypatch)
     older = store.create({"file_count": 1, "upload_name": "older.pdf"})

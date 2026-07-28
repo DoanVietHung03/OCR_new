@@ -313,10 +313,20 @@ def engines() -> list[dict]:
     return provider_profiles()
 
 
+def is_active(job: dict) -> bool:
+    return job.get("status") in ACTIVE
+
+
+def matches_status(job: dict, status: str) -> bool:
+    if status == "all":
+        return True
+    return is_active(job) if status == "active" else job.get("status") == status
+
+
 def metrics(jobs: list[dict]) -> dict:
     return {
         "total_jobs": len(jobs),
-        "active_jobs": sum(job.get("status") in {"starting", "queued", "running", "cancelling"} for job in jobs),
+        "active_jobs": sum(is_active(job) for job in jobs),
         "completed_jobs": sum(job.get("status") in {"completed", "completed_with_warnings"} for job in jobs),
         "documents": sum(len(job.get("documents", [])) for job in jobs),
         "pages": sum(int(job.get("page_count", 0)) for job in jobs),
@@ -336,7 +346,7 @@ async def state(
 ):
     jobs = [
         job for job in store.list()
-        if (status == "all" or job.get("status") == status)
+        if matches_status(job, status)
         and (method == "all" or job.get("ocr_method") == method)
         and (not query or query.lower() in json.dumps(job, ensure_ascii=False).lower())
     ]
@@ -626,7 +636,7 @@ def report_summary(jobs: list[dict]) -> dict:
     return {
         "operations": {
             "total_jobs": len(jobs),
-            "active_jobs": sum(job.get("status") in ACTIVE for job in jobs),
+            "active_jobs": sum(is_active(job) for job in jobs),
             "completed_jobs": sum(job.get("status") in {"completed", "completed_with_warnings"} for job in jobs),
             "error_jobs": sum(job.get("status") in {"error", "interrupted"} for job in jobs),
             "documents": len(documents),

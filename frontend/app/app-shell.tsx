@@ -18,6 +18,7 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
   const [updated, setUpdated] = useState<Date | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
 
@@ -43,10 +44,8 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
     <div className="meter"><i style={{ width: `${Math.max(0, Math.min(100, value || 0))}%` }} /></div>
   </article>;
   const active = (href: string) => href === "/" ? pathname === "/" || pathname.startsWith("/jobs/") : pathname.startsWith(href);
-  const nav = [
-    ["/", "▦", text("jobs")], ["/upload", "⇧", text("upload")], ["/documents", "▣", text("manage")],
-    ["/logs", "▤", text("processingLogs")], ["/reports", "▥", text("report")], ["/sizing", "◇", text("sizing")], ["/codes", "▧", text("codes")],
-  ];
+  const nav = [["/", "▦", text("jobs")], ["/upload", "⇧", text("newOcr")], ["/reports", "▥", text("report")], ["/sizing", "◇", text("sizing")]];
+  const tools = [["/logs", "▤", text("processingLogs")], ["/codes", "▧", text("codes")]];
   const operationStates = metrics?.operations?.states || {};
   const updateMonitor = (open: boolean) => { const query = new URLSearchParams(location.search); if (open) query.set("monitor", "1"); else query.delete("monitor"); history[open ? "pushState" : "replaceState"](null, "", `${location.pathname}${query.size ? `?${query}` : ""}`); setMonitorOpen(open); };
   const sidebarLabel = sidebarCollapsed ? (locale === "vi" ? "Mở rộng thanh bên" : "Expand sidebar") : (locale === "vi" ? "Thu gọn thanh bên" : "Collapse sidebar");
@@ -58,9 +57,15 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
       <button className="menu-toggle" aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen((value) => !value)}>☰</button>
       <nav id="primary-navigation" className={menuOpen ? "open" : ""} aria-label={text("jobs")}>
         {nav.map(([href, icon, label]) => <Link className={active(href) ? "nav-link active" : "nav-link"} href={href} key={href} aria-label={label} title={sidebarCollapsed ? label : undefined} onClick={(event) => { setMenuOpen(false); if (href === "/upload" && onNew) { event.preventDefault(); onNew(); } else onJobs?.(event); }}>{icon} <span>{label}</span></Link>)}
+        <div className="system-tools">
+          <button className={pathname.startsWith("/logs") || pathname.startsWith("/codes") ? "nav-link active" : "nav-link"} aria-expanded={toolsOpen} aria-controls="system-tools-menu" title={sidebarCollapsed ? text("systemTools") : undefined} onClick={() => setToolsOpen((value) => !value)}>⋯ <span>{text("systemTools")}</span></button>
+          {toolsOpen && <div id="system-tools-menu" className="system-tools-menu">
+            {tools.map(([href, icon, label]) => <Link className={active(href) ? "nav-link active" : "nav-link"} href={href} key={href} aria-label={label} title={sidebarCollapsed ? label : undefined} onClick={(event) => { setMenuOpen(false); setToolsOpen(false); onJobs?.(event); }}>{icon} <span>{label}</span></Link>)}
+            <button className="nav-link" aria-label={text("systemMonitor")} title={sidebarCollapsed ? text("systemMonitor") : undefined} onClick={() => { setMenuOpen(false); setToolsOpen(false); updateMonitor(true); }}>◫ <span>{text("systemMonitor")}</span></button>
+          </div>}
+        </div>
       </nav>
       <div className="sidebar-tools">
-        <button className="nav-link" aria-label={text("systemMonitor")} onClick={() => updateMonitor(true)}>◫ <span>{text("systemMonitor")}</span></button>
         <div className="language-switch" aria-label="Language">
           <button aria-pressed={locale === "vi"} onClick={() => changeLanguage("vi")}>VI</button>
           <button aria-pressed={locale === "en"} onClick={() => changeLanguage("en")}>EN</button>

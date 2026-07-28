@@ -85,6 +85,7 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("sanitized operation log");
   const download = page.waitForEvent("download"); await page.getByRole("button", { name: /tải xuống|download/i }).click(); expect((await download).suggestedFilename()).toContain("logs.txt");
 
+  await page.getByRole("button", { name: /công cụ hệ thống|system tools/i }).click();
   await page.getByRole("button", { name: /giám sát hệ thống|system monitor/i }).click();
   await expect(page.locator(".monitor-modal")).toContainText("12%");
   await expect(page.locator(".monitor-modal")).toContainText("load 0.1/0.2/0.3");
@@ -192,7 +193,8 @@ test("mobile English keeps PDF-only errors, instant language and closable monito
   await page.getByRole("button", { name: "Start OCR" }).click();
   await expect(page.locator(".notice.error")).toContainText("Worker unavailable");
   await expect(page.locator('input[type="file"]:not([webkitdirectory])')).toHaveValue(/bad\.pdf$/); await expect(page.getByLabel("VLM task")).toHaveValue("metadata"); await expect(page.getByLabel("Page scope")).toHaveValue("auto"); await expect(page.getByLabel("Candidate page limit")).toHaveValue("2");
-  await page.getByRole("button", { name: /system monitor/i }).click(); await expect(page.locator(".monitor-modal")).toBeVisible(); await page.locator(".monitor-modal").getByRole("button", { name: "Close" }).click();
+  await page.locator(".menu-toggle").click(); await page.getByRole("button", { name: /system tools/i }).click(); await page.getByRole("button", { name: /system monitor/i }).click();
+  await expect(page.locator("#primary-navigation")).not.toHaveClass(/open/); await expect(page.locator(".monitor-modal")).toBeVisible(); await page.locator(".monitor-modal").getByRole("button", { name: "Close" }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/mobile-upload-390x844.png") }); }
 });
@@ -368,7 +370,7 @@ test("monitor stops polling and preserves nullable GPU values", async ({ page })
     if (apiPath === "/api/system-metrics") { metricsCalls += 1; return route.fulfill({ json: { cpu_percent: 10, memory_percent: 20, disk: null, gpu: { status: "available", devices: [{ index: 0, name: "GPU", utilization_percent: null, memory_used_mb: null, memory_total_mb: null, temperature_c: null }] } } }); }
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
-  await page.goto("/"); await page.getByRole("button", { name: /giám sát hệ thống|system monitor/i }).click(); await expect(page.locator(".gpu-device")).toContainText("—"); await expect(page.locator(".gpu-device")).not.toContainText("0%");
+  await page.goto("/"); await page.getByRole("button", { name: /công cụ hệ thống|system tools/i }).click(); await page.getByRole("button", { name: /giám sát hệ thống|system monitor/i }).click(); await expect(page.locator(".gpu-device")).toContainText("—"); await expect(page.locator(".gpu-device")).not.toContainText("0%");
   await expect(page).toHaveURL(/monitor=1/); const opened = metricsCalls; await page.waitForTimeout(2_200); expect(metricsCalls).toBeGreaterThan(opened);
   await page.evaluate(() => { Object.defineProperty(document, "hidden", { configurable: true, value: true }); document.dispatchEvent(new Event("visibilitychange")); }); const hidden = metricsCalls; await page.waitForTimeout(2_200); expect(metricsCalls).toBe(hidden);
   await page.evaluate(() => { Object.defineProperty(document, "hidden", { configurable: true, value: false }); document.dispatchEvent(new Event("visibilitychange")); }); await expect.poll(() => metricsCalls).toBeGreaterThan(hidden);
@@ -399,13 +401,13 @@ test("terminal detail renders persisted progress, safe failure and timeline", as
 });
 
 test("app routes deep-link and Code Catalog CRUD survives reload", async ({ page }) => {
-  let catalog = { revision: 0, items: [] as any[] }; let eventsQuery = "";
+  let catalog = { revision: 0, items: [] as any[] }; let eventsQuery = ""; let reportsFail = false;
   await page.route("**/api/**", async (route) => {
     const request = route.request(), apiPath = new URL(request.url()).pathname;
     if (apiPath === "/api/state") return route.fulfill({ json: state([]) });
     if (apiPath === "/api/documents") return route.fulfill({ json: { items: [{ id: "smoke", job_id: id, job_status: "completed", file_name: "smoke.pdf", document_type: "Thông báo", status: "completed", review_status: "approved", page_count: 1, confidence_average: .91, warning_count: 1, needs_review: true, has_blocker: true, has_risk: false, low_confidence: false, has_suggestion: false, has_manual_crop: false, blocker_count: 1, risk_count: 0, low_confidence_count: 0, suggestion_count: 0, manual_crop_count: 0, target_page_index: 0, target_field: "so_van_ban", updated_at: now, deep_link: `/jobs/${id}?document=smoke&view=review&page=0&field=so_van_ban` }], pagination: { page: 1, page_size: 25, total: 1, pages: 1 }, triage_counts: { all: 1, needs_review: 1, blocker: 1, risk: 0, low_confidence: 0, suggestion: 0, manual_crop: 0 } } });
     if (apiPath === "/api/events") { eventsQuery = new URL(request.url()).search; return route.fulfill({ json: { items: [{ timestamp: now, severity: "info", category: "lifecycle", code: "job_created", job_id: id, provider_profile_id: "qwen", document_id: "smoke", page_index: 0, message: "job_created" }], pagination: { page: 1, page_size: 50, total: 1, pages: 1 } } }); }
-    if (apiPath === "/api/reports") return route.fulfill({ json: { operations: { total_jobs: 1, active_jobs: 0, completed_jobs: 1, error_jobs: 0, documents: 1, pages: 1, duration_seconds_average: 60, pages_per_minute: 1, failure_codes: {} }, quality: { documents: 1, approved_documents: 1, corrected_fields: 0, confidence_average: .91, total_fields: 1, confidence_coverage: 1, evidence_coverage: .5, warning_documents: 0 }, profiles: [{ provider_profile_id: "qwen", operations: { total_jobs: 1, active_jobs: 0, completed_jobs: 1, error_jobs: 0, documents: 1, pages: 1, duration_seconds_average: 60, pages_per_minute: 1, failure_codes: {} }, quality: { documents: 1, approved_documents: 1, corrected_fields: 0, confidence_average: .91, total_fields: 1, confidence_coverage: 1, evidence_coverage: .5, warning_documents: 0 }, recent_errors: [] }], benchmark_samples: null } });
+    if (apiPath === "/api/reports") return reportsFail ? route.fulfill({ status: 503, json: { detail: { code: "worker_unavailable", message: "worker_unavailable" } } }) : route.fulfill({ json: { operations: { total_jobs: 1, active_jobs: 0, completed_jobs: 1, error_jobs: 0, documents: 1, pages: 1, duration_seconds_average: 60, pages_per_minute: 1, failure_codes: {} }, quality: { documents: 1, approved_documents: 1, corrected_fields: 0, confidence_average: .91, total_fields: 1, confidence_coverage: 1, evidence_coverage: .5, warning_documents: 0 }, profiles: [{ provider_profile_id: "qwen", operations: { total_jobs: 1, active_jobs: 0, completed_jobs: 1, error_jobs: 0, documents: 1, pages: 1, duration_seconds_average: 60, pages_per_minute: 1, failure_codes: {} }, quality: { documents: 1, approved_documents: 1, corrected_fields: 0, confidence_average: .91, total_fields: 1, confidence_coverage: 1, evidence_coverage: .5, warning_documents: 0 }, recent_errors: [] }], benchmark_samples: null } });
     if (apiPath === "/api/sizing/overview") return route.fulfill({ json: { generated_at: now, sample_count: 0, operation_count: 0, value_kind: "unavailable", coverage: { response_usage_percent: null, billing_certainty_percent: null, complete_usage_attempts: 0, response_attempts: 0, known_billing_attempts: 0, total_attempts: 0 }, gates: { preview: { minimum_jobs: 1, available: false, reason: "measurement_foundation_pending" }, comparison: { minimum_jobs: 2, available: false, reason: "insufficient_sample" }, trend: { minimum_jobs: 5, available: false, reason: "insufficient_sample" }, capacity: { minimum_jobs: 20, available: false, reason: "insufficient_sample" } } } });
     if (apiPath === "/api/sizing/jobs") return route.fulfill({ json: { items: [], pagination: { page: 1, page_size: 25, total: 0, pages: 1 } } });
     if (apiPath === "/api/sizing/catalog") return route.fulfill({ json: { revision: 0, price_profiles: [], workload_profiles: [], hardware_profiles: [] } });
@@ -420,21 +422,44 @@ test("app routes deep-link and Code Catalog CRUD survives reload", async ({ page
   await page.goto("/"); const nav = page.locator("#primary-navigation");
   const shell = page.locator(".app-shell"), collapse = page.getByRole("button", { name: /thu gọn|collapse sidebar/i });
   await collapse.click(); await expect(shell).toHaveClass(/sidebar-collapsed/); await page.getByRole("button", { name: /mở rộng|expand sidebar/i }).click(); await expect(shell).not.toHaveClass(/sidebar-collapsed/);
-  await nav.getByRole("link", { name: /tải pdf|upload pdf/i }).click(); await expect(page).toHaveURL(/\/upload$/);
-  await nav.getByRole("link", { name: /quản lý|manage/i }).click(); await expect(page).toHaveURL(/\/documents$/); await expect(page.getByLabel(/lọc rà soát|review filter/i)).toContainText(/1/); await expect(page.getByRole("link", { name: /mở|open/i }).last()).toHaveAttribute("href", new RegExp(`document=smoke&view=review&page=0&field=so_van_ban`));
+  await expect(nav.getByRole("link", { name: /hàng đợi rà soát|review queue/i })).toHaveCount(0); await expect(nav.getByRole("link", { name: /nhật ký xử lý|processing logs/i })).toHaveCount(0);
+  await page.locator(".review-queue-cta").click(); await expect(page).toHaveURL(/\/documents\?triage=needs_review$/); await expect(page.getByLabel(/lọc rà soát|review filter/i)).toContainText(/1/); await expect(page.getByRole("link", { name: /mở|open/i }).last()).toHaveAttribute("href", new RegExp(`document=smoke&view=review&page=0&field=so_van_ban`));
   await page.getByLabel(/lọc rà soát|review filter/i).selectOption("blocker"); await expect(page).toHaveURL(/triage=blocker/);
   await page.getByLabel(/lọc rà soát|review filter/i).selectOption("all"); await page.goBack(); await expect(page.getByLabel(/lọc rà soát|review filter/i)).toHaveValue("blocker"); await page.goForward();
-  await nav.getByRole("link", { name: /nhật ký|logs/i }).click(); await expect(page).toHaveURL(/\/logs$/); await expect(page.locator(".data-table")).toContainText("job_created");
-  await page.getByLabel("Provider").fill("qwen"); await page.getByLabel(/tài liệu|document/i).fill("smoke"); await page.getByLabel(/số trang|pages/i).fill("0"); await expect.poll(() => eventsQuery).toContain("provider_profile_id=qwen"); expect(eventsQuery).toContain("document_id=smoke"); expect(eventsQuery).toContain("page_index=0");
+  await nav.getByRole("link", { name: /công việc|jobs/i }).click(); await nav.getByRole("link", { name: /ocr mới|new ocr/i }).click(); await expect(page).toHaveURL(/\/upload$/);
+  await page.getByRole("button", { name: /công cụ hệ thống|system tools/i }).click(); await nav.getByRole("link", { name: /nhật ký xử lý|processing logs/i }).click(); await expect(page).toHaveURL(/\/logs$/); await expect(page.locator(".data-table")).toContainText("job_created");
+  await page.getByLabel(/trạng thái|status/i).selectOption("warning"); await page.getByLabel("Provider").fill("qwen"); await page.getByLabel(/tài liệu|document/i).fill("smoke"); await page.getByLabel(/số trang|pages/i).fill("0"); await expect.poll(() => eventsQuery).toContain("provider_profile_id=qwen"); expect(eventsQuery).toContain("document_id=smoke"); expect(eventsQuery).toContain("page_index=0"); await expect(page).toHaveURL(/severity=warning/); await expect(page).toHaveURL(/provider_profile_id=qwen/);
+  await page.getByLabel(/trạng thái|status/i).selectOption("all"); await page.goBack(); await expect(page.getByLabel(/trạng thái|status/i)).toHaveValue("warning"); await page.goForward();
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]); await page.getByRole("button", { name: /sao chép|copy/i }).click(); expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("job_created"); const safeDownload = page.waitForEvent("download"); await page.getByRole("button", { name: /tải xuống|download/i }).click(); expect((await safeDownload).suggestedFilename()).toBe("safe-events.json");
-  await nav.getByRole("link", { name: /báo cáo|reports/i }).click(); await expect(page).toHaveURL(/\/reports$/); await expect(page.locator(".report-card").first()).toContainText("91%"); await expect(page.locator(".report-metrics")).toContainText("60s"); await expect(page.locator(".report-card").first()).toContainText("50%"); await expect(page.locator(".report-card").filter({ hasText: "qwen" })).toBeVisible(); await expect(page.getByRole("heading", { name: /so sánh lần chạy|run comparison/i })).toHaveCount(0);
+  await nav.getByRole("link", { name: /tổng quan vận hành|operations overview/i }).click(); await expect(page).toHaveURL(/\/reports$/); await expect(page.locator(".attention-grid")).toContainText("1"); await expect(page.locator(".attention-grid").getByRole("link", { name: /mở hàng đợi rà soát|open review queue/i })).toHaveAttribute("href", "/documents?triage=needs_review"); await expect(page.locator(".report-card").first()).toContainText("91%"); await expect(page.locator(".report-card").first()).toContainText("50%"); await expect(page.locator(".report-card").first()).toContainText("100%"); await expect(page.locator(".report-card").last()).toContainText("60s"); await expect(page.locator(".provider-report")).toContainText("qwen"); await expect(page.getByRole("heading", { name: /so sánh lần chạy|run comparison/i })).toHaveCount(0);
+  await page.setViewportSize({ width: 1366, height: 768 }); const attentionCards = page.locator(".attention-card"); const firstDesktopCard = await attentionCards.first().boundingBox(), lastDesktopCard = await attentionCards.last().boundingBox(); expect(lastDesktopCard!.y).toBe(firstDesktopCard!.y); expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy(); await page.setViewportSize({ width: 1440, height: 900 });
+  reportsFail = true; await page.getByRole("button", { name: /làm mới|refresh/i }).click(); await expect(page.locator(".notice.warning")).toBeVisible(); await expect(page.locator(".provider-report")).toContainText("qwen"); reportsFail = false;
   await nav.getByRole("link", { name: /sizing and cost/i }).click(); await expect(page).toHaveURL(/\/sizing$/); await expect(page.getByRole("heading", { name: "Sizing and cost" })).toBeVisible(); await expect(page.getByText(/Chưa có measurement tương thích|No compatible measurements/i)).toBeVisible(); await expect(page.locator(".data-table tbody tr")).toHaveCount(4);
-  await nav.getByRole("link", { name: /danh mục mã|code catalog/i }).click(); await expect(page).toHaveURL(/\/codes$/);
+  await page.getByRole("button", { name: /công cụ hệ thống|system tools/i }).click(); await nav.getByRole("link", { name: /danh mục mã|code catalog/i }).click(); await expect(page).toHaveURL(/\/codes$/);
   await page.getByRole("button", { name: /thêm mã|add code/i }).click(); await page.getByLabel("Code").fill("BC"); await page.getByLabel(/nhãn|label/i).fill("Báo cáo"); await page.getByRole("button", { name: /^lưu$|^save$/i }).click();
   let row = page.locator(".data-table tbody tr").filter({ hasText: "BC" }); await expect(row).toContainText("Báo cáo");
   await page.reload(); row = page.locator(".data-table tbody tr").filter({ hasText: "BC" }); await expect(row).toBeVisible();
   await row.getByRole("button", { name: /sửa mã|edit code/i }).click(); await page.getByLabel(/nhãn|label/i).fill("Báo cáo mới"); await page.getByRole("button", { name: /^lưu$|^save$/i }).click(); await expect(row).toContainText("Báo cáo mới");
   page.once("dialog", (dialog) => dialog.accept()); await row.getByRole("button", { name: /xóa|delete/i }).click(); await expect(row).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto("/reports"); await expect(page.locator(".attention-card")).toHaveCount(4);
+  const firstCard = await page.locator(".attention-card").nth(0).boundingBox(), secondCard = await page.locator(".attention-card").nth(1).boundingBox();
+  expect(firstCard).not.toBeNull(); expect(secondCard!.y).toBeGreaterThan(firstCard!.y); expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+});
+
+test("operations overview distinguishes empty data from no attention", async ({ page }) => {
+  let totalJobs = 0;
+  await page.route("**/api/**", async (route) => {
+    const apiPath = new URL(route.request().url()).pathname;
+    if (apiPath === "/api/reports") return route.fulfill({ json: {
+      operations: { total_jobs: totalJobs, active_jobs: 0, completed_jobs: totalJobs, error_jobs: 0, documents: 0, pages: 0, duration_seconds_average: null, pages_per_minute: null, failure_codes: {} },
+      quality: { documents: 0, approved_documents: 0, corrected_fields: 0, confidence_average: null, total_fields: 0, confidence_coverage: null, evidence_coverage: null, warning_documents: 0 },
+      profiles: [], benchmark_samples: null,
+    } });
+    if (apiPath === "/api/documents") return route.fulfill({ json: { items: [], pagination: { page: 1, page_size: 1, total: 0, pages: 1 }, triage_counts: { all: 0, needs_review: 0, blocker: 0, risk: 0, low_confidence: 0, suggestion: 0, manual_crop: 0 } } });
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.goto("/reports"); await expect(page.locator(".report-empty")).toContainText(/chưa có dữ liệu vận hành|no operational data/i); await expect(page.locator(".attention-grid")).toHaveCount(0);
+  totalJobs = 1; await page.getByRole("button", { name: /làm mới|refresh/i }).click(); await expect(page.locator(".report-empty")).toHaveCount(0); await expect(page.locator(".notice.success")).toContainText(/không có việc cần xử lý|nothing needs attention/i);
 });
 
 test("ready detail delete uses preview and result", async ({ page }) => {
