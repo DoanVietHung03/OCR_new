@@ -628,6 +628,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
     return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
   });
   await page.goto("/sizing"); await expect(page.getByText("12")).toBeVisible();
+  await expect(page.locator(".metric-card").filter({ hasText: /Token \/ attempt có usage|Tokens \/ measured attempt/i })).toContainText("12");
   if (process.env.UPDATE_GUIDE_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "public/guide/sizing.png"), fullPage: true }); }
   await page.getByRole("button", { name: /Document Explorer/i }).click(); const attempts = page.getByRole("button", { name: /Xem attempts|View attempts/i }); await attempts.nth(0).click(); await attempts.nth(1).click(); await expect(page.locator(".attempts-table")).toHaveCount(2); await expect(page.locator(".attempts-table").first()).toContainText("complete");
   await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await page.getByRole("button", { name: /Tính Preview|Calculate Preview/i }).click(); await expect(page.locator(".safe-json")).toContainText("insufficient_sample");

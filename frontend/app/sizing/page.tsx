@@ -22,7 +22,7 @@ const copy = {
     overview: "Tổng quan", explorer: "Document Explorer", calculator: "Kịch bản", retention: "Retention & snapshot",
     unavailable: "Chưa có measurement tương thích", honest: "Không ước lượng token ảnh, không biến dữ liệu thiếu thành số 0.",
     jobs: "Job tương thích", attempts: "Provider attempts", usage: "Phủ usage response", billing: "Độ chắc chắn billing",
-    tokens: "Tổng token", knownCost: "Chi phí đã biết", filters: "Bộ lọc", refresh: "Làm mới",
+    tokens: "Tổng token", tokensPerMeasuredAttempt: "Token / attempt có usage", knownCost: "Chi phí đã biết", filters: "Bộ lọc", refresh: "Làm mới",
     provider: "Provider Profile", task: "Task", mode: "Processing Mode", inspect: "Xem attempts",
     calculate: "Tính Preview", saveSnapshot: "Lưu snapshot", price: "Price Profile", savePrice: "Lưu Price Profile",
     monthly: "Job/tháng", days: "Ngày vận hành", hours: "Giờ/ngày", peak: "Peak factor", reserve: "Reserve",
@@ -39,7 +39,7 @@ const copy = {
     overview: "Overview", explorer: "Document Explorer", calculator: "Scenario", retention: "Retention & snapshots",
     unavailable: "No compatible measurements", honest: "Image tokens are not estimated and missing data is not shown as zero.",
     jobs: "Compatible jobs", attempts: "Provider attempts", usage: "Response usage coverage", billing: "Billing certainty",
-    tokens: "Total tokens", knownCost: "Known cost", filters: "Filters", refresh: "Refresh",
+    tokens: "Total tokens", tokensPerMeasuredAttempt: "Tokens / measured attempt", knownCost: "Known cost", filters: "Filters", refresh: "Refresh",
     provider: "Provider Profile", task: "Task", mode: "Processing Mode", inspect: "View attempts",
     calculate: "Calculate Preview", saveSnapshot: "Save snapshot", price: "Price Profile", savePrice: "Save Price Profile",
     monthly: "Jobs/month", days: "Operating days", hours: "Hours/day", peak: "Peak factor", reserve: "Reserve",
@@ -189,6 +189,7 @@ export default function SizingPage() {
       <article className="metric-card"><span>{t.jobs}</span><strong>{overview?.sample_count ?? "—"}</strong></article>
       <article className="metric-card"><span>{t.attempts}</span><strong>{overview?.operation_count ?? "—"}</strong></article>
       <article className="metric-card"><span>{t.tokens}</span><strong>{overview?.operation_count ? overview.total_tokens.toLocaleString() : "Unavailable"}</strong></article>
+      <article className="metric-card"><span>{t.tokensPerMeasuredAttempt}</span><strong>{overview?.coverage.complete_usage_attempts ? Math.round(overview.total_tokens / overview.coverage.complete_usage_attempts).toLocaleString(locale) : "Unavailable"}</strong></article>
       <article className="metric-card"><span>{t.usage}</span><strong>{pct(overview?.coverage.response_usage_percent)}</strong></article>
       <article className="metric-card"><span>{t.billing}</span><strong>{pct(overview?.coverage.billing_certainty_percent)}</strong></article>
       <article className="metric-card"><span>{t.knownCost}</span><strong>{money(overview?.known_cost)}</strong></article>

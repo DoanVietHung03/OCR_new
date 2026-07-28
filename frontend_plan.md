@@ -389,8 +389,9 @@ khi đóng.
 [`Token_Cal.md`](Token_Cal.md).
 
 - Thêm permanent sidebar route `/sizing`, nhưng mở theo gate:
-  Measurement Preview một PDF trước; comparison từ 2 job, trend/scatter từ 5,
-  histogram/P95/capacity screening từ 20 compatible jobs. Chưa đủ mẫu hiện lý
+  Measurement Preview một PDF trước; comparison từ 2 job, phân tích chuỗi thời
+  gian từ 5 job chỉ khi có bucket thời gian, P95/capacity screening từ 20
+  compatible jobs. Chưa đủ mẫu hiện lý
   do, không chart/zero/verdict giả.
 - Overview hiển thị page/document/job/system units, response usage coverage,
   billing certainty, known/unknown cost và provenance hai lớp: nguồn giá trị +
@@ -437,6 +438,11 @@ catalogs/calculator backend-owned, snapshot, retention Preview → Confirm và
 CSV/JSON/PNG/print export. UI gate `1/2/5/20` không dựng chart, zero hay verdict
 giả khi thiếu dữ liệu. Preview trên PDF/provider thật và full capacity screening
 vẫn mở tại `X17F`.
+
+Biểu đồ comparison chỉ giữ stacked bar `Prompt` + `Completion` theo job. Đã bỏ
+đường `Total trend`, scatter gắn nhãn sai `Tokens / attempts` và distribution
+chung mặt phẳng. `Token / attempt có usage` là metric riêng, dùng đúng
+`complete_usage_attempts`; trend chỉ có nghĩa trên trục thời gian, không nối Job ID.
 
 ### FE-X18
 

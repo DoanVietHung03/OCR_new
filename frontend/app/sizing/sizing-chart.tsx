@@ -15,7 +15,7 @@ export default function SizingChart({ jobs }: { jobs: SizingJob[] }) {
     ]).then(([core, charts, components, renderers]) => {
       if (!host.current) return;
       core.use([
-        charts.BarChart, charts.LineChart, charts.ScatterChart,
+        charts.BarChart,
         components.GridComponent, components.TooltipComponent,
         components.LegendComponent, components.DataZoomComponent,
         components.AriaComponent, components.ToolboxComponent, renderers.SVGRenderer,
@@ -30,11 +30,6 @@ export default function SizingChart({ jobs }: { jobs: SizingJob[] }) {
         series: [
           { name: "Prompt", type: "bar", stack: "tokens", data: jobs.map((job) => Number(job.prompt_tokens || 0)) },
           { name: "Completion", type: "bar", stack: "tokens", data: jobs.map((job) => Number(job.completion_tokens || 0)) },
-          ...(jobs.length >= 5 ? [
-            { name: "Total trend", type: "line", data: jobs.map((job) => Number(job.total_tokens || 0)) },
-            { name: "Tokens / attempts", type: "scatter", data: jobs.map((job) => [Number(job.operation_count || 0), Number(job.total_tokens || 0)]) },
-          ] : []),
-          ...(jobs.length >= 20 ? [{ name: "Token distribution", type: "bar", data: [...jobs].sort((a, b) => a.total_tokens - b.total_tokens).map((job) => job.total_tokens) }] : []),
         ],
       });
       window.addEventListener("resize", resize);

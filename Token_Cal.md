@@ -334,7 +334,8 @@ Tính riêng page/document/job và luôn hiện `n`, date range, fingerprint.
 
 - `n=1`: Measurement Preview.
 - `n>=2`: comparison table.
-- `n>=5`: trend/scatter.
+- `n>=5`: time-series insight chỉ khi có bucket thời gian có thứ tự; không nối
+  Job ID và gọi là trend.
 - Bốn fixture: functional/reproducible baseline, vẫn `Insufficient sample`.
 - `n>=20` compatible jobs: P95/capacity screening sơ bộ.
 - Dưới 20 vẫn hiện observed value nhưng không verdict `Đạt`.
@@ -490,8 +491,9 @@ P95. Capacity chính không dựa một mình vào total token/s.
 
 - 1 job: KPI, coverage, provenance và Document Explorer.
 - 2 job: comparison/top consumers.
-- 5 job: trend/scatter.
-- 20 job: histogram, P95 và capacity screening.
+- 5 job: chỉ mở time-series khi có bucket thời gian có thứ tự.
+- 20 job: P95 và capacity screening; histogram là view riêng nếu cần, không
+  chồng lên comparison chart.
 - Chưa đủ mẫu hiển thị lý do; không chart giả.
 
 Mỗi output tách hai lớp:

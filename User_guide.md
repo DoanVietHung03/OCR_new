@@ -512,8 +512,8 @@ sắm khi evidence chưa đủ:
   percentile, coverage, billing certainty và capacity;
 - giải thích measurement fingerprint, benchmark fingerprint và vì sao sample
   không tương thích không được trộn;
-- giải thích gate preview `n=1`, comparison `n≥2`, trend `n≥5`,
-  histogram/P95/capacity screening `n≥20`;
+- giải thích gate preview `n=1`, comparison token theo job `n≥2`, chuỗi thời
+  gian `n≥5` chỉ khi có bucket thời gian, P95/capacity screening `n≥20`;
 - `Unavailable`, `insufficient` hoặc partial cost phải giữ nguyên ý nghĩa, không
   chuyển thành `0`, chart hoặc verdict giả;
 - nêu quyết định nào mỗi mức evidence hỗ trợ và khi nào phải chờ benchmark thật;
