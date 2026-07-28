@@ -23,10 +23,12 @@ export function GuideFrame({ reference = false, children }: { reference?: boolea
       const hashTarget = document.getElementById(location.hash.slice(1));
       const hashSection = hashTarget?.closest<HTMLElement>(".guide-section")?.id;
       let current = hashSection && sectionIds.includes(hashSection) ? hashSection : sectionIds[0];
+      const readingLine = Math.min(innerHeight * .35, 320);
       for (const id of sectionIds) {
         const section = document.getElementById(id);
-        if (section && section.getBoundingClientRect().top <= 170) current = id;
+        if (section && section.getBoundingClientRect().top <= readingLine) current = id;
       }
+      if (scrollY + innerHeight >= document.documentElement.scrollHeight - 2) current = sectionIds.at(-1)!;
       setActiveId(current);
     };
     update();

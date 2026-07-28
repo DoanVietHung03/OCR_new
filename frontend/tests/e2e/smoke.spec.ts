@@ -656,6 +656,8 @@ test("static user guide keeps routes, anchors, language and mobile reflow withou
   await expect(page.locator(".guide-toc a.active")).toHaveAttribute("href", "#start-here");
   await expect(page.locator('a[href="/documents?triage=needs_review"]')).toBeVisible();
   await expect(page.locator('a[href="/?status=active"]')).toBeVisible();
+  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  await expect(page.locator(".guide-toc a.active")).toHaveAttribute("href", "#faq");
   await page.getByRole("button", { name: "EN", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("User guide");
   await page.goto("/guide/reference#sizing-cost");
@@ -667,6 +669,8 @@ test("static user guide keeps routes, anchors, language and mobile reflow withou
   await expect(page.locator(".reference-caution").first()).toHaveCSS("background-color", "rgb(255, 243, 214)");
   await expect(page.locator("#primary-navigation a[href='/guide']")).toHaveCount(1);
   await expect(page.locator("#primary-navigation a[href='/guide/reference']")).toHaveCount(0);
+  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  await expect(page.locator(".guide-toc a.active")).toHaveAttribute("href", "#glossary");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".guide-mobile-toc")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
