@@ -209,6 +209,8 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 .login-card label, .auth-modal label { display: grid; gap: 7px; color: #334c69; font-weight: 750; }
 .login-card input, .auth-modal input { width: 100%; min-height: 43px; border: 1px solid #c8d2df; border-radius: 8px; padding: 9px 11px; font: inherit; }
 .login-card .password-input input { padding-right: 52px; }
+.password-input input::-ms-reveal,
+.password-input input::-ms-clear { display: none; }
 .password-input { position: relative; }
 .password-input button { position: absolute; top: 50%; right: 8px; display: grid; width: 36px; height: 36px; place-items: center; border: 0; padding: 0; color: #173555; background: transparent; transform: translateY(-50%); cursor: pointer; }
 .password-input button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
