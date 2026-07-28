@@ -425,7 +425,9 @@ Triển khai theo thứ tự bắt buộc:
 2. `X17B` Measurement Preview: chạy một PDF thật, đối soát aggregate/sidecar,
    two coverage metrics và lazy drill-down; chưa capacity/SLA verdict.
 3. `X17C` aggregation: time/profile/task/mode/page filters, page/document/job
-   units, nearest-rank và backend-aggregated series.
+   units, nearest-rank và backend-aggregated series. `/sizing/jobs` dùng cùng
+   profile/task/mode/date filters với overview, sort `started_at` mới nhất trước
+   và phân trang theo giới hạn UI 10/25/50.
 4. `X17D` catalogs/calculator: Price/Workload/Hardware Profile, exchange-rate
    suggestion allowlist và cost/storage/capacity/reliability calculation.
 5. `X17E` retention/snapshots: preview/apply cleanup, rollup deletion,

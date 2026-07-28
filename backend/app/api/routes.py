@@ -916,13 +916,11 @@ async def system_metrics():
     return {**result, "operations": {"states": states}}
 
 
-@router.get("/sizing/overview", response_model=SizingOverviewResponse)
-async def sizing_overview(
+def filtered_sizing_operations(
     provider_profile_id: str = "", task: str = "", processing_mode: str = "",
     start_date: str = "", end_date: str = "",
-    unit: str = Query("job", pattern=r"^(attempt|page|document|job|system)$"),
-):
-    operations = [
+) -> list[dict]:
+    return [
         item for item in sizing_measurements.operations()
         if (not provider_profile_id or item.get("provider_profile_id") == provider_profile_id)
         and (not task or item.get("task") == task)
@@ -930,6 +928,15 @@ async def sizing_overview(
         and (not start_date or str(item.get("started_at", ""))[:10] >= start_date)
         and (not end_date or str(item.get("started_at", ""))[:10] <= end_date)
     ]
+
+
+@router.get("/sizing/overview", response_model=SizingOverviewResponse)
+async def sizing_overview(
+    provider_profile_id: str = "", task: str = "", processing_mode: str = "",
+    start_date: str = "", end_date: str = "",
+    unit: str = Query("job", pattern=r"^(attempt|page|document|job|system)$"),
+):
+    operations = filtered_sizing_operations(provider_profile_id, task, processing_mode, start_date, end_date)
     job_ids = {item.get("job_id") for item in operations if item.get("job_id")}
     live_summary = aggregate(operations, sample_count=len(job_ids), price_profiles=sizing_catalog.read()["price_profiles"])
     rollups = [] if any((provider_profile_id, task, processing_mode, start_date, end_date)) else [
@@ -990,8 +997,12 @@ def sizing_page(items: list, page: int, page_size: int) -> tuple[list, dict]:
 
 
 @router.get("/sizing/jobs", response_model=SizingJobsResponse)
-async def sizing_jobs(page: int = 1, page_size: int = Query(25, ge=1, le=100)):
-    operations = sizing_measurements.operations()
+async def sizing_jobs(
+    page: int = 1, page_size: int = Query(25, ge=1, le=100),
+    provider_profile_id: str = "", task: str = "", processing_mode: str = "",
+    start_date: str = "", end_date: str = "",
+):
+    operations = filtered_sizing_operations(provider_profile_id, task, processing_mode, start_date, end_date)
     catalog = sizing_catalog.read()
     job_ids = list(dict.fromkeys(item["job_id"] for item in operations if item.get("job_id")))
     items = []
@@ -1008,7 +1019,9 @@ async def sizing_jobs(page: int = 1, page_size: int = Query(25, ge=1, le=100)):
             "started_at": min((item.get("started_at") for item in selected), default=None),
             **summary,
         })
-    items.extend(item for job_id, item in sizing_measurements.rollups().items() if job_id not in job_ids)
+    if not any((provider_profile_id, task, processing_mode, start_date, end_date)):
+        items.extend(item for job_id, item in sizing_measurements.rollups().items() if job_id not in job_ids)
+    items.sort(key=lambda item: str(item.get("started_at") or ""), reverse=True)
     selected, pagination = sizing_page(items, page, page_size)
     return {"items": selected, "pagination": pagination}
 

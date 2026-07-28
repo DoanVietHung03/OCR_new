@@ -81,7 +81,8 @@ export const getReports = () => request<Reports>("/api/reports");
 const sizingQuery = (filters: Record<string, string | number | undefined> = {}) =>
   new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined && value !== "").map(([key, value]) => [key, String(value)])).toString();
 export const getSizingOverview = (filters: Record<string, string | undefined> = {}) => request<SizingOverview>(`/api/sizing/overview?${sizingQuery(filters)}`);
-export const getSizingJobs = (page = 1) => request<SizingJobs>(`/api/sizing/jobs?${sizingQuery({ page })}`);
+export const getSizingJobs = (filters: Record<string, string | number | undefined> = {}, page = 1, pageSize = 25) =>
+  request<SizingJobs>(`/api/sizing/jobs?${sizingQuery({ ...filters, page, page_size: pageSize })}`);
 export const getSizingOperations = (jobId: string, filters: Record<string, string | number | undefined> = {}) =>
   request<SizingOperations>(`/api/sizing/jobs/${encodeURIComponent(jobId)}/operations?${sizingQuery(filters)}`);
 export const getSizingCatalog = () => request<SizingCatalog>("/api/sizing/catalog");

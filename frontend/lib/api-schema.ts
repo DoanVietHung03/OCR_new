@@ -3413,6 +3413,11 @@ export interface operations {
             query?: {
                 page?: number;
                 page_size?: number;
+                provider_profile_id?: string;
+                task?: string;
+                processing_mode?: string;
+                start_date?: string;
+                end_date?: string;
             };
             header?: never;
             path?: never;

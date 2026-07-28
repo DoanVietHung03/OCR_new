@@ -607,6 +607,7 @@ test("missing canonical fields keep drafts until atomic approval succeeds", asyn
 
 test("sizing local workflow gates drilldown calculator catalog snapshot and retention", async ({ page }) => {
   const secondJobId = "22222222-2222-4222-8222-222222222222";
+  let jobsQuery = "";
   let catalog = { revision: 0, price_profiles: [] as any[], workload_profiles: [] as any[], hardware_profiles: [] as any[] };
   let snapshots: any[] = [];
   const overview = { generated_at: now, sample_count: 1, operation_count: 1, value_kind: "measured", unit: "job", unit_sample_count: 1, prompt_tokens: 10, completion_tokens: 2, total_tokens: 12, duration_ms_p50: 20, duration_ms_p95: 20, known_cost: null, total_cost: null, unknown_cost_attempts: 1, series: [{ date: "2026-07-27", total_tokens: 12 }], provenance: { value_kind: "measured", sample_count: 1 }, coverage: { response_usage_percent: 100, billing_certainty_percent: 0, complete_usage_attempts: 1, response_attempts: 1, known_billing_attempts: 0, total_attempts: 1 }, gates: { preview: { minimum_jobs: 1, available: true, reason: "available" }, comparison: { minimum_jobs: 2, available: false, reason: "insufficient_sample" }, trend: { minimum_jobs: 5, available: false, reason: "insufficient_sample" }, capacity: { minimum_jobs: 20, available: false, reason: "insufficient_sample" } } };
@@ -615,7 +616,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   await page.route("**/api/**", async (route) => {
     const request = route.request(), apiPath = new URL(request.url()).pathname;
     if (apiPath === "/api/sizing/overview") return route.fulfill({ json: overview });
-    if (apiPath === "/api/sizing/jobs") return route.fulfill({ json: jobs });
+    if (apiPath === "/api/sizing/jobs") { jobsQuery = new URL(request.url()).search; return route.fulfill({ json: jobs }); }
     if (apiPath.endsWith("/operations")) return route.fulfill({ json: { items: [{ schema_version: 1, operation_id: "op", attempt: 1, scope: "job", job_id: id, provider_profile_id: "qwen", model: "m", task: "metadata", processing_mode: "administrative_document", document_id: "doc", page_index: 0, status: "success", started_at: now, duration_ms: 20, request_bytes: 10, response_bytes: 5, retryable: false, usage_status: "complete", usage: { prompt_tokens: 10, completion_tokens: 2, canonical_total_tokens: 12 } }], pagination: { page: 1, page_size: 50, total: 1, pages: 1 } } });
     if (apiPath === "/api/sizing/catalog" && request.method() === "GET") return route.fulfill({ json: catalog });
     if (apiPath === "/api/sizing/catalog" && request.method() === "PUT") { const body = request.postDataJSON(); catalog = { ...body, revision: catalog.revision + 1 }; return route.fulfill({ json: catalog }); }
@@ -629,6 +630,11 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   });
   await page.goto("/sizing"); await expect(page.getByText("12")).toBeVisible();
   await expect(page.locator(".metric-card").filter({ hasText: /Token \/ attempt có usage|Tokens \/ measured attempt/i })).toContainText("12");
+  await page.getByLabel(/Số job hiển thị|Jobs shown/i).selectOption("10");
+  await page.getByLabel(/Provider Profile/i).fill("qwen");
+  await page.getByRole("button", { name: /Làm mới|Refresh/i }).click();
+  await expect.poll(() => jobsQuery).toContain("provider_profile_id=qwen");
+  expect(jobsQuery).toContain("page_size=10"); expect(jobsQuery).not.toContain("unit=");
   if (process.env.UPDATE_GUIDE_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "public/guide/sizing.png"), fullPage: true }); }
   await page.getByRole("button", { name: /Document Explorer/i }).click(); const attempts = page.getByRole("button", { name: /Xem attempts|View attempts/i }); await attempts.nth(0).click(); await attempts.nth(1).click(); await expect(page.locator(".attempts-table")).toHaveCount(2); await expect(page.locator(".attempts-table").first()).toContainText("complete");
   await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await page.getByRole("button", { name: /Tính Preview|Calculate Preview/i }).click(); await expect(page.locator(".safe-json")).toContainText("insufficient_sample");

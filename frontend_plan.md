@@ -403,9 +403,10 @@ khi đóng.
   scenario/profile IDs/assumptions; local calculation khi nhập mang nhãn
   `Preview`, không trở thành report chính thức.
 - Dùng đúng một `echarts` dependency, direct dynamic import chỉ tại route này,
-  tree-shaken components/renderer/ARIA. Không React wrapper. Chart có zoom/range,
-  tooltip/legend/series toggle và table HTML fallback; untrusted string không
-  đi vào HTML formatter.
+  tree-shaken components/renderer/ARIA. Không React wrapper. Comparison chart
+  có tooltip/legend/series toggle và table HTML fallback; không dùng `dataZoom`
+  để thay filter. Provider/task/mode/date và giới hạn 10/25/50 lọc
+  `/sizing/jobs` từ backend; untrusted string không đi vào HTML formatter.
 - Price Profile không yêu cầu user nhập usage. Exchange-rate suggestion chỉ lấy
   khi user bấm, hiển thị từng nguồn/loại/time/direct link và bắt xác nhận; không
   scrape Google, auto-average hoặc auto-update profile đã lưu.

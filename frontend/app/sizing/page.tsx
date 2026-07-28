@@ -22,7 +22,7 @@ const copy = {
     overview: "Tổng quan", explorer: "Document Explorer", calculator: "Kịch bản", retention: "Retention & snapshot",
     unavailable: "Chưa có measurement tương thích", honest: "Không ước lượng token ảnh, không biến dữ liệu thiếu thành số 0.",
     jobs: "Job tương thích", attempts: "Provider attempts", usage: "Phủ usage response", billing: "Độ chắc chắn billing",
-    tokens: "Tổng token", tokensPerMeasuredAttempt: "Token / attempt có usage", knownCost: "Chi phí đã biết", filters: "Bộ lọc", refresh: "Làm mới",
+    tokens: "Tổng token", tokensPerMeasuredAttempt: "Token / attempt có usage", knownCost: "Chi phí đã biết", filters: "Bộ lọc", jobLimit: "Số job hiển thị", refresh: "Làm mới",
     provider: "Provider Profile", task: "Task", mode: "Processing Mode", inspect: "Xem attempts",
     calculate: "Tính Preview", saveSnapshot: "Lưu snapshot", price: "Price Profile", savePrice: "Lưu Price Profile",
     monthly: "Job/tháng", days: "Ngày vận hành", hours: "Giờ/ngày", peak: "Peak factor", reserve: "Reserve",
@@ -39,7 +39,7 @@ const copy = {
     overview: "Overview", explorer: "Document Explorer", calculator: "Scenario", retention: "Retention & snapshots",
     unavailable: "No compatible measurements", honest: "Image tokens are not estimated and missing data is not shown as zero.",
     jobs: "Compatible jobs", attempts: "Provider attempts", usage: "Response usage coverage", billing: "Billing certainty",
-    tokens: "Total tokens", tokensPerMeasuredAttempt: "Tokens / measured attempt", knownCost: "Known cost", filters: "Filters", refresh: "Refresh",
+    tokens: "Total tokens", tokensPerMeasuredAttempt: "Tokens / measured attempt", knownCost: "Known cost", filters: "Filters", jobLimit: "Jobs shown", refresh: "Refresh",
     provider: "Provider Profile", task: "Task", mode: "Processing Mode", inspect: "View attempts",
     calculate: "Calculate Preview", saveSnapshot: "Save snapshot", price: "Price Profile", savePrice: "Save Price Profile",
     monthly: "Jobs/month", days: "Operating days", hours: "Hours/day", peak: "Peak factor", reserve: "Reserve",
@@ -55,6 +55,7 @@ const copy = {
 
 const pct = (value: number | null | undefined) => value == null ? "Unavailable" : `${value.toFixed(1)}%`;
 const money = (value: number | null | undefined) => value == null ? "Unavailable" : value.toFixed(6);
+const jobFilters = (filters: Record<string, string>) => Object.fromEntries(Object.entries(filters).filter(([key]) => key !== "unit"));
 const statusTone = (value: string) =>
   ["available", "success"].includes(value) ? "good"
     : ["insufficient_sample", "unavailable", "missing"].includes(value) ? "warning"
@@ -75,6 +76,7 @@ export default function SizingPage() {
   const [loadingJobs, setLoadingJobs] = useState<string[]>([]);
   const [catalog, setCatalog] = useState<SizingCatalog | null>(null); const [snapshots, setSnapshots] = useState<SizingSnapshots | null>(null);
   const [filters, setFilters] = useState({ provider_profile_id: "", task: "", processing_mode: "", start_date: "", end_date: "", unit: "job" });
+  const [jobLimit, setJobLimit] = useState(25);
   const [timezone, setTimezone] = useState("UTC");
   const [error, setError] = useState("");
   const [scenario, setScenario] = useState({ monthly_jobs: 100, operating_days: 20, operating_hours: 8, processing_mode: "administrative_document" as "administrative_document" | "dossier_cover" | "combined_dossier", peak_factor: 1.5, reserve: .25, minimum_success_rate: .95, artifact_retention_days: 30, average_pages_per_job: 1, average_documents_per_dossier: 1, average_pages_per_document: 1 });
@@ -88,7 +90,7 @@ export default function SizingPage() {
   const load = async () => {
     try {
       const [nextOverview, nextJobs, nextCatalog, nextSnapshots] = await Promise.all([
-        getSizingOverview(filters), getSizingJobs(), getSizingCatalog(), getSizingSnapshots(),
+        getSizingOverview(filters), getSizingJobs(jobFilters(filters), 1, jobLimit), getSizingCatalog(), getSizingSnapshots(),
       ]);
       setOverview(nextOverview); setJobs(nextJobs.items); setCatalog(nextCatalog); setSnapshots(nextSnapshots); setError("");
     } catch (reason) { setError(errorText(reason)); }
@@ -96,10 +98,11 @@ export default function SizingPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const initial = { provider_profile_id: params.get("provider") || "", task: params.get("task") || "", processing_mode: params.get("mode") || "", start_date: params.get("start") || "", end_date: params.get("end") || "", unit: params.get("unit") || "job" };
+    const initialLimit = [10, 25, 50].includes(Number(params.get("limit"))) ? Number(params.get("limit")) : 25;
     setFilters(initial); setView((params.get("view") as View) || "overview");
-    setTimezone(params.get("tz") || "UTC");
+    setTimezone(params.get("tz") || "UTC"); setJobLimit(initialLimit);
     getSizingOverview(initial).then(setOverview).catch((reason) => setError(errorText(reason)));
-    Promise.all([getSizingJobs(), getSizingCatalog(), getSizingSnapshots()]).then(([j, c, s]) => { setJobs(j.items); setCatalog(c); setSnapshots(s); }).catch((reason) => setError(errorText(reason)));
+    Promise.all([getSizingJobs(jobFilters(initial), 1, initialLimit), getSizingCatalog(), getSizingSnapshots()]).then(([j, c, s]) => { setJobs(j.items); setCatalog(c); setSnapshots(s); }).catch((reason) => setError(errorText(reason)));
     getExchangeRateSources().then((value) => setExchangeSources(value.items)).catch(() => setExchangeSources([]));
   }, []);
   useEffect(() => {
@@ -111,9 +114,10 @@ export default function SizingPage() {
     if (filters.start_date) params.set("start", filters.start_date);
     if (filters.end_date) params.set("end", filters.end_date);
     if (filters.unit !== "job") params.set("unit", filters.unit);
+    if (jobLimit !== 25) params.set("limit", String(jobLimit));
     if (timezone !== "UTC") params.set("tz", timezone);
     history.replaceState(null, "", `/sizing${params.size ? `?${params}` : ""}`);
-  }, [view, filters, timezone]);
+  }, [view, filters, timezone, jobLimit]);
   useEffect(() => { setRetentionPlan(null); }, [retention]);
 
   async function inspect(jobId: string) {
@@ -183,6 +187,7 @@ export default function SizingPage() {
       <label>{t.mode}<select value={filters.processing_mode} onChange={(event) => setFilters({ ...filters, processing_mode: event.target.value })}><option value="">All</option><option>administrative_document</option><option>dossier_cover</option><option>combined_dossier</option></select></label>
       <label>UTC start<input type="date" value={filters.start_date} onChange={(event) => setFilters({ ...filters, start_date: event.target.value })} /></label><label>UTC end<input type="date" value={filters.end_date} onChange={(event) => setFilters({ ...filters, end_date: event.target.value })} /></label>
       <label>Unit<select value={filters.unit} onChange={(event) => setFilters({ ...filters, unit: event.target.value })}><option>attempt</option><option>page</option><option>document</option><option>job</option><option>system</option></select></label>
+      <label>{t.jobLimit}<select value={jobLimit} onChange={(event) => setJobLimit(Number(event.target.value))}>{[10, 25, 50].map((value) => <option key={value}>{value}</option>)}</select></label>
       <label>Timezone<select value={timezone} onChange={(event) => setTimezone(event.target.value)}><option>UTC</option><option value={Intl.DateTimeFormat().resolvedOptions().timeZone}>Local · {Intl.DateTimeFormat().resolvedOptions().timeZone}</option></select></label>
     </div></section>
     <section className="metric-grid">

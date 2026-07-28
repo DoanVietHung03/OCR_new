@@ -17,14 +17,13 @@ export default function SizingChart({ jobs }: { jobs: SizingJob[] }) {
       core.use([
         charts.BarChart,
         components.GridComponent, components.TooltipComponent,
-        components.LegendComponent, components.DataZoomComponent,
+        components.LegendComponent,
         components.AriaComponent, components.ToolboxComponent, renderers.SVGRenderer,
       ]);
       chart = core.init(host.current, undefined, { renderer: "svg" });
       chart.setOption({
         aria: { enabled: true },
-        tooltip: { trigger: "axis" }, legend: {}, toolbox: { feature: { saveAsImage: { type: "png" } } }, grid: { left: 55, right: 20, bottom: 70 },
-        dataZoom: [{ type: "inside" }, { type: "slider" }],
+        tooltip: { trigger: "axis" }, legend: { top: 0 }, toolbox: { feature: { saveAsImage: { type: "png" } } }, grid: { left: 55, right: 20, top: 45, bottom: 40 },
         xAxis: { type: "category", data: jobs.map((job) => job.job_id.slice(0, 8)) },
         yAxis: { type: "value", name: "Tokens" },
         series: [

@@ -505,13 +505,15 @@ Mỗi output tách hai lớp:
 
 Dùng `echarts` trực tiếp, dynamic import chỉ ở `/sizing`; không React wrapper.
 Tree-shake chart/component/ARIA/SVG hoặc Canvas renderer cần dùng. Có tooltip,
-legend, series toggle, data zoom/range, responsive resize; table HTML là
-accessibility/verification fallback. Không đưa untrusted string vào HTML
+legend, series toggle và responsive resize; table HTML là
+accessibility/verification fallback. Comparison chart không dùng `dataZoom` để
+che bớt job: provider/task/mode/date filter và giới hạn 10/25/50 quyết định tập
+job từ backend. Không đưa untrusted string vào HTML
 formatter.
 
 Chart:
 
-- stacked input/output theo job và task;
+- stacked input/output theo job và task, sort `started_at` mới nhất trước;
 - daily token line;
 - token/document histogram;
 - pages-token và token-duration scatter;

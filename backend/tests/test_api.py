@@ -124,7 +124,17 @@ def test_sizing_local_workflow_catalog_drilldown_calculate_snapshot_and_retentio
     assert overview["sample_count"] == overview["operation_count"] == 1
     assert overview["total_tokens"] == 12
     assert overview["gates"]["preview"]["available"] is True
-    assert client.get("/api/sizing/jobs").json()["items"][0]["job_id"] == job["id"]
+    jobs = client.get("/api/sizing/jobs").json()
+    assert jobs["items"][0]["job_id"] == job["id"]
+    filtered = client.get("/api/sizing/jobs", params={
+        "provider_profile_id": "qwen", "task": "metadata",
+        "processing_mode": "administrative_document", "page_size": 10,
+        "start_date": jobs["items"][0]["started_at"][:10],
+        "end_date": jobs["items"][0]["started_at"][:10],
+    }).json()
+    assert filtered["pagination"]["page_size"] == 10
+    assert [item["job_id"] for item in filtered["items"]] == [job["id"]]
+    assert client.get("/api/sizing/jobs", params={"provider_profile_id": "other"}).json()["items"] == []
     assert client.get(f"/api/sizing/jobs/{job['id']}/operations").json()["items"][0]["usage_status"] == "complete"
     calculated = client.post("/api/sizing/calculate", json={
         "monthly_jobs": 100, "operating_days": 20, "operating_hours": 8,
