@@ -471,7 +471,9 @@ thái live evidence của `FE-X17`.
 Đã hoàn thành hai route tĩnh `/guide` và `/guide/reference`, VI/EN dùng language
 state hiện có, đúng một sidebar item, đúng 7 contextual help và 5 ảnh fixture
 sanitized. Reference có 9 nhóm, 38 entry với anchor ổn định và sáu phần nội
-dung; guide không gọi API, không thêm dependency/schema/persistence. Gate local
+dung. Follow-up UI thêm scroll-spy/`aria-current` cho mục lục hai route, bỏ hai
+CTA đầu guide bị trùng navigation, tách `Lưu ý` xanh trung tính và `Cẩn trọng`
+vàng cam trong reference; guide không gọi API, không thêm dependency/schema/persistence. Gate local
 đạt 62 backend tests, typecheck, production build/prerender, OpenAPI check,
 compileall và diff check. Browser runner thực thi đủ 25 test không báo test lỗi
 nhưng tiến trình teardown trên Windows không thoát trước timeout; vì vậy bằng

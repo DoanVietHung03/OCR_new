@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import AppShell from "../app-shell";
 import { guideImages, guideSections, referenceGroups } from "./content";
 import { useLanguage } from "../../lib/i18n";
@@ -16,6 +16,24 @@ export function GuideFrame({ reference = false, children }: { reference?: boolea
   const [locale] = useLanguage();
   const items = reference ? referenceGroups : guideSections;
   const l = labels[locale];
+  const sectionIds = items.map((item) => item.id);
+  const [activeId, setActiveId] = useState(sectionIds[0]);
+  useEffect(() => {
+    const update = () => {
+      const hashTarget = document.getElementById(location.hash.slice(1));
+      const hashSection = hashTarget?.closest<HTMLElement>(".guide-section")?.id;
+      let current = hashSection && sectionIds.includes(hashSection) ? hashSection : sectionIds[0];
+      for (const id of sectionIds) {
+        const section = document.getElementById(id);
+        if (section && section.getBoundingClientRect().top <= 170) current = id;
+      }
+      setActiveId(current);
+    };
+    update();
+    addEventListener("scroll", update, { passive: true });
+    addEventListener("hashchange", update);
+    return () => { removeEventListener("scroll", update); removeEventListener("hashchange", update); };
+  }, [reference]);
   return <AppShell>
     <header className="guide-hero">
       <p className="eyebrow">INTELLIDOC OCR</p>
@@ -23,20 +41,20 @@ export function GuideFrame({ reference = false, children }: { reference?: boolea
       <p>{reference
         ? locale === "vi" ? "Ý nghĩa, giá trị và tác động của mọi tham số người dùng cần thao tác." : "Meaning, values, and impact of every user-facing parameter."
         : locale === "vi" ? "Từ PDF đầu tiên đến khi rà soát và duyệt kết quả." : "From your first PDF to a reviewed and approved result."}</p>
-      {!reference && <div className="guide-actions"><Link className="button primary" href="/upload">{locale === "vi" ? "Bắt đầu OCR đầu tiên" : "Start your first OCR"}</Link><Link className="button secondary" href="/">{locale === "vi" ? "Xem công việc" : "View jobs"}</Link><Link href="/guide/reference">{l.reference} →</Link></div>}
+      {!reference && <div className="guide-actions"><Link href="/guide/reference">{l.reference} →</Link></div>}
       {reference && <Link className="back-link" href="/guide">← {locale === "vi" ? "Quay lại hướng dẫn" : "Back to the guide"}</Link>}
       <small>{locale === "vi" ? "Dành cho người dùng nghiệp vụ; không phải hướng dẫn cài đặt hệ thống." : "For operations users; this is not a system installation guide."}</small>
     </header>
-    <details className="guide-mobile-toc"><summary>{l.toc}</summary><GuideToc items={items} locale={locale} /></details>
+    <details className="guide-mobile-toc"><summary>{l.toc}</summary><GuideToc items={items} locale={locale} activeId={activeId} onSelect={setActiveId} /></details>
     <div className="guide-layout">
-      <aside className="guide-toc"><GuideToc items={items} locale={locale} /></aside>
+      <aside className="guide-toc"><GuideToc items={items} locale={locale} activeId={activeId} onSelect={setActiveId} /></aside>
       <article className="guide-content">{children}</article>
     </div>
   </AppShell>;
 }
 
-function GuideToc({ items, locale }: { items: { id: string; title: Record<"vi" | "en", string> }[]; locale: "vi" | "en" }) {
-  return <nav aria-label={labels[locale].toc}><b>{labels[locale].toc}</b>{items.map((item) => <a key={item.id} href={`#${item.id}`}>{item.title[locale]}</a>)}</nav>;
+function GuideToc({ items, locale, activeId, onSelect }: { items: { id: string; title: Record<"vi" | "en", string> }[]; locale: "vi" | "en"; activeId: string; onSelect: (id: string) => void }) {
+  return <nav aria-label={labels[locale].toc}><b>{labels[locale].toc}</b>{items.map((item) => <a className={activeId === item.id ? "active" : ""} aria-current={activeId === item.id ? "location" : undefined} key={item.id} href={`#${item.id}`} onClick={() => onSelect(item.id)}>{item.title[locale]}</a>)}</nav>;
 }
 
 export function GuideBody() {
@@ -67,7 +85,7 @@ export function ReferenceBody() {
       <div><dt>{l.when}</dt><dd>{item.when[locale]}</dd></div>
       <div><dt>{l.values}</dt><dd>{item.values[locale]}</dd></div>
       <div><dt>{l.example}</dt><dd>{item.example[locale]}</dd></div>
-      <div><dt>{l.caution}</dt><dd>{item.caution[locale]}</dd></div>
+      <div className="reference-caution"><dt>{l.caution}</dt><dd>{item.caution[locale]}</dd></div>
     </dl></article>)}
   </section>)}</>;
 }

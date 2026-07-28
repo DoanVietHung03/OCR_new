@@ -166,8 +166,10 @@ Không biến quick start thành wizard và không lưu trạng thái hoàn thà
 - Mobile: mục lục là native `<details>` đặt ngay dưới header, mặc định đóng.
 - Link mục lục dùng anchor và `scroll-margin-top`; browser back/forward giữ được
   vị trí section theo URL hash.
-- Section đang đọc có thể được nhấn mạnh bằng CSS `:target`; không cần
-  `IntersectionObserver` ở phiên bản đầu.
+- Mục lục desktop/mobile nhấn mạnh section đang đọc bằng màu, độ đậm và
+  `aria-current="location"`; scroll-spy dùng listener native, không thêm
+  dependency. URL hash vẫn là deep-link chuẩn và cập nhật active state ngay khi
+  user chọn mục.
 - Không thêm search V1. Mục lục, anchor và browser Find là đường tra cứu.
 
 ### 5.4 Section nội dung
@@ -637,7 +639,8 @@ số vì text/anchor là nguồn chuẩn.
 - Native `<details>/<summary>` thao tác được bằng keyboard.
 - Mọi link có tên mô tả đích; không dùng `Bấm vào đây`.
 - Alt text mô tả mục tiêu thao tác, không chép lại caption.
-- Callout có text `Lưu ý`/`Cảnh báo`, không chỉ icon/màu.
+- Callout có text, không chỉ icon/màu: `Lưu ý` dùng tông xanh trung tính;
+  `Cẩn trọng` trong reference dùng tông vàng cam riêng.
 - Focus ring hiện rõ trên sidebar, TOC, CTA, summary và contextual links.
 - Tuân thủ `prefers-reduced-motion`; không smooth-scroll bắt buộc.
 - Kiểm tra zoom 200% và reflow; nội dung vẫn đọc được, không che CTA.
@@ -763,6 +766,7 @@ documentation framework.
 - 390: một cột, table cuộn nội bộ, ảnh co đúng và document không overflow.
 - Text dài, thuật ngữ EN và filename ví dụ không phá layout.
 - Focus ring không bị clip.
+- Mục lục luôn có đúng một mục active khi cuộn ở cả guide và reference.
 
 ### Accessibility
 
