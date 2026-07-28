@@ -8,6 +8,10 @@ import { language, safeError, statusText, text, TextKey, useLanguage } from "../
 import AppShell from "./app-shell";
 
 const metricLabels: Record<keyof State["metrics"], TextKey> = { total_jobs: "totalJobs", active_jobs: "activeJobs", completed_jobs: "completedJobs", documents: "documents", pages: "pages", correction_count: "corrections", error_jobs: "errorJobs" };
+const metricGroups: { label: TextKey; keys: (keyof State["metrics"])[] }[] = [
+  { label: "jobStatusMetrics", keys: ["total_jobs", "active_jobs", "completed_jobs", "error_jobs"] },
+  { label: "contentMetrics", keys: ["documents", "pages", "correction_count"] },
+];
 const emptyState: State = {
   server_mode: true, jobs: [], documents: [], logs: [], metrics: { total_jobs: 0, active_jobs: 0, completed_jobs: 0, documents: 0, pages: 0, correction_count: 0, error_jobs: 0 },
   ocr_methods: [], limits: { max_files_per_job: 15, max_job_upload_bytes: 200 * 1024 * 1024 }, pagination: { page: 1, page_size: 25, pages: 1, total: 0 },
@@ -18,7 +22,6 @@ type PageMode = ProviderProfile["page_modes"][number];
 type ProcessingMode = ProviderProfile["processing_modes"][number];
 
 const size = (value: number) => value >= 1024 ** 3 ? `${(value / 1024 ** 3).toFixed(1)} GB` : `${Math.ceil(value / 1024 ** 2)} MB`;
-const duration = (start?: string | null, end?: string | null) => { const seconds = start && end ? Math.max(0, Math.round((Date.parse(end) - Date.parse(start)) / 1000)) : NaN; return Number.isFinite(seconds) ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : ""; };
 const message = (reason: unknown) => safeError(reason instanceof ApiError ? reason.code || reason.message : reason instanceof Error ? reason.message : String(reason));
 
 export default function Home() {
@@ -157,7 +160,10 @@ export default function Home() {
     </section>}
     {(error || (!uploadOnly && stale)) && <div className={error ? "notice error" : "notice warning"} role="alert"><span>{error || text("stale")}</span><button className="button secondary" onClick={refresh}>{text("retry")}</button></div>}
     {!uploadOnly && <>
-    <section className="metrics" aria-label={text("jobMetrics")}>{Object.entries(state.metrics).map(([key, value]) => <article className="panel metric" key={key}><span>{text(metricLabels[key as keyof State["metrics"]])}</span><strong>{value}</strong><small>{text("filteredResults")}</small></article>)}</section>
+    <section className="metric-summary" aria-label={text("jobMetrics")}>
+      {metricGroups.map((group) => <div className="metric-group" key={group.label}><h2>{text(group.label)}</h2><div className={`metrics metrics-${group.keys.length}`}>{group.keys.map((key) => <article className="panel metric" key={key}><span>{text(metricLabels[key])}</span><strong>{state.metrics[key]}</strong></article>)}</div></div>)}
+      <small className="metrics-note">{text("filteredResults")}</small>
+    </section>
     <Link className="panel review-queue-cta" href="/documents?triage=needs_review"><span><b>{text("documentsNeedReview")}</b><small>{text("reviewQueueCta")}</small></span><strong>{reviewCount ?? "—"} →</strong></Link>
     {!!reports?.benchmark_samples?.length && <section className="panel benchmark-panel"><div className="section-head"><div><p className="eyebrow">OCR</p><h2>{text("benchmark")}</h2></div><span>{reports.benchmark_samples.length} {text("samples")}</span></div><div className="table-scroll"><table className="data-table"><thead><tr><th>{text("provider")}</th><th>{text("fixtureGroup")}</th><th>{text("task")}</th><th>{text("sampleSize")}</th><th>{text("measured")}</th></tr></thead><tbody>{reports.benchmark_samples.map((sample) => <tr key={`${sample.provider_profile_id}-${sample.fixture_group}-${sample.measured_at}`}><td>{sample.provider_profile_id}</td><td>{sample.fixture_group}</td><td>{sample.task} · {sample.page_scope}</td><td>{sample.sample_size}</td><td>{new Date(sample.measured_at).toLocaleString(language())}</td></tr>)}</tbody></table></div></section>}
     <section className="panel jobs-panel">
@@ -169,8 +175,8 @@ export default function Home() {
         {state.jobs.map((job) => <article className="job-row" key={job.id}>
           <input aria-label={text("selectJob", { name: job.upload_name || job.id })} type="checkbox" disabled={!DELETABLE_JOB_STATUSES.has(job.status)} checked={selected.includes(job.id)} onChange={() => setSelected((ids) => ids.includes(job.id) ? ids.filter((id) => id !== job.id) : [...ids, job.id])} />
           <div><Link href={`/jobs/${job.id}`}><b>{job.upload_name || job.id}</b></Link><small>{job.id.slice(0, 8)}</small></div><span className={`status ${job.status}`}>{statusText(job.status)}</span>
-          <span>{job.provider || job.ocr_method || "—"}<small>{job.provider_profile_id || ""} · {job.model || ""}</small></span><span>{text("filesAndPages", { files: job.uploaded_files, expected: job.expected_files, pages: job.page_count, failed: job.failed_pages })}<small>{text("corrections")}: {job.correction_count}{job.error ? ` · ${safeError(job.error)}` : ""}</small>{job.total_pages > 0 && <><progress value={job.completed_pages} max={job.total_pages} /><small>{job.progress_stage.replaceAll("_", " ")} · {job.completed_pages}/{job.total_pages}</small></>}</span><time>{new Date(job.updated_at || job.created_at).toLocaleString(language())}<small>{text("created")}: {new Date(job.created_at).toLocaleString(language())}{duration(job.started_at, job.completed_at) ? ` · ${text("duration")}: ${duration(job.started_at, job.completed_at)}` : ""}</small></time>
-          <div className="actions"><Link className="button secondary" href={`/jobs/${job.id}`}>{text("open")}</Link>{ACTIVE_JOB_STATUSES.has(job.status) && <button className="button danger" disabled={job.status === "cancelling"} onClick={() => setAction({ type: "cancel", jobs: [job] })}>{text("cancel")}</button>}{DELETABLE_JOB_STATUSES.has(job.status) && <button className="button danger ghost" onClick={() => requestDelete([job])}>{text("delete")}</button>}{TERMINAL_JOB_STATUSES.has(job.status) && <button className="button secondary" onClick={() => setAction({ type: "rerun", jobs: [job] })}>{text("rerun")}</button>}</div>
+          <span>{job.provider || job.ocr_method || "—"}</span><span>{text("filesAndPages", { files: job.uploaded_files, expected: job.expected_files, pages: job.page_count, failed: job.failed_pages })}<small>{text("corrections")}: {job.correction_count}{job.error ? ` · ${safeError(job.error)}` : ""}</small>{ACTIVE_JOB_STATUSES.has(job.status) && job.total_pages > 0 && <><progress value={job.completed_pages} max={job.total_pages} /><small>{job.progress_stage.replaceAll("_", " ")} · {job.completed_pages}/{job.total_pages}</small></>}</span><time>{new Date(job.updated_at || job.created_at).toLocaleString(language())}</time>
+          <div className="actions"><Link className="button secondary" href={`/jobs/${job.id}`}>{text("open")}</Link>{ACTIVE_JOB_STATUSES.has(job.status) && <button className="button danger" disabled={job.status === "cancelling"} onClick={() => setAction({ type: "cancel", jobs: [job] })}>{text("cancel")}</button>}{TERMINAL_JOB_STATUSES.has(job.status) && <button className="button secondary" onClick={() => setAction({ type: "rerun", jobs: [job] })}>{text("rerun")}</button>}{DELETABLE_JOB_STATUSES.has(job.status) && <details className="row-menu"><summary aria-label={text("moreActions")} title={text("moreActions")}>···</summary><button onClick={() => requestDelete([job])}>{text("delete")}</button></details>}</div>
         </article>)}
         {!state.jobs.length && <p className="empty">{loaded ? text("noJobs") : text("loading")}</p>}
       </div>

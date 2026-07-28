@@ -160,7 +160,9 @@ test("mocked upload, review, exact crop, logs, monitor and delete", async ({ pag
   await page.locator(".monitor-modal").getByRole("button", { name: /đóng|close/i }).click();
   await page.getByRole("link", { name: /công việc|jobs/i }).first().click(); await expect(page).toHaveURL(/\/$/);
   if (process.env.UPDATE_UI_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/dashboard.png") }); await page.setViewportSize({ width: 1366, height: 768 }); await page.screenshot({ path: path.resolve(process.cwd(), "../docs/ui-parity/dashboard-1366x768.png") }); await page.setViewportSize({ width: 1440, height: 900 }); }
-  await page.locator(".job-row").filter({ hasText: "smoke.pdf" }).getByRole("button", { name: /xóa|delete/i }).click();
+  const dashboardRow = page.locator(".job-row").filter({ hasText: "smoke.pdf" });
+  await dashboardRow.getByLabel(/thao tác khác|more actions/i).click();
+  await dashboardRow.getByRole("button", { name: /xóa|delete/i }).click();
   await page.getByRole("button", { name: /xóa vĩnh viễn|delete permanently/i }).click();
   await expect(page.locator(".job-row").filter({ hasText: "smoke.pdf" })).toHaveCount(0);
 });
@@ -186,7 +188,7 @@ test("real Next and FastAPI use eager Celery with a fake HTTP provider", async (
   await page.getByRole("button", { name: /chạy lại|rerun/i }).first().click(); await page.locator("dialog[open]").getByRole("button", { name: /xác nhận|confirm/i }).click();
   await expect(page).not.toHaveURL(new RegExp(`${sourceId}$`));
   await page.goto("/");
-  const source = page.locator(".job-row").filter({ hasText: sourceId.slice(0, 8) }); await source.getByRole("button", { name: /xóa|delete/i }).click();
+  const source = page.locator(".job-row").filter({ hasText: sourceId.slice(0, 8) }); await source.getByLabel(/thao tác khác|more actions/i).click(); await source.getByRole("button", { name: /xóa|delete/i }).click();
   await page.getByRole("button", { name: /xóa vĩnh viễn|delete permanently/i }).click(); await expect(source).toHaveCount(0);
 });
 
@@ -230,6 +232,12 @@ test("desktop jobs warning status stays inside its column", async ({ page }) => 
   const row = page.locator(".job-row").filter({ hasText: job.upload_name });
   const badge = row.locator(".status");
   await expect(badge).toBeVisible();
+  await expect(page.locator(".metric-group")).toHaveCount(2);
+  await expect(page.getByText(/kết quả đang lọc|filtered results/i)).toHaveCount(1);
+  await expect(row.locator("progress")).toHaveCount(0);
+  await expect(row.getByRole("button", { name: /xóa|delete/i })).toBeHidden();
+  await row.getByLabel(/thao tác khác|more actions/i).click();
+  await expect(row.getByRole("button", { name: /xóa|delete/i })).toBeVisible();
   expect(await badge.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBeTruthy();
   const textRight = await badge.evaluate((element) => {
     const range = document.createRange(); range.selectNodeContents(element);
@@ -277,7 +285,7 @@ test("initial and stale state errors preserve only real snapshots", async ({ pag
     return route.fulfill({ json: state([fixtureJob(mode === "running" ? "running" : "completed")]) });
   });
   await page.goto("/"); await expect(page.locator("section[role=alert]")).toContainText("Provider không khả dụng"); await expect(page.locator(".metrics")).toHaveCount(0);
-  mode = "success"; await page.getByRole("button", { name: /thử lại|retry/i }).click(); const row = page.locator(".job-row").filter({ hasText: "smoke.pdf" }); await expect(row).toContainText("Số hiệu chỉnh: 0"); await expect(row).toContainText("Tạo lúc");
+  mode = "success"; await page.getByRole("button", { name: /thử lại|retry/i }).click(); const row = page.locator(".job-row").filter({ hasText: "smoke.pdf" }); await expect(row).toContainText("Số hiệu chỉnh: 0"); await expect(row).not.toContainText("Tạo lúc");
   await page.getByLabel(/chọn mọi công việc đã kết thúc|select all terminal/i).check(); await expect(row.getByRole("checkbox")).toBeChecked(); mode = "stale"; await page.getByRole("button", { name: /làm mới|refresh/i }).click(); await expect(page.locator(".notice.warning")).toBeVisible(); await expect(row.getByRole("checkbox")).toBeChecked();
   mode = "running"; await page.locator(".notice.warning").getByRole("button", { name: /thử lại|retry/i }).click(); await expect(row.getByRole("checkbox")).toBeDisabled(); await expect(row.getByRole("checkbox")).not.toBeChecked();
 });

@@ -327,6 +327,12 @@ Callout:
 
 Không bắt người mới học mọi internal status. Nhóm thành các trạng thái nghiệp vụ:
 
+Dashboard chia số liệu thành `Trạng thái công việc` (Tổng, Đang xử lý, Hoàn
+thành, Lỗi) và `Khối lượng nội dung` (Tài liệu, Số trang, Số hiệu chỉnh). Một
+dòng `Kết quả đang lọc` áp dụng cho cả hai nhóm. Progress bar chỉ xuất hiện với
+job đang xử lý; job đã kết thúc dùng trạng thái và số liệu cuối, còn `Xóa` nằm
+trong menu `···` và vẫn yêu cầu xác nhận.
+
 | Nhóm hiển thị | Status liên quan | Người dùng nên làm gì |
 |---|---|---|
 | Đang chuẩn bị | `uploading`, `ready`, `starting`, `queued` | Chờ; không tạo job trùng |

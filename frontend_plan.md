@@ -217,7 +217,7 @@ Backend counterpart:
 | Năng lực | Contract hiện tại cần giữ |
 |---|---|
 | Shell/routes | Jobs, Upload, Manage, Logs, Reports, Codes, job detail; Monitor là dialog |
-| Dashboard | Search, filter provider/status, sort, pagination, URL query và bulk delete |
+| Dashboard | Search/filter/sort/pagination/URL; metric 4 trạng thái + 3 khối lượng; progress chỉ cho job active; delete từng dòng trong menu phụ; bulk delete giữ confirmation |
 | Upload/lifecycle | Multi-PDF drag/drop, quota, task/page/profile/consent, start-once, cancel/rerun/delete |
 | Review/correction | Viewer Fit/100%, scalar edit, suggestion Apply, original diff, conflict/draft/audit |
 | Crop/partial result | Natural-pixel pointer/keyboard crop; page lỗi không che field/page tốt |
@@ -575,6 +575,7 @@ thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
 | Token/cost/sizing | `X17A`–`X17E` LOCAL COMPLETE; `X17F` LIVE PENDING | One-PDF/provider Preview → bốn fixture → 20-job capacity gate |
 | User guide/reference | `X18` IMPLEMENTED; browser teardown pending | Hai route tĩnh, inventory đủ, VI/EN, 7 contextual link, 5 ảnh và accessibility; xác nhận runner thoát sạch sau 25 test |
 | Shared demo auth | `X19` LOCAL COMPLETE; LIVE GATE PENDING | Exact host-port closure và full authenticated OCR smoke |
+| Dashboard hierarchy refinement | LOCAL COMPLETE 2026-07-28 | Hai nhóm metric có một scope note; terminal không có progress; delete ở menu phụ; sidebar VI/EN dùng selected blue |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 
@@ -589,8 +590,8 @@ Các ảnh sanitized được giữ trong `docs/ui-parity/`:
 
 | Ảnh | State/viewport |
 |---|---|
-| `dashboard.png` | Dashboard, 1440×900 |
-| `dashboard-1366x768.png` | Dashboard, 1366×768 |
+| `dashboard.png` | Dashboard cũ, 1440×900; cần recapture sau refinement metric/job-row trước release |
+| `dashboard-1366x768.png` | Dashboard cũ, 1366×768; cần recapture sau refinement metric/job-row trước release |
 | `review-workspace.png` | Review workspace, 1440×900 |
 | `crop-modal.png` | Natural-pixel crop, 1366×768 |
 | `mobile-upload-390x844.png` | Mobile PDF-only safety state |

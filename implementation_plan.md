@@ -548,6 +548,10 @@ Python compileall và `git diff --check`.
   persistence của `/logs` không yêu cầu backend endpoint khác.
 - Report vẫn aggregate toàn bộ job đang được lưu. Không thêm time-range,
   time-series, chart data hoặc benchmark giả để phục vụ re-decoration.
+- Dashboard refinement 2026-07-28 chỉ đổi presentation phía frontend: nhóm bảy
+  metric thành 4 trạng thái + 3 khối lượng với một scope note, chỉ hiện progress
+  cho active job và đưa Delete từng dòng vào menu phụ. Không đổi `/api/state`,
+  metric semantics, delete preview/confirm hoặc durable job data.
 - Giữ old-job readability, không rewrite persisted job và không đổi filesystem
   layout, artifact URL, safe-event redaction hay Code Catalog persistence.
 

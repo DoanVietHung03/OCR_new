@@ -21,6 +21,9 @@ gate pass, còn live Nginx/direct-port/full OCR smoke. Chi tiết nằm tại
 Giao diện Next.js có route Jobs, Upload, Manage/Documents, Logs, Reports,
 Codes, Sizing & Cost, [Hướng dẫn sử dụng](http://localhost:54846/guide),
 [Tra cứu tham số](http://localhost:54846/guide/reference) và job workspace.
+Dashboard nhóm số liệu thành Trạng thái công việc (4 thẻ) và Khối lượng nội dung
+(3 thẻ), dùng một ghi chú phạm vi lọc chung; danh sách chỉ hiện progress khi job
+đang xử lý và đặt Xóa từng dòng trong menu phụ có bước xác nhận.
 Dữ liệu giàu gồm Provider Profile, OCR text/quality/
 evidence/suggestion, artifact manifest, Safe Events, report/benchmark nullable,
 Code Catalog `_codes.json` và System Monitor allowlist. Mọi số liệu đều lấy từ

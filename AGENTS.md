@@ -203,6 +203,11 @@ revision conflict, and Continue in the browser gate.
   desktop-first: visual/functional anchors at `1440×900` and `1366×768`; at
   `390×844` require only no horizontal overflow, no broken layout, and closable
   modals.
+- Dashboard metrics are intentionally grouped as four job-status cards and
+  three content-volume cards with one shared filtered-scope note. Job-list
+  progress appears only for active jobs; terminal rows keep destructive Delete
+  inside the secondary overflow menu. The sidebar language selection uses a
+  neutral blue selected state, not the amber warning/brand accent.
 - System telemetry describes the environment visible to the backend. The frontend
   may add sanitized CPU/runtime details, memory, the disk containing
   `OCR_DATA_DIR`, best-effort GPU details, and persisted OCR operation samples.

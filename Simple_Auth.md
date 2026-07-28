@@ -270,6 +270,8 @@ Vùng `sidebar-tools` hiện có nhận thêm:
 
 - username dùng chung;
 - nút Đăng xuất cạnh/bên dưới VI/EN;
+- VI/EN trong sidebar dùng selected state xanh trung tính, không dùng amber
+  cảnh báo/brand accent của login;
 - collapsed sidebar chỉ hiện icon với tooltip/ARIA label;
 - mobile hiển thị trong menu đang mở.
 
