@@ -1,6 +1,6 @@
 # Simple Auth — shared demo login
 
-**Trạng thái:** `APPROVED PLAN — chưa triển khai`
+**Trạng thái:** `IMPLEMENTED LOCAL — live deployment evidence pending`
 
 **Ngày khóa scope:** 2026-07-28
 
@@ -357,7 +357,7 @@ Không triển khai OIDC/TLS/user management “cho sau này”.
 ### Frontend/Playwright
 
 - Login VI/EN, keyboard, show/hide password, Caps Lock và generic error.
-- `returnTo` nội bộ thành công; `//host`/absolute URL bị từ chối.
+- `returnTo` nội bộ giữ nguyên query; `//host`, backslash-host và absolute URL bị từ chối.
 - Login trực tiếp về Jobs.
 - Sidebar username/logout hoạt động ở expanded/collapsed/mobile.
 - Logout rồi Back/refresh không đọc protected cache.

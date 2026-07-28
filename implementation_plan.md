@@ -39,8 +39,9 @@ bởi stack Next.js/FastAPI/Celery.
 Backend counterpart `BE-X18` là `N/A`; đặc tả chi tiết nằm tại
 [`User_guide.md`](User_guide.md).
 
-**Simple Auth 2026-07-28:** `BE-X19`/`FE-X19` đã khóa scope nhưng chưa triển
-khai. Đây là shared demo login qua HTTP, giữ `actor="anonymous"` và độc lập với
+**Simple Auth 2026-07-28:** `BE-X19`/`FE-X19` đã triển khai và pass local gate;
+live Nginx/direct-port/full OCR smoke còn mở. Đây là shared demo login qua HTTP,
+giữ `actor="anonymous"` và độc lập với
 sign-off Milestone C. Đặc tả chi tiết nằm tại
 [`Simple_Auth.md`](Simple_Auth.md).
 
@@ -493,7 +494,7 @@ trước timeout, nên không suy diễn đây là live/provider evidence.
 
 ### BE-X19
 
-**P1 — Shared demo access gate — APPROVED PLAN; NOT IMPLEMENTED.** Counterpart:
+**P1 — Shared demo access gate — LOCAL COMPLETE; LIVE GATE PENDING.** Counterpart:
 [`FE-X19`](frontend_plan.md#fe-x19). Đặc tả chi tiết và acceptance:
 [`Simple_Auth.md`](Simple_Auth.md).
 
@@ -512,8 +513,10 @@ trước timeout, nên không suy diễn đây là live/provider evidence.
   Git, API, job JSON, browser storage hoặc log.
 - Public Pydantic/OpenAPI cho auth endpoint là canonical; schema thay đổi phải
   regenerate frontend types.
-- `BE-X19` không block Milestone C. Chỉ đổi trạng thái sau implementation, full
-  local gate và live browser/Nginx/direct-port smoke.
+- `BE-X19` không block Milestone C. Backend và full local regression pass 65
+  tests; generated OpenAPI/types, frontend build và 27 browser checks pass.
+  Docker/Nginx syntax, exact host bind/direct-port closure và full live OCR smoke
+  vẫn cần server có Docker và IP `10.6.18.1`.
 
 <a id="sidebar-re-decoration-backend"></a>
 ## Sidebar re-decoration — backend counterpart
@@ -606,12 +609,13 @@ docker compose up -d --build redis backend worker frontend nginx
 docker compose ps
 docker compose logs --tail=200 backend worker redis nginx
 docker compose exec worker celery -A app.workers.tasks:celery_app inspect registered
-curl -fsS http://127.0.0.1:52409/health
-curl -fsSI http://127.0.0.1:54846/
-curl -fsS http://127.0.0.1:54846/api/state > /dev/null
+curl -fsS http://10.6.18.1:54846/health
+curl -fsSI http://10.6.18.1:54846/login
+curl -sS -o /dev/null -w '%{http_code}\n' http://10.6.18.1:54846/api/state # expected 401
 ```
 
-Qua browser Nginx `:52409`, chạy `63-btc.pdf` với `metadata`/`full_ocr`, Bìa với
+Đăng nhập qua browser Nginx `http://10.6.18.1:54846`, chạy `63-btc.pdf` với
+`metadata`/`full_ocr`, Bìa với
 `metadata`, hồ sơ gộp rõ với cả hai task và hồ sơ gộp khó với `metadata` + manual
 boundary correction. Ghi source/document/excluded counts, field/evidence,
 approval và observed duration/call count; chưa đặt SLA.
@@ -680,7 +684,7 @@ vì vậy sign-off Milestone C tổng thể bên dưới vẫn **PENDING**.
 ### Runtime gate
 
 - Repair repro `63-btc.pdf` cho hai task: _pending_
-- Nginx health `52409`; frontend và `/api/*` `54846`: _pending_
+- Nginx health/login/API tại `10.6.18.1:54846`: _pending_
 - Backend/Redis internal-only: _pending_
 - Worker registered `ocr.process_job`, concurrency `1`, prefetch `1`: _pending_
 - Upload trên 1 MiB không `413`: _pending_

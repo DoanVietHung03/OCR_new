@@ -1,10 +1,29 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from .auth import require_authenticated, require_safe_browser_request, router as auth_router
 from .api.routes import router
 
 app = FastAPI(title="OCR API", version="0.2.0")
+app.include_router(auth_router, prefix="/api")
 app.include_router(router, prefix="/api")
+
+
+@app.middleware("http")
+async def auth_gate(request: Request, call_next):
+    try:
+        if request.url.path.startswith("/api/") and not request.url.path.startswith("/api/auth/"):
+            require_authenticated(request)
+            require_safe_browser_request(request)
+    except Exception as exc:
+        from fastapi import HTTPException
+        if not isinstance(exc, HTTPException):
+            raise
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail}, headers={"Cache-Control": "no-store"})
+    response = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.exception_handler(RequestValidationError)

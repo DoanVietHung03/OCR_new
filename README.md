@@ -14,8 +14,8 @@ của `X7`–`X13`, `X16`, phần local của `X15` và `X17A`–`X17E` đã pas
 Milestone C chỉ là internal production-like pilot,
 không phải customer-production approval.
 
-Kế hoạch `X19` cho một shared demo login/logout đã được khóa nhưng **chưa triển
-khai**. Runtime hiện tại vẫn chưa có auth; chi tiết mục tiêu nằm tại
+`X19` shared demo login/logout đã **hoàn tất local**; backend, build và browser
+gate pass, còn live Nginx/direct-port/full OCR smoke. Chi tiết nằm tại
 [`Simple_Auth.md`](Simple_Auth.md).
 
 Giao diện Next.js có route Jobs, Upload, Manage/Documents, Logs, Reports,
@@ -57,7 +57,7 @@ provider production-like thật.
   và mapping ảnh parity.
 - `User_guide.md`: đặc tả nội dung/acceptance cho guide; nội dung sử dụng trực
   tiếp nằm tại `/guide` và `/guide/reference`, không phụ thuộc backend.
-- `Simple_Auth.md`: kế hoạch `BE-X19`/`FE-X19` cho shared demo login; chưa triển
+- `Simple_Auth.md`: contract `BE-X19`/`FE-X19` cho shared demo login; live gate còn mở
   khai.
 - `incomlpeted.md`: các việc còn phụ thuộc fixture, provider, strong server hoặc
   xác nhận operator, kèm điều kiện nghiệm thu.
@@ -180,26 +180,19 @@ Khi schema FastAPI thay đổi, chạy `pnpm api:generate` và commit cả
 
 ## Chạy bằng Docker Compose
 
-Nginx publish cổng host `52409`; frontend đồng thời publish `54846` để địa chỉ
-Next.js ghi trong container log có thể truy cập trực tiếp. Cả hai đường đều dùng
-được đầy đủ `/api/*`; backend, Redis và worker vẫn chỉ hoạt động trong mạng nội
-bộ của Compose. Dùng `52409` cho luồng internal-pilot/cutover và `54846` khi cần
-truy cập trực tiếp frontend.
-
-Đây là runtime **hiện tại**. Target `X19` sau implementation sẽ giữ
-`http://10.6.18.1:54846` nhưng chuyển host port đó cho Nginx, bỏ publish `52409`
-và không publish frontend trực tiếp; không dùng hướng dẫn target này trước khi
-`BE-X19`/`FE-X19` pass.
+Nginx là service duy nhất publish host port tại `10.6.18.1:54846`; frontend,
+backend, Redis và worker chỉ hoạt động trong mạng Compose. Auth deployment fail
+bind nếu host không có IP này.
 
 ```bash
 cp .env.example .env
 # chỉnh các giá trị chỉ dùng phía máy chủ trước khi chạy
+uv run --project backend python -m app.auth hash-password
 docker compose config
 docker compose up -d --build redis backend worker frontend nginx
 docker compose ps
-curl -fsS http://127.0.0.1:52409/health
-curl -fsSI http://127.0.0.1:54846/
-curl -fsS http://127.0.0.1:54846/api/state > /dev/null
+curl -fsS http://10.6.18.1:54846/health
+curl -fsSI http://10.6.18.1:54846/login
 ```
 
 Không dùng Compose với `OCR_DATA_DIR` thật cho đến khi đã dừng nhận upload,
@@ -208,11 +201,11 @@ drain worker và tạo bản sao lưu có checksum.
 ## Cổng và dữ liệu
 
 - FastAPI chạy trực tiếp: `50177`.
-- Next.js chạy trực tiếp hoặc frontend Compose: `54846`.
-- Điểm truy cập Compose: `52409`.
+- Next.js chạy trực tiếp trong local development: `54846`.
+- Điểm truy cập Compose auth: `10.6.18.1:54846` qua Nginx.
 - Redis nội bộ trong Compose: `6380`.
 
-Target `X19` chưa triển khai chỉ expose Nginx tại `10.6.18.1:54846`; xem
+Live gate `X19` cần xác minh exact port closure trên server; xem
 [`Simple_Auth.md`](Simple_Auth.md).
 
 `OCR_ENDPOINT_EXTERNAL` mặc định là `true`; mỗi job phải ghi nhận sự đồng ý

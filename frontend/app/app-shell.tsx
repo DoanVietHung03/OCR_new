@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MouseEvent, ReactNode, useEffect, useRef, useState } from "react";
-import { getSystemMetrics, SystemMetrics } from "../lib/api";
+import { getSession, getSystemMetrics, login, logout, SystemMetrics } from "../lib/api";
 import { text, useLanguage } from "../lib/i18n";
 
 const percent = (value: number) => `${Math.round(value)}%`;
@@ -20,7 +20,14 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
   const [menuOpen, setMenuOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [username, setUsername] = useState("");
+  const [authEnabled, setAuthEnabled] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const authDialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => { const sync = () => setMonitorOpen(new URLSearchParams(location.search).get("monitor") === "1"); sync(); window.addEventListener("popstate", sync); return () => window.removeEventListener("popstate", sync); }, []);
   useEffect(() => {
@@ -38,6 +45,13 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
     document.addEventListener("visibilitychange", refresh);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", refresh); };
   }, [monitorOpen, refreshToken]);
+  useEffect(() => {
+    getSession().then((value) => { setAuthEnabled(value.authenticated); setUsername(value.username); }).catch(() => {});
+    const expired = () => setAuthOpen(true);
+    window.addEventListener("ocr:auth-expired", expired);
+    return () => window.removeEventListener("ocr:auth-expired", expired);
+  }, []);
+  useEffect(() => { if (authOpen) authDialog.current?.showModal(); else authDialog.current?.close(); }, [authOpen]);
 
   const meter = (label: string, value: number | null | undefined) => <article className="monitor-card">
     <div><span>{label}</span><strong>{value == null ? "—" : percent(value)}</strong></div>
@@ -66,10 +80,12 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
         </div>
       </nav>
       <div className="sidebar-tools">
+        {authEnabled && <small className="shared-user" title={username}>● <span>{username}</span></small>}
         <div className="language-switch" aria-label="Language">
           <button aria-pressed={locale === "vi"} onClick={() => changeLanguage("vi")}>VI</button>
           <button aria-pressed={locale === "en"} onClick={() => changeLanguage("en")}>EN</button>
         </div>
+        {authEnabled && <button className="logout-button" aria-label={locale === "vi" ? "Đăng xuất" : "Sign out"} title={sidebarCollapsed ? (locale === "vi" ? "Đăng xuất" : "Sign out") : undefined} onClick={() => logout().finally(() => location.assign("/login"))}>↪ <span>{locale === "vi" ? "Đăng xuất" : "Sign out"}</span></button>}
       </div>
     </aside>
     <main className="main-content">{children}</main>
@@ -90,6 +106,21 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
         {metrics?.operations && <article className="monitor-card gpu-card"><div><span>{text("ocrOperations")}</span><strong>{Object.values(operationStates).reduce((sum, value) => sum + value, 0)}</strong></div><small>{Object.entries(operationStates).map(([state, count]) => `${state}: ${count}`).join(" · ") || text("unavailable")}</small></article>}
       </div>
       <footer className="modal-actions"><small>{updated ? text("lastUpdated", { date: updated.toLocaleTimeString(locale) }) : text("loading")}</small><button className="button secondary" onClick={() => setRefreshToken((value) => value + 1)}>{text("refresh")}</button></footer>
+    </dialog>
+    <dialog ref={authDialog} className="modal auth-modal" onCancel={(event) => { event.preventDefault(); setAuthOpen(false); }}>
+      <div className="modal-head"><div><p className="eyebrow">IntelliDoc</p><h2>{locale === "vi" ? "Phiên đăng nhập đã hết" : "Session expired"}</h2></div><button className="icon-button" aria-label={text("close")} onClick={() => setAuthOpen(false)}>×</button></div>
+      <p>{locale === "vi" ? "Bản đang sửa vẫn được giữ. Đăng nhập lại rồi bấm lại thao tác chưa hoàn tất." : "Your draft is preserved. Sign in again, then retry the unfinished action."}</p>
+      <form onSubmit={async (event) => {
+        event.preventDefault(); setAuthBusy(true); setAuthError("");
+        try { const value = await login(username, authPassword); setAuthEnabled(true); setUsername(value.username); setAuthPassword(""); setAuthOpen(false); }
+        catch { setAuthError(locale === "vi" ? "Tên đăng nhập hoặc mật khẩu không đúng." : "Incorrect username or password."); }
+        finally { setAuthBusy(false); }
+      }}>
+        <label>{locale === "vi" ? "Tên đăng nhập" : "Username"}<input autoComplete="username" required value={username} onChange={(event) => setUsername(event.target.value)} /></label>
+        <label>{locale === "vi" ? "Mật khẩu" : "Password"}<input type="password" autoComplete="current-password" required value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} /></label>
+        {authError && <p className="error" role="alert">{authError}</p>}
+        <footer className="modal-actions"><button type="button" className="button secondary" onClick={() => setAuthOpen(false)}>{text("close")}</button><button className="button primary" disabled={authBusy}>{authBusy ? text("loading") : (locale === "vi" ? "Đăng nhập lại" : "Sign in again")}</button></footer>
+      </form>
     </dialog>
   </div>;
 }

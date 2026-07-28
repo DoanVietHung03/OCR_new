@@ -16,6 +16,74 @@ function fixtureDocument() {
 }
 const state = (jobs: ReturnType<typeof fixtureJob>[], external = false) => ({ server_mode: true, jobs, documents: [], logs: [], metrics: { total_jobs: jobs.length, active_jobs: jobs.filter((job) => ["starting", "queued", "running", "cancelling"].includes(job.status)).length, completed_jobs: jobs.filter((job) => ["completed", "completed_with_warnings"].includes(job.status)).length, documents: jobs.reduce((count, job) => count + job.documents.length, 0), pages: jobs.length, correction_count: 0, error_jobs: 0 }, ocr_methods: [{ id: "qwen", label: "Qwen", status: "configured", external }], limits: { max_files_per_job: 15, max_job_upload_bytes: 209715200 }, pagination: { page: 1, page_size: 25, pages: 1, total: jobs.length } });
 
+test("login returnTo, shared username and logout use the browser auth seam", async ({ page }) => {
+  let loginHeader = "", loginBody: unknown, loggedOut = false;
+  await page.route("**/api/**", async (route) => {
+    const request = route.request(), pathname = new URL(request.url()).pathname;
+    if (pathname === "/api/auth/login") {
+      loginHeader = request.headers()["x-ocr-request"] || "";
+      loginBody = request.postDataJSON();
+      return route.fulfill({ json: { authenticated: true, username: "ocr", expires_at: "2026-07-29T00:00:00Z" } });
+    }
+    if (pathname === "/api/auth/session") return route.fulfill({ json: { authenticated: true, username: "ocr", expires_at: "2026-07-29T00:00:00Z" } });
+    if (pathname === "/api/auth/logout") { loggedOut = true; return route.fulfill({ status: 204 }); }
+    if (pathname === "/api/reports") return route.fulfill({ json: { operations: { total_jobs: 0, active_jobs: 0, completed_jobs: 0, error_jobs: 0, documents: 0, pages: 0, duration_seconds_average: null, pages_per_minute: null, failure_codes: {} }, quality: { documents: 0, approved_documents: 0, corrected_fields: 0, confidence_average: null, total_fields: 0, confidence_coverage: null, evidence_coverage: null, warning_documents: 0 }, benchmark_samples: null } });
+    return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
+  });
+
+  await page.goto("/login?returnTo=/reports");
+  await expect(page.getByRole("heading", { name: "Đăng nhập" })).toBeVisible();
+  await page.getByLabel("Tên đăng nhập").fill("ocr");
+  await page.locator('input[autocomplete="current-password"]').fill("secret1");
+  await page.getByRole("button", { name: "Hiện hoặc ẩn mật khẩu" }).click();
+  await expect(page.locator('input[autocomplete="current-password"]')).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+  await expect(page).toHaveURL(/\/reports$/);
+  await expect(page.locator(".shared-user")).toContainText("ocr");
+  expect(loginHeader).toBe("browser");
+  expect(loginBody).toEqual({ username: "ocr", password: "secret1" });
+  await page.getByRole("button", { name: "Đăng xuất" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  expect(loggedOut).toBeTruthy();
+
+  await page.goto("/login?returnTo=https://attacker.test");
+  await page.getByLabel("Tên đăng nhập").fill("ocr");
+  await page.locator('input[autocomplete="current-password"]').fill("secret1");
+  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+  await expect(page).toHaveURL("http://127.0.0.1:3100/");
+  await page.goto("/login?returnTo=/%5Cevil.example");
+  await page.getByLabel("Tên đăng nhập").fill("ocr");
+  await page.locator('input[autocomplete="current-password"]').fill("secret1");
+  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+  await expect(page).toHaveURL("http://127.0.0.1:3100/");
+  await page.goto("/login?returnTo=/reports?status=active&page=2");
+  await page.getByLabel("Tên đăng nhập").fill("ocr");
+  await page.locator('input[autocomplete="current-password"]').fill("secret1");
+  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+  await expect(page).toHaveURL(/\/reports\?status=active&page=2$/);
+});
+
+test("session expiry keeps the review draft and never replays its mutation", async ({ page }) => {
+  let correctionCalls = 0;
+  await page.route("**/api/**", async (route) => {
+    const request = route.request(), pathname = new URL(request.url()).pathname;
+    if (pathname === "/api/auth/session" || pathname === "/api/auth/login") return route.fulfill({ json: { authenticated: true, username: "ocr", expires_at: "2026-07-29T00:00:00Z" } });
+    if (pathname === `/api/jobs/${id}` && request.method() === "GET") return route.fulfill({ json: fixtureJob() });
+    if (pathname.endsWith("/corrections")) { correctionCalls += 1; return route.fulfill({ status: 401, json: { detail: { code: "auth_required", message: "auth_required" } } }); }
+    return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
+  });
+  await page.goto(`/jobs/${id}?view=review`);
+  const draft = page.locator(".field-card input").first();
+  await draft.fill("UNSAVED");
+  await page.getByRole("button", { name: /lưu và duyệt|save and approve/i }).click();
+  expect(correctionCalls).toBe(1);
+  await expect(page.getByRole("heading", { name: "Phiên đăng nhập đã hết" })).toBeVisible();
+  await page.locator(".auth-modal input[autocomplete='current-password']").fill("secret1");
+  await page.getByRole("button", { name: "Đăng nhập lại" }).click();
+  await expect(draft).toHaveValue("UNSAVED");
+  expect(correctionCalls).toBe(1);
+});
+
 test("mocked upload, review, exact crop, logs, monitor and delete", async ({ page }) => {
   const document = fixtureDocument(); let created = false, deleted = false, reads = 0, conflictOnce = true, cropCalls = 0; let correctionBody: any; let cropBody: any;
   document.crop_evidence.push({ crop_image: `/api/jobs/${id}/artifacts/smoke/old-crop.png`, field: "so_van_ban", page_index: 0, created_at: "2026-07-20T10:00:00Z", bbox: { x: 1, y: 1, width: 2, height: 2 }, evidence_source: "manual_crop", evidence_status: "trusted" });
@@ -628,7 +696,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
     if (apiPath === "/api/sizing/exchange-rate-sources") return route.fulfill({ json: { items: [] } });
     return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
   });
-  await page.goto("/sizing"); await expect(page.getByText("12")).toBeVisible();
+  await page.goto("/sizing"); await expect(page.locator(".metric-card").filter({ hasText: /Tổng token|Total tokens/i })).toContainText("12");
   await expect(page.locator(".metric-card").filter({ hasText: /Token \/ attempt có usage|Tokens \/ measured attempt/i })).toContainText("12");
   await page.getByLabel(/Số job hiển thị|Jobs shown/i).selectOption("10");
   await page.getByLabel(/Provider Profile/i).fill("qwen");
@@ -652,7 +720,10 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
 
 test("static user guide keeps routes, anchors, language and mobile reflow without API", async ({ page }) => {
   let apiCalls = 0;
-  await page.route("**/api/**", (route) => { apiCalls += 1; return route.abort(); });
+  await page.route("**/api/**", (route) => {
+    if (new URL(route.request().url()).pathname === "/api/auth/session") return route.fulfill({ json: { authenticated: true, username: "ocr", expires_at: "2026-07-29T00:00:00Z" } });
+    apiCalls += 1; return route.abort();
+  });
   await page.goto("/guide");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hướng dẫn sử dụng");
   await expect(page.locator("#primary-navigation").getByRole("link", { name: "Hướng dẫn sử dụng" })).toHaveClass(/active/);

@@ -32,9 +32,10 @@ VI/EN routes, seven contextual links, and five sanitized captures. Its
 production build and non-browser checks pass; Playwright reached all 25 tests
 without a reported test failure but Windows teardown still needs a clean
 non-timeout confirmation before `X18` is called `LOCAL COMPLETE`.
-The paired `X19` shared demo login plan is approved but not implemented. It uses
-one shared credential, keeps OCR actor data anonymous, and is specified in
-`Simple_Auth.md`; do not describe the current runtime as authenticated.
+The paired `X19` shared demo login is locally implemented. It uses one shared
+credential, keeps OCR actor data anonymous, and is specified in
+`Simple_Auth.md`. Backend, build and browser gates pass; do not claim the live
+deployment until Nginx/direct-port/rate-limit/full OCR smoke is recorded.
 `incomlpeted.md` lists every external condition still required.
 
 The 2026-07-27 OpenAI-compatible reliability update preserves the minimal
@@ -72,8 +73,8 @@ revision conflict, and Continue in the browser gate.
 - `docs/ui-parity/`: sanitized 1440/1366/mobile PNG captures.
 - `frontend/public/guide/`: five sanitized task-focused user-guide captures.
 - `User_guide.md`: canonical `FE-X18` content and acceptance contract.
-- `Simple_Auth.md`: approved `BE-X19`/`FE-X19` shared demo login plan; not yet
-  implemented.
+- `Simple_Auth.md`: implemented `BE-X19`/`FE-X19` shared demo login contract;
+  live deployment evidence pending.
 
 ## Architecture invariants
 
@@ -213,19 +214,17 @@ revision conflict, and Continue in the browser gate.
 
 ## Runtime contract
 
-- The following ports describe the current, unauthenticated runtime until `X19`
-  is implemented.
+- Direct local development with `OCR_AUTH_MODE=disabled` may still use:
 - Direct backend: `50177`.
-- Direct frontend and Compose frontend: `54846`.
-- Compose also publishes Nginx on `52409`; backend and Redis stay internal on
-  `50177`/`6380`. The frontend image builds its `/api/*` rewrite to
+- Direct frontend: `54846`.
+- Auth deployment publishes only Nginx on `10.6.18.1:54846`; backend, frontend,
+  worker and Redis stay private. The frontend image builds its `/api/*` rewrite to
   `http://backend:50177`, while Nginx routes `/api/*` directly to backend.
 - Do not add `BACKEND_PORT`; it does not configure the listener.
 - Browser API calls remain relative `/api/*`; TLS terminates outside Compose.
-- Approved `X19` target, not current behavior: keep
-  `http://10.6.18.1:54846`, let Nginx alone bind `10.6.18.1:54846:80`, remove
-  host `52409` and the frontend host publish, and keep backend/frontend/Redis/
-  worker private. HTTP risk is explicitly limited to the internal demo.
+- The live `X19` target is `http://10.6.18.1:54846`, with Nginx alone binding
+  `10.6.18.1:54846:80`; host `52409` and the frontend host publish are removed.
+  HTTP risk is explicitly limited to the internal demo.
 
 ## Working procedure
 

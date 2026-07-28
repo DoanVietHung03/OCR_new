@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +15,26 @@ class Settings(BaseSettings):
     ocr_endpoint_external: bool = True
     celery_broker_url: str = "redis://localhost:6380/0"
     celery_result_backend: str = "redis://localhost:6380/1"
+    ocr_auth_mode: str = "disabled"
+    ocr_public_origin: str = ""
+    ocr_auth_username: str = ""
+    ocr_auth_password_hash: str = ""
+    ocr_auth_session_secret: str = ""
+
+    @model_validator(mode="after")
+    def validate_auth(self):
+        if self.ocr_auth_mode not in {"disabled", "shared"}:
+            raise ValueError("OCR_AUTH_MODE must be disabled or shared")
+        self.ocr_auth_username = self.ocr_auth_username.strip()
+        if self.ocr_auth_mode == "shared":
+            if not 1 <= len(self.ocr_auth_username) <= 64:
+                raise ValueError("OCR_AUTH_USERNAME must contain 1-64 characters")
+            if not all((self.ocr_public_origin, self.ocr_auth_password_hash, self.ocr_auth_session_secret)):
+                raise ValueError("shared auth configuration is incomplete")
+            if len(self.ocr_auth_session_secret) != 64:
+                raise ValueError("OCR_AUTH_SESSION_SECRET must be 64 hex characters")
+            bytes.fromhex(self.ocr_auth_session_secret)
+        return self
 
 
 settings = Settings()

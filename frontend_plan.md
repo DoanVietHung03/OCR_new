@@ -18,9 +18,10 @@ và capacity evidence vẫn mở tại `FE-X17F`. Chi tiết nằm tại
 chi tiết nằm tại [`User_guide.md`](User_guide.md); backend counterpart
 [`BE-X18`](implementation_plan.md#be-x18) là `N/A`.
 
-**Simple Auth 2026-07-28:** `FE-X19`/`BE-X19` đã khóa scope nhưng chưa triển
-khai. Shared login dùng một credential, giữ HTTP/IP/port hiện tại và không thêm
-identity/role. Đặc tả chi tiết nằm tại [`Simple_Auth.md`](Simple_Auth.md).
+**Simple Auth 2026-07-28:** `FE-X19`/`BE-X19` đã triển khai và pass local gate;
+live Nginx/direct-port/full OCR smoke còn mở. Shared login dùng một credential,
+giữ HTTP/IP/port đã chốt và không thêm identity/role. Đặc tả chi tiết nằm tại
+[`Simple_Auth.md`](Simple_Auth.md).
 
 **Sidebar re-decoration 2026-07-28:** information architecture mới đã triển khai
 và hoàn thành local gate: `62` backend tests, `24` browser checks, typecheck,
@@ -495,7 +496,7 @@ thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
 
 ### FE-X19
 
-**P1 — Shared demo login/logout — APPROVED PLAN; NOT IMPLEMENTED.** Counterpart:
+**P1 — Shared demo login/logout — LOCAL COMPLETE; LIVE GATE PENDING.** Counterpart:
 [`BE-X19`](implementation_plan.md#be-x19). Đặc tả chi tiết và acceptance:
 [`Simple_Auth.md`](Simple_Auth.md).
 
@@ -511,9 +512,10 @@ thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
   tiếp tục read/poll nhưng không auto-replay mutation.
 - Protected response dùng `no-store`; logout rồi Back/refresh không đọc dữ liệu
   cũ. UI phải pass `1440×900`, `1366×768`, `390×844`.
-- `FE-X19` không block Milestone C và không được gọi implemented trước khi
-  counterpart backend, generated contract, browser gate và live port-closure
-  smoke cùng pass.
+- `FE-X19` không block Milestone C. `/login`, AppShell logout, shared request
+  seam và modal hết phiên đã pass production build cùng 27 browser checks, gồm
+  returnTo an toàn và giữ draft không replay mutation. Live port-closure/full OCR
+  smoke vẫn mở.
 
 ## Thứ tự triển khai parity
 
@@ -572,7 +574,7 @@ thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
 | Sidebar re-decoration | LOCAL COMPLETE 2026-07-28 (`X14`/`X15`) | Navigation mới, actionable report, exact deep-link, partial error và ba viewport pass |
 | Token/cost/sizing | `X17A`–`X17E` LOCAL COMPLETE; `X17F` LIVE PENDING | One-PDF/provider Preview → bốn fixture → 20-job capacity gate |
 | User guide/reference | `X18` IMPLEMENTED; browser teardown pending | Hai route tĩnh, inventory đủ, VI/EN, 7 contextual link, 5 ảnh và accessibility; xác nhận runner thoát sạch sau 25 test |
-| Shared demo auth | `X19` APPROVED PLAN; NOT IMPLEMENTED | Login/logout/expiry/draft, generated types và exact host-port closure |
+| Shared demo auth | `X19` LOCAL COMPLETE; LIVE GATE PENDING | Exact host-port closure và full authenticated OCR smoke |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 

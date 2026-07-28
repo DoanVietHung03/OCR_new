@@ -78,9 +78,11 @@ hành còn lại:
   `--concurrency=1`, `--prefetch-multiplier=1`, artifact/report và bốn fixture;
 - diễn tập restart/interrupted, persistence, đọc job cũ và rollback image/deployment;
 - ghi toàn bộ bằng chứng sanitized vào `BE-C-EVIDENCE`;
-- `X19` shared demo login là kế hoạch riêng trong `Simple_Auth.md`, vẫn giữ
-  `actor="anonymous"` và không thuộc gate pilot hiện tại; verified identity hoặc
-  customer production tiếp tục là architecture request khác.
+- `X19` shared demo login đã pass local gate và vẫn giữ `actor="anonymous"`.
+  Còn cần server có Docker/IP `10.6.18.1` để xác minh Nginx config, exact host
+  bind, đóng `52409`/direct frontend/backend/Redis, rate limit và full OCR smoke
+  qua auth. Verified identity hoặc customer production vẫn là architecture
+  request khác.
 
 ## 5. X17F — Sizing evidence thật
 

@@ -26,6 +26,7 @@ export type Artifacts = Schemas["ArtifactsResponse"];
 export type Artifact = Schemas["ArtifactEntry"];
 export type SourcePdf = Schemas["SourcePdfResponse"];
 export type Segment = Schemas["Segment"];
+export type AuthSession = Schemas["SessionResponse"];
 
 export const ACTIVE_JOB_STATUSES = new Set(["starting", "queued", "running", "cancelling", "segmenting", "awaiting_segmentation_review", "segmentation_confirmed", "extraction_starting"]);
 export const TERMINAL_JOB_STATUSES = new Set(["completed", "completed_with_warnings", "error", "cancelled", "interrupted"]);
@@ -36,14 +37,24 @@ export class ApiError extends Error {
 }
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const headers = new Headers(init?.headers);
+  if (init?.method && !["GET", "HEAD"].includes(init.method.toUpperCase())) headers.set("X-OCR-Request", "browser");
+  const response = await fetch(url, { ...init, headers });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const detail = typeof payload?.detail === "object" ? payload.detail as Schemas["ErrorDetail"] : undefined;
+    if (response.status === 401 && detail?.code === "auth_required" && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("ocr:auth-expired"));
+    }
     throw new ApiError(detail?.message || String(payload?.detail || `Request failed (${response.status})`), response.status, detail?.code, detail);
   }
   return payload;
 }
+
+export const login = (username: string, password: string) =>
+  request<AuthSession>("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password } satisfies Schemas["LoginRequest"]) });
+export const getSession = () => request<AuthSession>("/api/auth/session");
+export const logout = () => request<void>("/api/auth/logout", { method: "POST" });
 
 export const getState = (filters: NonNullable<operations["state_api_state_get"]["parameters"]["query"]> = {}) =>
   request<State>(`/api/state?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)])).toString()}`);

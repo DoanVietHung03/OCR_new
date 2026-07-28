@@ -192,6 +192,26 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 .disk-card small, .gpu-device small { color: #62738a; }
 .gpu-device { display: grid; gap: 3px; padding-top: 8px; border-top: 1px solid #dce3ed; }
 .gpu-card { grid-column: 1 / -1; }
+.sidebar-tools { gap: 8px; }
+.shared-user { max-width: 100%; overflow: hidden; color: #cbd8e8; text-overflow: ellipsis; white-space: nowrap; }
+.logout-button { display: flex; align-items: center; gap: 7px; border: 0; border-radius: 7px; padding: 7px 9px; color: #dbe6f3; background: transparent; cursor: pointer; }
+.logout-button:hover { background: rgb(255 255 255 / 10%); }
+.sidebar-collapsed .shared-user span, .sidebar-collapsed .logout-button span { display: none; }
+.login-page { display: grid; min-height: 100vh; place-items: center; padding: 20px; background: linear-gradient(135deg, #0d294b, #1768d4); }
+.login-card { position: relative; width: min(430px, 100%); border-radius: 16px; padding: 34px; background: #fff; box-shadow: 0 30px 80px rgb(0 17 43 / 35%); }
+.login-card header { display: flex; align-items: center; gap: 10px; margin-bottom: 34px; color: #132b4e; }
+.login-card header div { display: grid; }
+.login-card header small { color: #1768d4; font-weight: 800; }
+.login-card h1 { margin: 5px 0 8px; }
+.login-card > p:not(.eyebrow) { color: #60728a; }
+.login-language { position: absolute; top: 28px; right: 28px; }
+.login-card form, .auth-modal form { display: grid; gap: 16px; margin-top: 24px; }
+.login-card label, .auth-modal label { display: grid; gap: 7px; color: #334c69; font-weight: 750; }
+.login-card input, .auth-modal input { width: 100%; min-height: 43px; border: 1px solid #c8d2df; border-radius: 8px; padding: 9px 11px; font: inherit; }
+.password-input { position: relative; }
+.password-input button { position: absolute; top: 4px; right: 4px; min-width: 36px; min-height: 35px; border: 0; background: transparent; cursor: pointer; }
+.login-card .button { justify-content: center; width: 100%; }
+.warning { color: #8b5c08; }
 
 .context-help { display: inline-block; margin-top: 6px; color: #1768d4; font-size: .82rem; font-weight: 750; text-decoration: none; }
 .context-help:hover { text-decoration: underline; }
@@ -269,6 +289,7 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
   .sidebar-collapsed .sidebar nav .nav-link { justify-content: flex-start; gap: 12px; font-size: inherit; }
   .sidebar-collapsed .sidebar nav .nav-link span { display: inline; }
   .sidebar-tools { display: flex; grid-column: 1 / -1; grid-row: 3; align-items: center; justify-content: flex-end; margin-top: 10px; }
+  .sidebar-collapsed .shared-user span, .sidebar-collapsed .logout-button span { display: inline; }
   .language-switch, .sidebar-collapsed .language-switch { min-width: 92px; grid-template-columns: 1fr 1fr; }
   .main-content { padding: 24px 14px 48px; }
   .page-header, .job-header { align-items: flex-start; flex-direction: column; }
