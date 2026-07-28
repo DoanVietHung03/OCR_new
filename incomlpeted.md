@@ -67,13 +67,20 @@ Benchmark thật còn thiếu vì chưa có sample có fingerprint. Điều ki�
 Máy hiện tại không có đủ stack và bằng chứng live để ký gate. Điều kiện hoàn
 thành:
 
+Live OCR workload hiện có đã `PASS` với 6 job/66 PDF/237 trang, 137 provider
+operation thành công và không còn failed page ở trạng thái terminal; evidence
+sanitized nằm trong `implementation_plan.md#be-c-evidence`. Kết quả này đủ để
+tiếp tục các kế hoạch độc lập như Simple Auth, nhưng không thay thế các gate vận
+hành còn lại:
+
 - tạm dừng upload, drain worker, backup `OCR_DATA_DIR` kèm size/checksum;
 - chạy Nginx → FastAPI → Redis → Celery → provider thật; xác nhận task đăng ký,
   `--concurrency=1`, `--prefetch-multiplier=1`, artifact/report và bốn fixture;
 - diễn tập restart/interrupted, persistence, đọc job cũ và rollback image/deployment;
 - ghi toàn bộ bằng chứng sanitized vào `BE-C-EVIDENCE`;
-- việc bỏ auth anonymous hoặc nâng lên customer production là một yêu cầu kiến
-  trúc riêng, không thuộc gate pilot hiện tại.
+- `X19` shared demo login là kế hoạch riêng trong `Simple_Auth.md`, vẫn giữ
+  `actor="anonymous"` và không thuộc gate pilot hiện tại; verified identity hoặc
+  customer production tiếp tục là architecture request khác.
 
 ## 5. X17F — Sizing evidence thật
 

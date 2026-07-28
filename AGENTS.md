@@ -32,6 +32,9 @@ VI/EN routes, seven contextual links, and five sanitized captures. Its
 production build and non-browser checks pass; Playwright reached all 25 tests
 without a reported test failure but Windows teardown still needs a clean
 non-timeout confirmation before `X18` is called `LOCAL COMPLETE`.
+The paired `X19` shared demo login plan is approved but not implemented. It uses
+one shared credential, keeps OCR actor data anonymous, and is specified in
+`Simple_Auth.md`; do not describe the current runtime as authenticated.
 `incomlpeted.md` lists every external condition still required.
 
 The 2026-07-27 OpenAI-compatible reliability update preserves the minimal
@@ -69,6 +72,8 @@ revision conflict, and Continue in the browser gate.
 - `docs/ui-parity/`: sanitized 1440/1366/mobile PNG captures.
 - `frontend/public/guide/`: five sanitized task-focused user-guide captures.
 - `User_guide.md`: canonical `FE-X18` content and acceptance contract.
+- `Simple_Auth.md`: approved `BE-X19`/`FE-X19` shared demo login plan; not yet
+  implemented.
 
 ## Architecture invariants
 
@@ -155,9 +160,10 @@ revision conflict, and Continue in the browser gate.
   responses, or unredacted request/response payloads.
 - Keep the frontend dependency-light: Next/React, CSS, and native browser APIs;
   no UI kit, state manager, BFF, database, or shared-types package.
-- Milestone C uses `actor="anonymous"` because this is an internal test product.
-  Do not add free-form spoofable identity or auth; verified approver/customer
-  production is a separate architecture request.
+- Milestone C and planned `X19` both keep `actor="anonymous"`. `X19` may add only
+  the one shared HTTP demo credential/session gate specified in `Simple_Auth.md`;
+  do not turn its username into durable identity or add OIDC, roles, user DB,
+  API tokens, TLS claims or customer-production semantics.
 - The primary UI persona is an operations reviewer completing upload → monitor
   → review/correct/approve. The frontend provides permanent Jobs, Upload, Manage,
   Logs, Report, Codes, Sizing, and User guide navigation with real routes and data; System Monitor
@@ -207,6 +213,8 @@ revision conflict, and Continue in the browser gate.
 
 ## Runtime contract
 
+- The following ports describe the current, unauthenticated runtime until `X19`
+  is implemented.
 - Direct backend: `50177`.
 - Direct frontend and Compose frontend: `54846`.
 - Compose also publishes Nginx on `52409`; backend and Redis stay internal on
@@ -214,12 +222,18 @@ revision conflict, and Continue in the browser gate.
   `http://backend:50177`, while Nginx routes `/api/*` directly to backend.
 - Do not add `BACKEND_PORT`; it does not configure the listener.
 - Browser API calls remain relative `/api/*`; TLS terminates outside Compose.
+- Approved `X19` target, not current behavior: keep
+  `http://10.6.18.1:54846`, let Nginx alone bind `10.6.18.1:54846:80`, remove
+  host `52409` and the frontend host publish, and keep backend/frontend/Redis/
+  worker private. HTTP risk is explicitly limited to the internal demo.
 
 ## Working procedure
 
 1. Read `implementation_plan.md` before backend, migration, or cutover work. For
    frontend work, read `frontend_plan.md`. Follow the matching
    `BE-Xn`/`FE-Xn` backlink and do not close one side without its counterpart.
+   For `X19`, also read `Simple_Auth.md` completely before changing auth,
+   AppShell login/logout or deployment port ownership.
 2. Before editing code, use the CodeGraph MCP against `C:\HProjecT\OCR` to
    inspect the target symbols, callers, routes, and blast radius. Do not infer
    flow from filenames or query `.codegraph/codegraph.db` directly.

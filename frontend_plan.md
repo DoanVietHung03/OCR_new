@@ -18,6 +18,10 @@ và capacity evidence vẫn mở tại `FE-X17F`. Chi tiết nằm tại
 chi tiết nằm tại [`User_guide.md`](User_guide.md); backend counterpart
 [`BE-X18`](implementation_plan.md#be-x18) là `N/A`.
 
+**Simple Auth 2026-07-28:** `FE-X19`/`BE-X19` đã khóa scope nhưng chưa triển
+khai. Shared login dùng một credential, giữ HTTP/IP/port hiện tại và không thêm
+identity/role. Đặc tả chi tiết nằm tại [`Simple_Auth.md`](Simple_Auth.md).
+
 **Sidebar re-decoration 2026-07-28:** information architecture mới đã triển khai
 và hoàn thành local gate: `62` backend tests, `24` browser checks, typecheck,
 production build, OpenAPI generation/check, compileall và diff check đều pass.
@@ -40,7 +44,7 @@ ghi duy nhất trong `BE-C-EVIDENCE`.
 
 - Frontend sở hữu route, input, copy, rendering, interaction, accessibility và
   visual evidence; backend sở hữu schema, persistence và execution semantics.
-- Mỗi mục `FE-X1`–`FE-X18` link thẳng tới counterpart backend. Chỉ đánh dấu hoàn thành khi hai phía
+- Mỗi mục `FE-X1`–`FE-X19` link thẳng tới counterpart backend. Chỉ đánh dấu hoàn thành khi hai phía
   pass hoặc một phía ghi rõ `N/A` cùng lý do.
 - Không chép lại backend contract dài trong file này. OpenAPI generated là nguồn
   chuẩn duy nhất cho public fields.
@@ -67,6 +71,7 @@ ghi duy nhất trong `BE-C-EVIDENCE`.
 | `FE-X16` | [`BE-X16`](implementation_plan.md#be-x16) | Hồ sơ gộp được phân đoạn, xác nhận và review bền vững |
 | `FE-X17` | [`BE-X17`](implementation_plan.md#be-x17) | Measurement Preview dùng dữ liệu thật; chart/calculator tuân sample gate |
 | `FE-X18` | [`BE-X18`](implementation_plan.md#be-x18) | Workflow guide và parameter reference VI/EN khớp UI, không thêm backend |
+| `FE-X19` | [`BE-X19`](implementation_plan.md#be-x19) | Login/logout/returnTo/expiry giữ draft; toàn protected surface qua auth seam |
 
 ## Phạm vi và nguồn chuẩn
 
@@ -76,6 +81,7 @@ Thứ tự ưu tiên khi có mâu thuẫn:
 2. OpenAPI do FastAPI sinh.
 3. File này cho workflow/visual frontend.
 4. `User_guide.md` cho content/IA/acceptance chi tiết của `FE-X18`.
+5. `Simple_Auth.md` cho shared-login content/session/acceptance của `FE-X19`.
 
 Frontend phải dùng dữ liệu thật hoặc hiển thị
 “không có dữ liệu”. Cấm URL/key/header provider, raw response, stack trace,
@@ -487,6 +493,28 @@ nhưng tiến trình teardown trên Windows không thoát trước timeout; vì 
 chứng browser full-suite vẫn được ghi rõ là teardown pending, không dùng để
 thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
 
+### FE-X19
+
+**P1 — Shared demo login/logout — APPROVED PLAN; NOT IMPLEMENTED.** Counterpart:
+[`BE-X19`](implementation_plan.md#be-x19). Đặc tả chi tiết và acceptance:
+[`Simple_Auth.md`](Simple_Auth.md).
+
+- `/login` dùng CSS/brand hiện có, VI/EN, username/password, show/hide, Caps Lock,
+  loading và generic error; không signup/forgot-password/profile/admin.
+- Login thành công quay về relative `returnTo` an toàn hoặc Jobs. Không lưu auth
+  data trong localStorage; language setting hiện có giữ nguyên.
+- `sidebar-tools` hiển thị shared username và Logout cạnh VI/EN; collapsed/mobile
+  giữ keyboard, tooltip/ARIA label và không thêm avatar menu.
+- Shared request helper thêm `X-OCR-Request` cho unsafe method và phát native
+  auth-expired event khi nhận `401`.
+- Session-expired modal login lại tại chỗ, giữ correction/segmentation draft,
+  tiếp tục read/poll nhưng không auto-replay mutation.
+- Protected response dùng `no-store`; logout rồi Back/refresh không đọc dữ liệu
+  cũ. UI phải pass `1440×900`, `1366×768`, `390×844`.
+- `FE-X19` không block Milestone C và không được gọi implemented trước khi
+  counterpart backend, generated contract, browser gate và live port-closure
+  smoke cùng pass.
+
 ## Thứ tự triển khai parity
 
 0. **Fixture-first:** khóa composition manifest/page ranges trước khi xây UI.
@@ -500,6 +528,8 @@ thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
    chart/calculator/retention/snapshot mở dần theo data gate.
 6. **User guide:** `FE-X18`; audit UI/OpenAPI trước, rồi triển khai đồng thời
    workflow guide, parameter reference, VI/EN, contextual help và evidence ảnh.
+7. **Shared demo auth:** backend `BE-X19` trước; sau đó `/login`, AppShell logout,
+   session-expired draft safety và cuối cùng Nginx/direct-port live smoke.
 
 ## Public-data mapping cần bảo vệ
 
@@ -542,6 +572,7 @@ thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
 | Sidebar re-decoration | LOCAL COMPLETE 2026-07-28 (`X14`/`X15`) | Navigation mới, actionable report, exact deep-link, partial error và ba viewport pass |
 | Token/cost/sizing | `X17A`–`X17E` LOCAL COMPLETE; `X17F` LIVE PENDING | One-PDF/provider Preview → bốn fixture → 20-job capacity gate |
 | User guide/reference | `X18` IMPLEMENTED; browser teardown pending | Hai route tĩnh, inventory đủ, VI/EN, 7 contextual link, 5 ảnh và accessibility; xác nhận runner thoát sạch sau 25 test |
+| Shared demo auth | `X19` APPROVED PLAN; NOT IMPLEMENTED | Login/logout/expiry/draft, generated types và exact host-port closure |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
 

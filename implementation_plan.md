@@ -39,11 +39,16 @@ bởi stack Next.js/FastAPI/Celery.
 Backend counterpart `BE-X18` là `N/A`; đặc tả chi tiết nằm tại
 [`User_guide.md`](User_guide.md).
 
+**Simple Auth 2026-07-28:** `BE-X19`/`FE-X19` đã khóa scope nhưng chưa triển
+khai. Đây là shared demo login qua HTTP, giữ `actor="anonymous"` và độc lập với
+sign-off Milestone C. Đặc tả chi tiết nằm tại
+[`Simple_Auth.md`](Simple_Auth.md).
+
 ## Cách dùng hai kế hoạch
 
 - Backend sở hữu schema, validation, persistence, worker, provider, deployment
   và evidence vận hành; frontend không chép lại các contract này.
-- Mỗi mục giao nhau dùng mã `X1`–`X18` và backlink đối xứng. Một mục chỉ được đóng
+- Mỗi mục giao nhau dùng mã `X1`–`X19` và backlink đối xứng. Một mục chỉ được đóng
   khi counterpart đã pass hoặc ghi rõ `N/A` cùng lý do.
 - Public schema thay đổi bắt buộc kiểm tra `BE-X3` và `FE-X3`.
 - Checkbox/test local không thay thế evidence provider/worker thật trong
@@ -71,6 +76,7 @@ Backend counterpart `BE-X18` là `N/A`; đặc tả chi tiết nằm tại
 | `X16` | Source PDF và logical documents | [`FE-X16`](frontend_plan.md#fe-x16) | Hồ sơ gộp được phân đoạn, xác nhận và review bền vững |
 | `X17` | Provider measurement, sizing contract và durable analytics | [`FE-X17`](frontend_plan.md#fe-x17) | Measurement Preview dùng dữ liệu thật; calculator/capacity chỉ mở sau sample gate |
 | `X18` | `N/A` — guide tĩnh, không backend/schema | [`FE-X18`](frontend_plan.md#fe-x18) | Hai route guide/reference khớp contract hiện có và full regression không drift |
+| `X19` | Shared credential, signed session, auth/CSRF seam và deployment port closure | [`FE-X19`](frontend_plan.md#fe-x19) | Login/logout/expiry giữ draft; không còn đường host bypass |
 
 ## Domain contract
 
@@ -485,6 +491,30 @@ Regression backend giữ nguyên và pass 62 tests; OpenAPI không drift. Fronte
 đã chạy tới đủ 25 test không báo test lỗi nhưng Windows teardown chưa thoát sạch
 trước timeout, nên không suy diễn đây là live/provider evidence.
 
+### BE-X19
+
+**P1 — Shared demo access gate — APPROVED PLAN; NOT IMPLEMENTED.** Counterpart:
+[`FE-X19`](frontend_plan.md#fe-x19). Đặc tả chi tiết và acceptance:
+[`Simple_Auth.md`](Simple_Auth.md).
+
+- Deployment target giữ `http://10.6.18.1:54846`; Nginx sở hữu đúng host bind
+  này, còn frontend/backend/Redis/worker không publish host port.
+- Một username/password dùng chung; username và `scrypt` password hash nằm trong
+  `.env`. Không user database, OIDC, TLS, role, API token hoặc auth service mới.
+- FastAPI sở hữu signed `HttpOnly`/`SameSite=Lax` cookie 8 giờ, login/session/
+  logout endpoint, dependency chung và CSRF guard. HTTP đã được chấp nhận nên
+  cookie không có `Secure`; đây chỉ là demo access gate trong LAN.
+- `OCR_AUTH_MODE=disabled|shared`; local test giữ `disabled`, deployment
+  `shared` thiếu config phải fail startup.
+- Actor OCR vẫn `anonymous`; auth không thêm durable field, không rewrite old
+  job và không thay worker/provider flow.
+- Login rate limit 10 lần/phút/IP tại Nginx; credential/session secret không vào
+  Git, API, job JSON, browser storage hoặc log.
+- Public Pydantic/OpenAPI cho auth endpoint là canonical; schema thay đổi phải
+  regenerate frontend types.
+- `BE-X19` không block Milestone C. Chỉ đổi trạng thái sau implementation, full
+  local gate và live browser/Nginx/direct-port smoke.
+
 <a id="sidebar-re-decoration-backend"></a>
 ## Sidebar re-decoration — backend counterpart
 
@@ -549,6 +579,9 @@ Python compileall và `git diff --check`.
    trước, aggregation/calculator/capacity sau sample gate.
 7. **Giai đoạn 7 — user guide:** `BE-X18` giữ `N/A`; chỉ chạy backend/OpenAPI
    regression cùng frontend `FE-X18`, không mở rộng public contract.
+8. **Giai đoạn 8 — shared demo auth:** `BE-X19 → FE-X19`; backend/session seam
+   trước, login/draft UX sau, cuối cùng chuyển host port ownership sang Nginx và
+   đóng direct-port bypass.
 
 ## Milestone C: runbook và deployment rollback
 
@@ -596,6 +629,27 @@ auth, verified approver và customer-production gate là scope riêng.
 Đây là ledger bằng chứng Milestone C internal-pilot duy nhất. Điền trên strong
 server; không ghi secret, provider URL, raw response, document text hoặc API key.
 Local test không thay thế được các mục dưới đây.
+
+### Live OCR workload hiện có — PASS 2026-07-28
+
+Kiểm kê read-only từ `data/jobs/*/job.json`,
+`data/jobs/*/provider_operations/*.json` và artifact đã persist, không đọc hoặc
+ghi nội dung tài liệu:
+
+- 6 job terminal xử lý 66 PDF/237 trang: 4 `completed`, 2
+  `completed_with_warnings`, tổng `failed_pages=0`;
+- 137 provider operation đều `success`, HTTP `200`, `usage_status=complete`;
+- 781 PNG artifact; 660 metadata field có giá trị, trong đó 544 field có bbox và
+  evidence URL;
+- 4 job `administrative_document` và 2 job `combined_dossier` nhiều PDF; tất cả
+  dùng `metadata + auto`;
+- Safe Events có một `page_pass_failed` đã được xử lý thành công; không còn trang
+  lỗi ở trạng thái terminal.
+
+Kết luận được chấp nhận: **live OCR workload PASS** và không chặn việc lập kế
+hoạch khác. Evidence này chưa bao phủ `full_ocr`, segmentation của một PDF gộp,
+correction/approval, topology runtime, backup, restart/interrupted hoặc rollback;
+vì vậy sign-off Milestone C tổng thể bên dưới vẫn **PENDING**.
 
 ### Build và môi trường
 
@@ -679,9 +733,9 @@ git diff --check
 ```
 
 Local checks là contract evidence, không chứng minh chất lượng OCR hoặc live
-runtime. Milestone C cũng không phải customer-production approval. Không thêm
-database, provider SDK, UI kit, state manager, BFF, WebSocket, auth,
-auto-retention hoặc host agent.
+runtime. Milestone C cũng không phải customer-production approval. Ngoài scope
+`BE-X19` đã khóa trong `Simple_Auth.md`, không thêm database, provider SDK, UI
+kit, state manager, BFF, WebSocket, auth khác, auto-retention hoặc host agent.
 
 ## Cơ sở kỹ thuật còn hiệu lực
 

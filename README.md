@@ -14,6 +14,10 @@ của `X7`–`X13`, `X16`, phần local của `X15` và `X17A`–`X17E` đã pas
 Milestone C chỉ là internal production-like pilot,
 không phải customer-production approval.
 
+Kế hoạch `X19` cho một shared demo login/logout đã được khóa nhưng **chưa triển
+khai**. Runtime hiện tại vẫn chưa có auth; chi tiết mục tiêu nằm tại
+[`Simple_Auth.md`](Simple_Auth.md).
+
 Giao diện Next.js có route Jobs, Upload, Manage/Documents, Logs, Reports,
 Codes, Sizing & Cost, [Hướng dẫn sử dụng](http://localhost:54846/guide),
 [Tra cứu tham số](http://localhost:54846/guide/reference) và job workspace.
@@ -53,6 +57,8 @@ provider production-like thật.
   và mapping ảnh parity.
 - `User_guide.md`: đặc tả nội dung/acceptance cho guide; nội dung sử dụng trực
   tiếp nằm tại `/guide` và `/guide/reference`, không phụ thuộc backend.
+- `Simple_Auth.md`: kế hoạch `BE-X19`/`FE-X19` cho shared demo login; chưa triển
+  khai.
 - `incomlpeted.md`: các việc còn phụ thuộc fixture, provider, strong server hoặc
   xác nhận operator, kèm điều kiện nghiệm thu.
 - `docs/ui-parity/`: ảnh ẩn danh tại 1440×900, 1366×768 và 390×844.
@@ -180,6 +186,11 @@ Next.js ghi trong container log có thể truy cập trực tiếp. Cả hai đ�
 bộ của Compose. Dùng `52409` cho luồng internal-pilot/cutover và `54846` khi cần
 truy cập trực tiếp frontend.
 
+Đây là runtime **hiện tại**. Target `X19` sau implementation sẽ giữ
+`http://10.6.18.1:54846` nhưng chuyển host port đó cho Nginx, bỏ publish `52409`
+và không publish frontend trực tiếp; không dùng hướng dẫn target này trước khi
+`BE-X19`/`FE-X19` pass.
+
 ```bash
 cp .env.example .env
 # chỉnh các giá trị chỉ dùng phía máy chủ trước khi chạy
@@ -200,6 +211,9 @@ drain worker và tạo bản sao lưu có checksum.
 - Next.js chạy trực tiếp hoặc frontend Compose: `54846`.
 - Điểm truy cập Compose: `52409`.
 - Redis nội bộ trong Compose: `6380`.
+
+Target `X19` chưa triển khai chỉ expose Nginx tại `10.6.18.1:54846`; xem
+[`Simple_Auth.md`](Simple_Auth.md).
 
 `OCR_ENDPOINT_EXTERNAL` mặc định là `true`; mỗi job phải ghi nhận sự đồng ý
 trước khi gửi ảnh trang đến endpoint bên ngoài. `BACKEND_PORT` cố ý không được
