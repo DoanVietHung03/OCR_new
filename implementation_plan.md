@@ -513,7 +513,7 @@ trước timeout, nên không suy diễn đây là live/provider evidence.
   Git, API, job JSON, browser storage hoặc log.
 - Public Pydantic/OpenAPI cho auth endpoint là canonical; schema thay đổi phải
   regenerate frontend types.
-- `BE-X19` không block Milestone C. Backend và full local regression pass 65
+- `BE-X19` không block Milestone C. Backend và full local regression pass 66
   tests; generated OpenAPI/types, frontend build và 27 browser checks pass.
   Docker/Nginx syntax, exact host bind/direct-port closure và full live OCR smoke
   vẫn cần server có Docker và IP `10.6.18.1`.

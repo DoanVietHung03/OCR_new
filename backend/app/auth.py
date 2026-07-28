@@ -13,11 +13,14 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
-from .settings import settings
-
 COOKIE = "ocr_session"
 SESSION_SECONDS = 8 * 60 * 60
 SCRYPT_N, SCRYPT_R, SCRYPT_P = 16384, 8, 1
+
+
+def _settings():
+    from .settings import settings
+    return settings
 
 
 class LoginRequest(BaseModel):
@@ -61,11 +64,13 @@ def verify_password(password: str, encoded: str) -> bool:
 
 
 def _credential_version() -> str:
+    settings = _settings()
     value = f"{settings.ocr_auth_username}\0{settings.ocr_auth_password_hash}".encode()
     return hashlib.sha256(value).hexdigest()[:24]
 
 
 def issue_session(now: int | None = None) -> tuple[str, int]:
+    settings = _settings()
     issued = int(time.time() if now is None else now)
     expires = issued + SESSION_SECONDS
     payload = _b64(json.dumps({"iat": issued, "exp": expires, "cv": _credential_version()}, separators=(",", ":")).encode())
@@ -74,6 +79,7 @@ def issue_session(now: int | None = None) -> tuple[str, int]:
 
 
 def current_session(request: Request, now: int | None = None) -> dict | None:
+    settings = _settings()
     if settings.ocr_auth_mode == "disabled":
         current = int(time.time() if now is None else now)
         return {"iat": current, "exp": current + SESSION_SECONDS, "username": "anonymous"}
@@ -106,6 +112,7 @@ def require_authenticated(request: Request) -> dict:
 
 
 def require_safe_browser_request(request: Request) -> None:
+    settings = _settings()
     if settings.ocr_auth_mode != "shared" or request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
         return
     if request.headers.get("X-OCR-Request") != "browser":
@@ -120,6 +127,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login", response_model=SessionResponse)
 async def login(payload: LoginRequest, request: Request, response: Response):
+    settings = _settings()
     require_safe_browser_request(request)
     username = payload.username.strip()
     if (
@@ -135,6 +143,7 @@ async def login(payload: LoginRequest, request: Request, response: Response):
 
 @router.get("/session", response_model=SessionResponse)
 async def session(request: Request):
+    settings = _settings()
     if settings.ocr_auth_mode == "disabled":
         return {"authenticated": False, "username": "", "expires_at": datetime.now(timezone.utc)}
     value = require_authenticated(request)

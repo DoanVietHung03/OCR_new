@@ -186,8 +186,11 @@ bind nếu host không có IP này.
 
 ```bash
 cp .env.example .env
-# chỉnh các giá trị chỉ dùng phía máy chủ trước khi chạy
+# Không truyền password trên command line; lệnh sẽ hỏi hai lần bằng getpass.
 uv run --project backend python -m app.auth hash-password
+python -c "import secrets; print(secrets.token_hex(32))"
+# Dán hai output lần lượt vào OCR_AUTH_PASSWORD_HASH và
+# OCR_AUTH_SESSION_SECRET trong .env, rồi chỉnh các giá trị server-only còn lại.
 docker compose config
 docker compose up -d --build redis backend worker frontend nginx
 docker compose ps

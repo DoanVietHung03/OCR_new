@@ -1,3 +1,7 @@
+import os
+import subprocess
+import sys
+
 from fastapi.testclient import TestClient
 
 from app.auth import COOKIE, SESSION_SECONDS, current_session, hash_password, issue_session, verify_password
@@ -76,3 +80,14 @@ def test_disabled_session_does_not_expose_login_controls(monkeypatch):
     payload = TestClient(app).get("/api/auth/session").json()
     assert payload["authenticated"] is False
     assert payload["username"] == ""
+
+
+def test_hash_password_cli_is_available_before_auth_config():
+    environment = {**os.environ, "OCR_AUTH_MODE": "shared", "OCR_AUTH_SESSION_SECRET": "invalid"}
+    result = subprocess.run(
+        [sys.executable, "-m", "app.auth", "wrong-command"],
+        cwd="backend", env=environment, capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "usage: python -m app.auth hash-password" in result.stderr
+    assert "ValidationError" not in result.stderr
