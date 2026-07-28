@@ -180,7 +180,7 @@ Khi schema FastAPI thay đổi, chạy `pnpm api:generate` và commit cả
 
 ## Chạy bằng Docker Compose
 
-Nginx là service duy nhất publish host port tại `10.6.18.1:54846`; frontend,
+Nginx là service duy nhất publish host port tại `10.6.18.76:54846`; frontend,
 backend, Redis và worker chỉ hoạt động trong mạng Compose. Auth deployment fail
 bind nếu host không có IP này.
 
@@ -194,8 +194,8 @@ python -c "import secrets; print(secrets.token_hex(32))"
 docker compose config
 docker compose up -d --build redis backend worker frontend nginx
 docker compose ps
-curl -fsS http://10.6.18.1:54846/health
-curl -fsSI http://10.6.18.1:54846/login
+curl -fsS http://10.6.18.76:54846/health
+curl -fsSI http://10.6.18.76:54846/login
 ```
 
 Không dùng Compose với `OCR_DATA_DIR` thật cho đến khi đã dừng nhận upload,
@@ -205,7 +205,7 @@ drain worker và tạo bản sao lưu có checksum.
 
 - FastAPI chạy trực tiếp: `50177`.
 - Next.js chạy trực tiếp trong local development: `54846`.
-- Điểm truy cập Compose auth: `10.6.18.1:54846` qua Nginx.
+- Điểm truy cập Compose auth: `10.6.18.76:54846` qua Nginx.
 - Redis nội bộ trong Compose: `6380`.
 
 Live gate `X19` cần xác minh exact port closure trên server; xem

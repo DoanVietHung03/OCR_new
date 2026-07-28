@@ -5,7 +5,7 @@
 **Ngày khóa scope:** 2026-07-28
 
 **Đích:** thêm một cổng đăng nhập/đăng xuất cơ bản cho bản demo OCR nội bộ tại
-`http://10.6.18.1:54846`, dùng đúng một cặp username/password dùng chung.
+`http://10.6.18.76:54846`, dùng đúng một cặp username/password dùng chung.
 
 File này là đặc tả chi tiết của `BE-X19`/`FE-X19`.
 [`implementation_plan.md`](implementation_plan.md) và
@@ -14,9 +14,9 @@ backend/frontend; không chép toàn bộ nội dung file này sang hai kế ho�
 
 ## 1. Quyết định đã chốt
 
-- Giữ URL `http://10.6.18.1:54846`; không thêm HTTPS, certificate, OIDC,
+- Giữ URL `http://10.6.18.76:54846`; không thêm HTTPS, certificate, OIDC,
   `oauth2-proxy` hoặc Identity Provider.
-- Nginx sở hữu duy nhất host bind `10.6.18.1:54846`; frontend, backend, Redis và
+- Nginx sở hữu duy nhất host bind `10.6.18.76:54846`; frontend, backend, Redis và
   worker không publish host port trong deployment auth.
 - Có một username và password dùng chung. Không có user database, đăng ký, quên
   mật khẩu, đổi mật khẩu trong UI, role, ownership hoặc permission matrix.
@@ -60,9 +60,9 @@ toàn hơn cho HTTP.
 
 ```text
 Browser
-  │ HTTP http://10.6.18.1:54846
+  │ HTTP http://10.6.18.76:54846
   ▼
-Nginx host bind 10.6.18.1:54846
+Nginx host bind 10.6.18.76:54846
   ├─ public login/static/health
   ├─ protected UI ─────────────► Next.js :54846 (Compose private)
   └─ /api/* ───────────────────► FastAPI :50177 (Compose private)
@@ -109,7 +109,7 @@ hash vẫn được cache immutable.
 
 ```dotenv
 OCR_AUTH_MODE=shared
-OCR_PUBLIC_ORIGIN=http://10.6.18.1:54846
+OCR_PUBLIC_ORIGIN=http://10.6.18.76:54846
 OCR_AUTH_USERNAME=ocr
 OCR_AUTH_PASSWORD_HASH=scrypt:...
 OCR_AUTH_SESSION_SECRET=<64-hex-characters>
@@ -295,7 +295,7 @@ request tiếp theo; không thêm cross-tab session framework.
 
 Deployment auth:
 
-- Nginx publish duy nhất `10.6.18.1:54846:80`.
+- Nginx publish duy nhất `10.6.18.76:54846:80`.
 - Bỏ host publish `52409`.
 - Bỏ `ports: ["54846:54846"]` khỏi frontend.
 - Backend `50177`, frontend `54846`, Redis `6380`, worker chỉ ở Compose network.
@@ -307,7 +307,7 @@ Deployment auth:
 Direct local development vẫn có thể chạy backend `50177` và frontend `54846`
 với `OCR_AUTH_MODE=disabled`. Đây không phải deployment auth.
 
-Nếu host không có IP `10.6.18.1`, Compose phải fail bind thay vì tự mở trên
+Nếu host không có IP `10.6.18.76`, Compose phải fail bind thay vì tự mở trên
 `0.0.0.0`.
 
 ## 11. Phạm vi file dự kiến
@@ -367,7 +367,7 @@ Không triển khai OIDC/TLS/user management “cho sau này”.
 
 ### Nginx/Compose live
 
-- Chỉ `10.6.18.1:54846` reachable; `52409`, frontend/backend/Redis ports không
+- Chỉ `10.6.18.76:54846` reachable; `52409`, frontend/backend/Redis ports không
   reachable từ client network.
 - Không session: UI về login, API JSON `401`, health `200`.
 - Cookie có `HttpOnly`, `SameSite=Lax`, `Path=/`, không `Domain`; xác nhận rõ
@@ -398,7 +398,7 @@ Rollout:
 1. Tạo username, password hash và session secret ngoài Git.
 2. Chạy tests/build/OpenAPI check.
 3. Validate `docker compose config` và Nginx config.
-4. Deploy với Nginx sở hữu `10.6.18.1:54846`.
+4. Deploy với Nginx sở hữu `10.6.18.76:54846`.
 5. Từ client thật kiểm tra login, returnTo, logout, CSRF, rate limit, direct-port
    closure và full OCR smoke.
 
@@ -420,7 +420,7 @@ job schema hoặc actor nên không restore dữ liệu trừ khi dữ liệu th
 - một shared credential, một policy full access, không permission branch;
 - login/logout/returnTo/expiry/draft flow pass;
 - toàn protected surface bị chặn khi thiếu session;
-- host chỉ expose `10.6.18.1:54846`, không direct-port bypass;
+- host chỉ expose `10.6.18.76:54846`, không direct-port bypass;
 - password hash, signed cookie, CSRF và rate limit đúng contract;
 - credential/session secret không vào Git/API/job/browser storage/log;
 - actor vẫn `anonymous`, old job không rewrite;

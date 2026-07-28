@@ -217,13 +217,13 @@ revision conflict, and Continue in the browser gate.
 - Direct local development with `OCR_AUTH_MODE=disabled` may still use:
 - Direct backend: `50177`.
 - Direct frontend: `54846`.
-- Auth deployment publishes only Nginx on `10.6.18.1:54846`; backend, frontend,
+- Auth deployment publishes only Nginx on `10.6.18.76:54846`; backend, frontend,
   worker and Redis stay private. The frontend image builds its `/api/*` rewrite to
   `http://backend:50177`, while Nginx routes `/api/*` directly to backend.
 - Do not add `BACKEND_PORT`; it does not configure the listener.
 - Browser API calls remain relative `/api/*`; TLS terminates outside Compose.
-- The live `X19` target is `http://10.6.18.1:54846`, with Nginx alone binding
-  `10.6.18.1:54846:80`; host `52409` and the frontend host publish are removed.
+- The live `X19` target is `http://10.6.18.76:54846`, with Nginx alone binding
+  `10.6.18.76:54846:80`; host `52409` and the frontend host publish are removed.
   HTTP risk is explicitly limited to the internal demo.
 
 ## Working procedure

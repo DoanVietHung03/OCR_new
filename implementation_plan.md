@@ -498,7 +498,7 @@ trước timeout, nên không suy diễn đây là live/provider evidence.
 [`FE-X19`](frontend_plan.md#fe-x19). Đặc tả chi tiết và acceptance:
 [`Simple_Auth.md`](Simple_Auth.md).
 
-- Deployment target giữ `http://10.6.18.1:54846`; Nginx sở hữu đúng host bind
+- Deployment target giữ `http://10.6.18.76:54846`; Nginx sở hữu đúng host bind
   này, còn frontend/backend/Redis/worker không publish host port.
 - Một username/password dùng chung; username và `scrypt` password hash nằm trong
   `.env`. Không user database, OIDC, TLS, role, API token hoặc auth service mới.
@@ -516,7 +516,7 @@ trước timeout, nên không suy diễn đây là live/provider evidence.
 - `BE-X19` không block Milestone C. Backend và full local regression pass 66
   tests; generated OpenAPI/types, frontend build và 27 browser checks pass.
   Docker/Nginx syntax, exact host bind/direct-port closure và full live OCR smoke
-  vẫn cần server có Docker và IP `10.6.18.1`.
+  vẫn cần server có Docker và IP `10.6.18.76`.
 
 <a id="sidebar-re-decoration-backend"></a>
 ## Sidebar re-decoration — backend counterpart
@@ -609,12 +609,12 @@ docker compose up -d --build redis backend worker frontend nginx
 docker compose ps
 docker compose logs --tail=200 backend worker redis nginx
 docker compose exec worker celery -A app.workers.tasks:celery_app inspect registered
-curl -fsS http://10.6.18.1:54846/health
-curl -fsSI http://10.6.18.1:54846/login
-curl -sS -o /dev/null -w '%{http_code}\n' http://10.6.18.1:54846/api/state # expected 401
+curl -fsS http://10.6.18.76:54846/health
+curl -fsSI http://10.6.18.76:54846/login
+curl -sS -o /dev/null -w '%{http_code}\n' http://10.6.18.76:54846/api/state # expected 401
 ```
 
-Đăng nhập qua browser Nginx `http://10.6.18.1:54846`, chạy `63-btc.pdf` với
+Đăng nhập qua browser Nginx `http://10.6.18.76:54846`, chạy `63-btc.pdf` với
 `metadata`/`full_ocr`, Bìa với
 `metadata`, hồ sơ gộp rõ với cả hai task và hồ sơ gộp khó với `metadata` + manual
 boundary correction. Ghi source/document/excluded counts, field/evidence,
@@ -684,7 +684,7 @@ vì vậy sign-off Milestone C tổng thể bên dưới vẫn **PENDING**.
 ### Runtime gate
 
 - Repair repro `63-btc.pdf` cho hai task: _pending_
-- Nginx health/login/API tại `10.6.18.1:54846`: _pending_
+- Nginx health/login/API tại `10.6.18.76:54846`: _pending_
 - Backend/Redis internal-only: _pending_
 - Worker registered `ocr.process_job`, concurrency `1`, prefetch `1`: _pending_
 - Upload trên 1 MiB không `413`: _pending_
