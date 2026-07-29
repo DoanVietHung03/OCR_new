@@ -1,130 +1,67 @@
-# Dịch vụ OCR
+# IntelliDoc OCR – xử lý tài liệu hành chính tiếng Việt
 
-Hệ thống OCR tài liệu hành chính tiếng Việt, chỉ nhận PDF. Stack chuyển đổi sử
-dụng Next.js, FastAPI, Celery, Redis và một endpoint OCR tương thích OpenAI do
-máy chủ cấu hình.
+IntelliDoc OCR là hệ thống chỉ nhận **PDF**, dùng để trích xuất, rà soát và phê
+duyệt dữ liệu từ văn bản hành chính, bìa hồ sơ hoặc hồ sơ gộp. Hệ thống gồm
+Next.js, FastAPI, Celery, Redis và một endpoint OCR tương thích OpenAI do máy
+chủ cấu hình.
 
-Milestone A, B và frontend Next.js đã có closure local ngày 2026-07-21.
-Repair Gate đã pass local ngày 2026-07-22; contract local
-của `X7`–`X13`, `X16`, phần local của `X15` và `X17A`–`X17E` đã pass.
-`X7`/`X16` vẫn IN PROGRESS ở gate tổng thể vì còn thiếu fixture/provider live;
-`X14` còn benchmark thật và `X17F` còn one-PDF/provider/fixture/server evidence.
-Điều kiện hoàn thành các phần phụ thuộc bên ngoài nằm trong
-[`incomlpeted.md`](incomlpeted.md).
-Milestone C chỉ là internal production-like pilot,
-không phải customer-production approval.
+Các đặc điểm chính:
 
-`X19` shared demo login/logout đã **hoàn tất local**; backend, build và browser
-gate pass, còn live Nginx/direct-port/full OCR smoke. Chi tiết nằm tại
-[`Simple_Auth.md`](Simple_Auth.md).
+- Tải lên từng PDF hoặc chọn một thư mục chứa nhiều PDF.
+- Xử lý ba chế độ: `administrative_document`, `dossier_cover` và
+  `combined_dossier`.
+- Rà soát phân đoạn, sửa dữ liệu, phê duyệt, vẽ Manual crop và lưu audit bền
+  vững.
+- Theo dõi job, log an toàn, báo cáo, Code Catalog, System Monitor và chi phí
+  OCR trên giao diện VI/EN.
+- Lưu JSON, PDF và artifact trong `data/jobs/`; Redis chỉ làm hàng đợi.
 
-Giao diện Next.js có route Jobs, Upload, Manage/Documents, Logs, Reports,
-Codes, Sizing & Cost, [Hướng dẫn sử dụng](http://localhost:54846/guide),
-[Tra cứu tham số](http://localhost:54846/guide/reference) và job workspace.
-Dashboard nhóm số liệu thành Trạng thái công việc (4 thẻ) và Khối lượng nội dung
-(3 thẻ), dùng một ghi chú phạm vi lọc chung; danh sách chỉ hiện progress khi job
-đang xử lý và đặt Xóa từng dòng trong menu phụ có bước xác nhận.
-Dữ liệu giàu gồm Provider Profile, OCR text/quality/
-evidence/suggestion, artifact manifest, Safe Events, report/benchmark nullable,
-Code Catalog `_codes.json` và System Monitor allowlist. Mọi số liệu đều lấy từ
-API/dữ liệu bền vững hoặc hiển thị unavailable trung thực.
-Trang Upload cho chọn nhiều PDF trực tiếp hoặc chọn một thư mục chứa nhiều PDF
-bằng native browser picker; cả hai dùng cùng giới hạn và flow upload tuần tự.
-Closure audit còn kiểm chứng sort, job timing, document warnings, scoped Logs,
-report throughput/coverage và CPU load đều đi qua generated typed contract.
+> **Phạm vi hiện tại:** Milestone A và B đã hoàn tất cục bộ. Milestone C vẫn là
+> cổng thử nghiệm nội bộ gần giống production, không phải phê duyệt
+> customer-production.
 
-Repair Gate ngày 2026-07-22 đạt 28 backend tests, 10 legacy compatibility tests,
-focused browser coverage cho task/page retry và partial-result UI, typecheck,
-build, OpenAPI/types và diff checks. Đây là baseline cần bảo vệ. Contract local
-hiện có field policy dùng chung, strict write DTO, missing-field
-atomic approval, typed blocker/risk/error/Safe Events, field evidence, Processing
-Mode, review segmentation theo revision, Continue, rerun reuse/resegment,
-readiness probe, durable progress/failure/timeline và triage. Create/rerun từ chối
-Provider Profile chưa cấu hình hoặc không hỗ trợ mode/task/page scope đã chọn.
-Sizing & Cost đo từng provider attempt, aggregate tài nguyên/token/cost bền vững,
-giữ catalog/snapshot dưới `OCR_DATA_DIR/_sizing*`, và chỉ mở calculator/capacity
-theo sample/coverage gate; thiếu dữ liệu luôn hiển thị unavailable.
-Bộ backend đạt 54 tests ở baseline; browser `20 passed` và eager
-Celery/fake-provider pass. Đây chưa phải bằng chứng bốn fixture, restart hoặc
-provider production-like thật.
+## Giao diện
 
-## Cấu trúc repository
+| Dashboard | Không gian rà soát |
+| --- | --- |
+| ![Dashboard hiển thị trạng thái job và khối lượng nội dung](docs/ui-parity/dashboard.png) | ![Không gian rà soát kết quả OCR](docs/ui-parity/review-workspace.png) |
 
-- `frontend/`: giao diện Next.js App Router và các kiểu API được sinh tự động.
-- `backend/`: FastAPI, kho job bền vững, Celery task và các bài kiểm tra.
-- `nginx/`: định tuyến deployment trên cùng một domain.
-- `data/jobs/`: JSON, PDF và artifact bền vững của job; không lưu trong Redis.
-- `implementation_plan.md`: nguồn chuẩn backend, Repair Gate, cutover và ledger
-  bằng chứng Milestone C.
-- `frontend_plan.md`: nguồn chuẩn frontend, workflow, regression gate
-  và mapping ảnh parity.
-- `User_guide.md`: đặc tả nội dung/acceptance cho guide; nội dung sử dụng trực
-  tiếp nằm tại `/guide` và `/guide/reference`, không phụ thuộc backend.
-- `Simple_Auth.md`: contract `BE-X19`/`FE-X19` cho shared demo login; live gate còn mở
-  khai.
-- `incomlpeted.md`: các việc còn phụ thuộc fixture, provider, strong server hoặc
-  xác nhận operator, kèm điều kiện nghiệm thu.
-- `docs/ui-parity/`: ảnh ẩn danh tại 1440×900, 1366×768 và 390×844.
+Các ảnh ẩn danh khác nằm trong [`docs/ui-parity/`](docs/ui-parity/) và
+[`frontend/public/guide/`](frontend/public/guide/).
 
-## Các ràng buộc đã khóa
+## Mục lục
 
-- Chỉ nhận PDF: tối đa 15 PDF và 200 MiB cho mỗi job; tối đa 100 trang mỗi PDF.
-- Có thể chọn các PDF riêng lẻ hoặc chọn một thư mục PDF; không hỗ trợ ZIP, ảnh
-  hay quản lý directory tree.
-- PDF được kiểm tra trước khi dispatch. PDF không hợp lệ, có mật khẩu hoặc vượt
-  giới hạn sẽ làm toàn bộ job thất bại mà không gọi provider.
-- FastAPI chỉ xử lý request ngắn. Celery render trang ở 200 DPI và gọi provider.
-- Job mới chọn một `processing_mode`: `administrative_document`,
-  `dossier_cover` hoặc `combined_dossier`. Mode chọn schema/prompt; Provider
-  Profile chọn engine/model và capability, hai khái niệm không suy lẫn nhau.
-- Với `combined_dossier` nhiều PDF, worker sắp theo tên file: PDF đầu là một Bìa
-  trọn vẹn, mỗi PDF sau là một văn bản trọn vẹn và không gọi provider để phân
-  đoạn. Nếu chỉ có một PDF gộp, worker vẫn phân đoạn từng trang bằng provider.
-  Reviewer có thể xác nhận từng PDF hoặc xác nhận tất cả PDF hợp lệ; hệ thống
-  vẫn gửi tuần tự từng revision rồi mới dispatch extraction. Folder nhiều PDF
-  chỉ cho chọn Bìa/Văn bản; `excluded` chỉ dành cho trang trắng/phân cách trong
-  một PDF gộp, còn `unclassified` là trạng thái lỗi cần sửa chứ không phải lựa chọn.
-- `/start` chỉ dispatch một lần. Worker production dùng concurrency `1` và
-  prefetch `1`; job không tự động retry hoặc resume.
-- Provider, model, phiên bản prompt và trạng thái endpoint bên ngoài được chụp
-  lại theo từng job. URL, khóa, header, phản hồi thô của provider và lỗi không
-  an toàn không bao giờ được lưu.
-- Backend công bố ordered expected/required fields, typed blockers/risks và
-  `logical_document_type`. Văn bản mới dùng schema 11 field, Bìa dùng schema 13
-  field với `khoa` và không có `hop_so`; dữ liệu legacy vẫn đọc được nhưng không
-  bị áp policy mới hoặc rewrite.
-- Với văn bản hành chính, `Metadata nhanh + Tự động` lấy metadata đầu văn bản ở
-  trang đầu rồi tìm riêng nhóm quyền hạn/chức vụ/người ký từ cuối về đầu, dừng
-  khi gặp trang có đủ chức vụ + người ký. `Số trang tối đa` giới hạn tổng số
-  trang candidate; `Tất cả trang` và `Trang đầu và cuối` giữ nguyên nghĩa.
-- Prompt chữ ký đọc cả chữ in bị con dấu đỏ hoặc nét ký che một phần. Crop tự
-  động chỉ được công bố cho field thắng cuối cùng và vùng có nội dung; bbox trắng
-  hoặc `value/source_text` mâu thuẫn được đánh dấu cần rà soát thay vì hiển thị
-  bằng chứng sai. Lý do thiếu evidence được phân biệt thành bbox thiếu, bbox
-  không hợp lệ hoặc crop gần như trắng; cảnh báo đối chiếu giá trị được giữ
-  riêng. Crop không trắng chỉ chứng minh artifact tồn tại, reviewer vẫn phải
-  kiểm tra đúng ngữ nghĩa hoặc vẽ Manual crop; pipeline không gọi thêm OCR hay
-  provider chỉ để kiểm tra crop.
-- Nội dung chỉnh sửa, phê duyệt, audit bất biến và bằng chứng crop thủ công được
-  lưu bền vững. Approval độc lập từng logical document. Rerun tạo job sạch và
-  explicit reuse hoặc chạy lại segmentation; job nguồn luôn bất biến.
-- `data/jobs/` là nguồn dữ liệu bền vững duy nhất. Redis không có volume lưu trữ.
-- Code Catalog lưu atomic tại `OCR_DATA_DIR/_codes.json`, có revision conflict;
-  không thêm database.
-- Trình duyệt chỉ gọi đường dẫn tương đối `/api/*`; cấu hình provider và secret
-  không bao giờ được gửi xuống frontend.
-- `/api/system-metrics` chỉ trả CPU/RAM, dung lượng filesystem chứa
-  `OCR_DATA_DIR` và GPU mà backend nhìn thấy theo best-effort. Endpoint không trả
-  hostname, path, process, raw command output, secret hoặc provider config;
-  Compose mặc định không yêu cầu GPU.
+- [Yêu cầu và phụ thuộc](#yêu-cầu-và-phụ-thuộc)
+- [Cài đặt cục bộ](#cài-đặt-cục-bộ)
+- [Cách sử dụng](#cách-sử-dụng)
+- [Chạy bằng Docker Compose](#chạy-bằng-docker-compose)
+- [Kiểm tra](#kiểm-tra)
+- [Xử lý lỗi và câu hỏi thường gặp](#xử-lý-lỗi-và-câu-hỏi-thường-gặp)
+- [Cấu trúc repository](#cấu-trúc-repository)
+- [Ràng buộc kỹ thuật](#ràng-buộc-kỹ-thuật)
+- [Tài liệu liên quan](#tài-liệu-liên-quan)
+- [Trạng thái và lỗi đã biết](#trạng-thái-và-lỗi-đã-biết)
 
-## Yêu cầu môi trường
+## Yêu cầu và phụ thuộc
+
+### Công cụ
 
 - Python 3.12 và `uv`.
 - Node.js 22 và pnpm 10.
-- Docker Compose chỉ cần cho môi trường live internal-pilot và Milestone C.
+- Một Redis có thể kết nối khi chạy Celery trực tiếp.
+- Docker Compose chỉ cần cho môi trường internal-pilot và Milestone C.
+- Một endpoint OCR tương thích OpenAI do phía máy chủ cấu hình.
 
-## Thiết lập cục bộ
+### Thành phần chính
+
+- Frontend: Next.js và React, khai báo tại
+  [`frontend/package.json`](frontend/package.json).
+- Backend: FastAPI, Celery và các thư viện OCR, khai báo tại
+  [`backend/pyproject.toml`](backend/pyproject.toml).
+- Phiên bản Python được khóa trong [`backend/uv.lock`](backend/uv.lock).
+- Nginx và Redis phục vụ deployment bằng Docker Compose.
+
+## Cài đặt cục bộ
 
 Chạy từ thư mục gốc của repository:
 
@@ -134,58 +71,69 @@ uv sync --project backend
 pnpm install
 ```
 
-Điền các giá trị provider thật, chỉ dùng phía máy chủ, vào `.env`. Redis host
-`redis` trong file mẫu dành cho Compose; khi chạy Celery trực tiếp phải dùng
-một Redis host có thể kết nối được.
+Điền các giá trị provider thật vào `.env`. Đây là cấu hình chỉ dùng phía máy
+chủ; không đưa URL, khóa hoặc header của provider xuống frontend.
 
-Khởi động API và frontend trong hai terminal riêng:
+Host Redis `redis` trong file mẫu dành cho Compose. Khi chạy Celery trực tiếp,
+hãy đổi cả hai URL Celery sang một Redis mà máy đang chạy worker có thể kết nối.
+
+## Cách sử dụng
+
+### 1. Khởi động ứng dụng
+
+Mở hai terminal riêng:
 
 ```powershell
 uv run --env-file .env --project backend uvicorn app.main:app --host 0.0.0.0 --port 50177 --reload
 pnpm --dir frontend dev -- --hostname 0.0.0.0 --port 54846
 ```
 
-Mặc định frontend proxy các request tương đối `/api/*` đến
-`http://127.0.0.1:50177`. Chỉ đặt `OCR_BACKEND_URL` khi backend trực tiếp dùng
-URL khác. Môi trường phát triển Next hiện cho phép `127.0.0.1` và `10.6.18.76`;
-hãy cập nhật `allowedDevOrigins` trong `frontend/next.config.ts` nếu dùng một
-máy chủ LAN khác.
+Mở <http://localhost:54846>. Frontend mặc định chuyển tiếp `/api/*` đến
+`http://127.0.0.1:50177`.
 
-Để chạy worker trực tiếp, trỏ cả hai URL Celery đến cùng một Redis có thể kết
-nối được, sau đó chạy:
+Khởi động worker trong terminal thứ ba:
 
 ```powershell
 uv run --env-file .env --project backend celery -A app.workers.tasks:celery_app worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1
 ```
 
-## Kiểm tra
+### 2. Thực hiện một job OCR
 
-Local contract gate không cần Redis, worker đang chạy, Docker, GPU hoặc provider
-thật và vẫn bắt buộc trước strong-server gate:
+1. Mở **Upload** và chọn tối đa 15 PDF, tổng dung lượng tối đa 200 MiB.
+2. Chọn Provider Profile, chế độ xử lý và phạm vi trang.
+3. Nếu endpoint là bên ngoài, xác nhận việc gửi ảnh trang ra endpoint đó.
+4. Tạo job và bắt đầu xử lý.
+5. Với hồ sơ gộp, rà soát và xác nhận cấu trúc trước khi tiếp tục trích xuất.
+6. Mở workspace để kiểm tra OCR text, metadata, cảnh báo và bằng chứng crop.
+7. Sửa các trường cần thiết rồi chọn **Save and approve** khi không còn blocker.
+8. Xem artifact, Safe Events, báo cáo hoặc chạy lại job bằng
+   `reuse_segmentation`/`resegment` khi cần.
 
-```powershell
-uv run --project backend pytest backend/tests -q
-pnpm --dir frontend typecheck
-pnpm --dir frontend build
-pnpm --dir frontend e2e:smoke
-pnpm api:check
-python -m compileall -q backend/app
-git diff --check
-```
+Ví dụ với một hồ sơ nhiều PDF: đặt tên file theo đúng thứ tự mong muốn. Ở chế độ
+`combined_dossier`, PDF đầu tiên được xem là một Bìa hoàn chỉnh; mỗi PDF sau là
+một văn bản hoàn chỉnh. Nếu tải một PDF gộp duy nhất, hệ thống phân đoạn từng
+trang và yêu cầu người rà soát xác nhận ranh giới.
 
-Playwright kiểm tra workflow dùng mock, một luồng Next/FastAPI/eager-task thật
-với fake provider cục bộ, desktop `1440×900`, laptop `1366×768` và safety smoke
-mobile `390×844`. Các kiểm tra này không chứng minh hành vi của
-Redis/Celery/provider trên live internal-pilot stack.
+Hướng dẫn đầy đủ có tại
+[Hướng dẫn sử dụng](http://localhost:54846/guide) và
+[Tra cứu tham số](http://localhost:54846/guide/reference).
 
-Khi schema FastAPI thay đổi, chạy `pnpm api:generate` và commit cả
-`frontend/openapi.json` lẫn `frontend/lib/api-schema.ts`.
+### Cổng mặc định
+
+| Thành phần | Địa chỉ |
+| --- | --- |
+| FastAPI chạy trực tiếp | `http://localhost:50177` |
+| Next.js chạy trực tiếp | `http://localhost:54846` |
+| Compose có xác thực | `http://10.6.18.76:54846` qua Nginx |
+| Redis trong Compose | `redis:6380` |
+
+`BACKEND_PORT` không được hỗ trợ; backend luôn lắng nghe tại `50177`.
 
 ## Chạy bằng Docker Compose
 
 Nginx là service duy nhất publish host port tại `10.6.18.76:54846`; frontend,
-backend, Redis và worker chỉ hoạt động trong mạng Compose. Auth deployment fail
-bind nếu host không có IP này.
+backend, Redis và worker chỉ hoạt động trong mạng Compose. Deployment sẽ không
+bind được nếu host không có IP này.
 
 ```bash
 cp .env.example .env
@@ -204,21 +152,126 @@ curl -fsSI http://10.6.18.76:54846/login
 Không dùng Compose với `OCR_DATA_DIR` thật cho đến khi đã dừng nhận upload,
 drain worker và tạo bản sao lưu có checksum.
 
-## Cổng và dữ liệu
+## Kiểm tra
 
-- FastAPI chạy trực tiếp: `50177`.
-- Next.js chạy trực tiếp trong local development: `54846`.
-- Điểm truy cập Compose auth: `10.6.18.76:54846` qua Nginx.
-- Redis nội bộ trong Compose: `6380`.
+Local contract gate không cần Redis, worker đang chạy, Docker, GPU hoặc provider
+thật:
 
-Live gate `X19` cần xác minh exact port closure trên server; xem
-[`Simple_Auth.md`](Simple_Auth.md).
+```powershell
+uv run --project backend pytest backend/tests -q
+pnpm --dir frontend typecheck
+pnpm --dir frontend build
+pnpm --dir frontend e2e:smoke
+pnpm api:check
+python -m compileall -q backend/app
+git diff --check
+```
 
-`OCR_ENDPOINT_EXTERNAL` mặc định là `true`; mỗi job phải ghi nhận sự đồng ý
-trước khi gửi ảnh trang đến endpoint bên ngoài. `BACKEND_PORT` cố ý không được
-hỗ trợ — backend luôn lắng nghe tại `50177`.
+Playwright kiểm tra workflow mock, một luồng Next/FastAPI/eager-task với fake
+provider, desktop `1440×900`, laptop `1366×768` và safety smoke mobile
+`390×844`. Các kiểm tra này không chứng minh hành vi Redis, Celery hoặc provider
+trên live internal-pilot stack.
 
-Xem [implementation_plan.md](implementation_plan.md) cho backend, Repair Gate,
-cutover và evidence Milestone C; xem
-[frontend_plan.md](frontend_plan.md) cho frontend và các
-counterpart `FE-X1`–`FE-X17`.
+Khi schema FastAPI thay đổi, chạy `pnpm api:generate` và đưa cả
+`frontend/openapi.json` lẫn `frontend/lib/api-schema.ts` vào cùng thay đổi.
+
+## Xử lý lỗi và câu hỏi thường gặp
+
+### Worker không kết nối được Redis
+
+Giá trị host `redis` chỉ phân giải bên trong mạng Compose. Khi chạy worker trực
+tiếp, cấu hình broker URL và result backend trỏ đến cùng một Redis mà máy local
+có thể truy cập.
+
+### Frontend không gọi được backend
+
+Giữ request trình duyệt ở dạng tương đối `/api/*`. Mặc định Next.js proxy đến
+`http://127.0.0.1:50177`; chỉ đặt `OCR_BACKEND_URL` khi backend thật sự chạy ở
+URL khác.
+
+### Không mở được frontend từ một máy LAN khác
+
+Môi trường phát triển hiện cho phép `127.0.0.1` và `10.6.18.76`. Nếu dùng host
+LAN khác, cập nhật `allowedDevOrigins` trong `frontend/next.config.ts`.
+
+### Docker Compose báo lỗi bind
+
+Compose auth hiện publish đúng IP `10.6.18.76`. Chỉ chạy cấu hình này trên host
+có IP đó; không mở thêm cổng backend/frontend trực tiếp trong deployment auth.
+
+### Sizing & Cost hiển thị `Unavailable`
+
+Đây là hành vi có chủ ý khi provider chưa trả đủ usage hoặc chưa đạt sample và
+coverage gate. Hệ thống không thay dữ liệu thiếu bằng số `0` hay dự báo giả.
+
+### Có thể tải ảnh hoặc ZIP không?
+
+Không. Hệ thống chỉ nhận PDF. PDF có mật khẩu, không hợp lệ hoặc vượt giới hạn
+sẽ làm toàn bộ job thất bại trước khi gọi provider.
+
+### Local tests đã đủ để triển khai production chưa?
+
+Chưa. Local tests là bằng chứng contract, không thay thế kiểm tra fixture thật,
+provider thật, restart, Redis/Celery/Nginx, rollback và tải trên server mục tiêu.
+
+## Cấu trúc repository
+
+- `frontend/`: Next.js App Router và các kiểu API sinh từ OpenAPI.
+- `backend/`: FastAPI, kho job bền vững, Celery worker và tests.
+- `nginx/`: định tuyến deployment trên cùng một domain.
+- `data/jobs/`: JSON, PDF và artifact bền vững; không lưu trong Redis.
+- `docs/ui-parity/`: ảnh giao diện ẩn danh ở các viewport được hỗ trợ.
+- `implementation_plan.md`: contract backend, Repair Gate, cutover và ledger
+  bằng chứng Milestone C.
+- `frontend_plan.md`: contract frontend, workflow và regression gate.
+- `User_guide.md`: đặc tả nội dung và acceptance của hướng dẫn VI/EN.
+- `Simple_Auth.md`: contract shared demo login `BE-X19`/`FE-X19`.
+- `incomlpeted.md`: điều kiện nghiệm thu còn phụ thuộc fixture, provider, server
+  hoặc operator.
+
+## Ràng buộc kỹ thuật
+
+- Chỉ nhận PDF: tối đa 15 file và 200 MiB mỗi job; tối đa 100 trang mỗi PDF.
+- FastAPI chỉ xử lý request ngắn; Celery render trang ở 200 DPI và gọi provider.
+- `/start` chỉ dispatch một lần. Worker production dùng concurrency `1`,
+  prefetch `1`; job không tự retry hoặc tự resume toàn bộ.
+- Mỗi thao tác provider có tối đa hai lần thử theo retry policy đã khóa.
+- `data/jobs/` là nguồn dữ liệu bền vững duy nhất; Redis không có volume.
+- Dữ liệu legacy vẫn đọc được và không bị tự động rewrite.
+- Provider URL, khóa, header, phản hồi thô, lỗi không an toàn và cấu hình bí mật
+  không được lưu hoặc gửi xuống frontend.
+- Approval độc lập theo logical document. Rerun tạo job mới và không sửa job
+  nguồn.
+- Crop tự động chỉ là bằng chứng artifact; reviewer vẫn phải đối chiếu ngữ nghĩa
+  hoặc vẽ Manual crop. Thiếu crop là risk, không phải blocker phê duyệt.
+- Code Catalog được ghi atomic tại `OCR_DATA_DIR/_codes.json`; hệ thống không
+  dùng database.
+- System Monitor chỉ công bố telemetry allowlist mà backend nhìn thấy; không trả
+  hostname, IP, username, path, process, raw command output, secret hoặc provider
+  config.
+
+## Tài liệu liên quan
+
+- [Hướng dẫn người dùng](User_guide.md)
+- [Kế hoạch backend và Milestone C](implementation_plan.md)
+- [Kế hoạch frontend](frontend_plan.md)
+- [Kế hoạch Token/Cost/Sizing](Token_Cal.md)
+- [Đặc tả shared demo login](Simple_Auth.md)
+- [Các điều kiện còn thiếu](incomlpeted.md)
+
+## Trạng thái và lỗi đã biết
+
+- `X7` và `X16` vẫn **IN PROGRESS** ở gate tổng thể do thiếu nghiệm thu
+  fixture/provider live.
+- `X14` còn thiếu benchmark fingerprint thật.
+- `X17F` còn thiếu one-PDF/provider/fixture/server evidence.
+- `X18` đã qua build và các kiểm tra không dùng browser; Playwright chưa có xác
+  nhận teardown sạch trên Windows nên chưa được gọi là `LOCAL COMPLETE`.
+- `X19` shared demo login/logout đã hoàn tất local nhưng còn thiếu bằng chứng
+  Nginx, đóng direct port, rate limit và full OCR smoke trên deployment thật.
+- Milestone C chưa có đủ bằng chứng bốn fixture, restart, persistence, Nginx,
+  Redis, Celery, provider và rollback.
+
+Điều kiện đóng từng mục được theo dõi tại
+[`incomlpeted.md`](incomlpeted.md). Các kết quả local không phải chứng nhận
+customer-production.
