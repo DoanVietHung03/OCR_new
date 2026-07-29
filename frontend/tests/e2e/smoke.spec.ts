@@ -84,6 +84,21 @@ test("session expiry keeps the review draft and never replays its mutation", asy
   expect(correctionCalls).toBe(1);
 });
 
+test("artifact image opens immediately in the modal top layer", async ({ page }) => {
+  await page.route("**/api/**", async (route) => {
+    const apiPath = new URL(route.request().url()).pathname;
+    if (apiPath === `/api/jobs/${id}`) return route.fulfill({ json: fixtureJob() });
+    if (apiPath === `/api/jobs/${id}/artifacts`) return route.fulfill({ json: { items: [{ name: "page-1.png", kind: "image", status: "available", size_bytes: 200, updated_at: now, document_id: "smoke", page_index: 0, field: "so_van_ban", download_url: `/api/jobs/${id}/artifacts/smoke/page-1.png` }] } });
+    if (apiPath.endsWith("/page-1.png")) return route.fulfill({ status: 200, contentType: "image/svg+xml", body: svg });
+    return route.fulfill({ status: 404, json: { detail: "unmocked" } });
+  });
+  await page.goto(`/jobs/${id}?view=artifacts`);
+  await page.locator(".artifact-item").click();
+  const dialog = page.locator(".evidence-modal").filter({ hasText: "page-1.png" });
+  await expect.poll(() => dialog.evaluate((element) => element.matches(":modal"))).toBe(true);
+  await expect(dialog.locator("img")).toBeVisible();
+});
+
 test("mocked upload, review, exact crop, logs, monitor and delete", async ({ page }) => {
   const document = fixtureDocument(); let created = false, deleted = false, reads = 0, conflictOnce = true, cropCalls = 0; let correctionBody: any; let cropBody: any;
   document.crop_evidence.push({ crop_image: `/api/jobs/${id}/artifacts/smoke/old-crop.png`, field: "so_van_ban", page_index: 0, created_at: "2026-07-20T10:00:00Z", bbox: { x: 1, y: 1, width: 2, height: 2 }, evidence_source: "manual_crop", evidence_status: "trusted" });
