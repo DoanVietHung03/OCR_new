@@ -26,16 +26,23 @@ h1, h2, h3, p { margin: 0; }
 .menu-toggle { display: none; border: 0; border-radius: 8px; padding: 8px 11px; color: #fff; background: #17365f; font-size: 1.2rem; }
 .nav-link { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 12px; border: 0; border-radius: 9px; padding: 10px 12px; color: #b8c9df; background: transparent; text-align: left; text-decoration: none; }
 .nav-link:hover, .nav-link.active { color: #fff; background: #17365f; }
-.sidebar-collapse { margin-bottom: 14px; }
+.nav-icon { width: 20px; height: 20px; flex: 0 0 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.sidebar-collapse { position: absolute; z-index: 2; top: 72px; right: -16px; display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #315273; border-radius: 50%; padding: 0; color: #dce7f8; background: #0c1f3c; font-size: 1.25rem; line-height: 1; }
+.sidebar-collapse:hover { color: #fff; background: #17365f; }
+.sidebar-collapse svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
 .sidebar-collapsed .brand { justify-content: center; padding-inline: 0; }
 .sidebar-collapsed .brand > span:last-child, .sidebar-collapsed .nav-link span { display: none; }
 .sidebar-collapsed .nav-link { justify-content: center; gap: 0; padding-inline: 8px; font-size: 1.1rem; }
 .sidebar-collapsed .language-switch { grid-template-columns: 1fr; }
-.system-tools { margin-top: auto; border-top: 1px solid rgb(184 201 223 / 24%); padding-top: 12px; }
+.system-tools { margin-top: 12px; border-top: 1px solid rgb(184 201 223 / 24%); padding-top: 12px; }
+.system-tools > .nav-link { position: relative; }
+.disclosure-chevron { width: 16px; height: 16px; flex: 0 0 16px; margin-left: auto; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; transition: transform .12s ease; }
+.disclosure-chevron.open { transform: rotate(90deg); }
+.sidebar-collapsed .nav-link .disclosure-chevron { position: absolute; right: 4px; display: block; width: 11px; height: 11px; }
 .system-tools-menu { display: grid; gap: 4px; margin-top: 4px; }
 .system-tools-menu .nav-link { padding-left: 24px; }
 .sidebar-collapsed .system-tools-menu .nav-link { padding-left: 8px; }
-.sidebar-tools { display: grid; gap: 12px; margin-top: 12px; }
+.sidebar-tools { display: grid; gap: 12px; margin-top: 16px; border-top: 1px solid rgb(184 201 223 / 24%); padding-top: 16px; }
 .language-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 9px; background: #08182e; }
 .language-switch button { border: 0; border-radius: 6px; padding: 7px; color: #9db0ca; background: transparent; }
 .language-switch button[aria-pressed="true"] { color: #102745; background: #f1b947; font-weight: 800; }
@@ -202,9 +209,14 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 .gpu-device { display: grid; gap: 3px; padding-top: 8px; border-top: 1px solid #dce3ed; }
 .gpu-card { grid-column: 1 / -1; }
 .sidebar-tools { gap: 8px; }
-.shared-user { max-width: 100%; overflow: hidden; color: #cbd8e8; text-overflow: ellipsis; white-space: nowrap; }
+.shared-user { display: flex; min-width: 0; align-items: center; gap: 9px; color: #cbd8e8; }
+.shared-user i { color: #63c995; font-size: .65rem; font-style: normal; }
+.shared-user span { display: grid; min-width: 0; }
+.shared-user strong { overflow: hidden; color: #fff; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
+.shared-user small { color: #8ea5c5; font-size: .68rem; }
 .logout-button { display: flex; align-items: center; gap: 7px; border: 0; border-radius: 7px; padding: 7px 9px; color: #dbe6f3; background: transparent; cursor: pointer; }
 .logout-button:hover { background: rgb(255 255 255 / 10%); }
+.sidebar-collapsed .shared-user { justify-content: center; }
 .sidebar-collapsed .shared-user span, .sidebar-collapsed .logout-button span { display: none; }
 .login-page { display: grid; min-height: 100vh; place-items: center; padding: 20px; background: linear-gradient(135deg, #0d294b, #1768d4); }
 .login-card { position: relative; width: min(430px, 100%); border-radius: 16px; padding: 34px; background: #fff; box-shadow: 0 30px 80px rgb(0 17 43 / 35%); }

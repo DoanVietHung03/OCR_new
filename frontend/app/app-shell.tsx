@@ -8,6 +8,7 @@ import { text, useLanguage } from "../lib/i18n";
 
 const percent = (value: number) => `${Math.round(value)}%`;
 const bytes = (value: number) => `${(value / 1024 ** 3).toFixed(1)} GB`;
+const icon = (children: ReactNode) => <svg className="nav-icon" aria-hidden="true" viewBox="0 0 24 24">{children}</svg>;
 
 export default function AppShell({ children, onNew, onJobs }: { children: ReactNode; detail?: boolean; onNew?: () => void; onJobs?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
   const pathname = usePathname();
@@ -58,8 +59,17 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
     <div className="meter"><i style={{ width: `${Math.max(0, Math.min(100, value || 0))}%` }} /></div>
   </article>;
   const active = (href: string) => href === "/" ? pathname === "/" || pathname.startsWith("/jobs/") : pathname.startsWith(href);
-  const nav = [["/", "▦", text("jobs")], ["/upload", "⇧", text("newOcr")], ["/reports", "▥", text("report")], ["/sizing", "◇", text("sizing")], ["/guide", "?", text("guide")]];
-  const tools = [["/logs", "▤", text("processingLogs")], ["/codes", "▧", text("codes")]];
+  const nav: [string, ReactNode, string][] = [
+    ["/", icon(<><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2" /></>), text("jobs")],
+    ["/upload", icon(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M12 18v-6m-3 3 3-3 3 3" /></>), text("newOcr")],
+    ["/reports", icon(<><path d="M3 3v18h18" /><path d="m7 16 4-4 3 3 5-7" /></>), text("report")],
+    ["/sizing", icon(<><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h.01M16 19h.01" /></>), text("sizing")],
+    ["/guide", icon(<><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H12V5H6.5A2.5 2.5 0 0 0 4 7.5Z" /><path d="M20 19.5a2.5 2.5 0 0 0-2.5-2.5H12V5h5.5A2.5 2.5 0 0 1 20 7.5Z" /></>), text("guide")],
+  ];
+  const tools: [string, ReactNode, string][] = [
+    ["/logs", icon(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 13h8M8 17h8" /></>), text("processingLogs")],
+    ["/codes", icon(<><path d="m8 9-3 3 3 3M16 9l3 3-3 3M14 5l-4 14" /></>), text("codes")],
+  ];
   const operationStates = metrics?.operations?.states || {};
   const updateMonitor = (open: boolean) => { const query = new URLSearchParams(location.search); if (open) query.set("monitor", "1"); else query.delete("monitor"); history[open ? "pushState" : "replaceState"](null, "", `${location.pathname}${query.size ? `?${query}` : ""}`); setMonitorOpen(open); };
   const sidebarLabel = sidebarCollapsed ? (locale === "vi" ? "Mở rộng thanh bên" : "Expand sidebar") : (locale === "vi" ? "Thu gọn thanh bên" : "Collapse sidebar");
@@ -67,25 +77,25 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
   return <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-locale={locale}>
     <aside className="sidebar">
       <Link className="brand" href="/" aria-label={text("title")} onClick={onJobs}><span className="brand-mark">ID</span><span>IntelliDoc<small>OCR</small></span></Link>
-      <button className="sidebar-collapse nav-link" aria-label={sidebarLabel} aria-pressed={sidebarCollapsed} title={sidebarLabel} onClick={() => setSidebarCollapsed((value) => !value)}>{sidebarCollapsed ? "»" : "«"} <span>{sidebarLabel}</span></button>
+      <button className="sidebar-collapse" aria-label={sidebarLabel} aria-pressed={sidebarCollapsed} title={sidebarLabel} onClick={() => setSidebarCollapsed((value) => !value)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d={sidebarCollapsed ? "m9 18 6-6-6-6" : "m15 18-6-6 6-6"} /></svg></button>
       <button className="menu-toggle" aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen((value) => !value)}>☰</button>
       <nav id="primary-navigation" className={menuOpen ? "open" : ""} aria-label={text("jobs")}>
         {nav.map(([href, icon, label]) => <Link className={active(href) ? "nav-link active" : "nav-link"} href={href} key={href} aria-label={label} title={sidebarCollapsed ? label : undefined} onClick={(event) => { setMenuOpen(false); if (href === "/upload" && onNew) { event.preventDefault(); onNew(); } else onJobs?.(event); }}>{icon} <span>{label}</span></Link>)}
         <div className="system-tools">
-          <button className={pathname.startsWith("/logs") || pathname.startsWith("/codes") ? "nav-link active" : "nav-link"} aria-expanded={toolsOpen} aria-controls="system-tools-menu" title={sidebarCollapsed ? text("systemTools") : undefined} onClick={() => setToolsOpen((value) => !value)}>⋯ <span>{text("systemTools")}</span></button>
+          <button className={pathname.startsWith("/logs") || pathname.startsWith("/codes") ? "nav-link active" : "nav-link"} aria-expanded={toolsOpen} aria-controls="system-tools-menu" title={sidebarCollapsed ? text("systemTools") : undefined} onClick={() => setToolsOpen((value) => !value)}>{icon(<><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h6M14 18h6" /><circle cx="16" cy="6" r="2" /><circle cx="8" cy="12" r="2" /><circle cx="12" cy="18" r="2" /></>)}<span>{text("systemTools")}</span><svg className={toolsOpen ? "disclosure-chevron open" : "disclosure-chevron"} aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg></button>
           {toolsOpen && <div id="system-tools-menu" className="system-tools-menu">
             {tools.map(([href, icon, label]) => <Link className={active(href) ? "nav-link active" : "nav-link"} href={href} key={href} aria-label={label} title={sidebarCollapsed ? label : undefined} onClick={(event) => { setMenuOpen(false); setToolsOpen(false); onJobs?.(event); }}>{icon} <span>{label}</span></Link>)}
-            <button className="nav-link" aria-label={text("systemMonitor")} title={sidebarCollapsed ? text("systemMonitor") : undefined} onClick={() => { setMenuOpen(false); setToolsOpen(false); updateMonitor(true); }}>◫ <span>{text("systemMonitor")}</span></button>
+            <button className="nav-link" aria-label={text("systemMonitor")} title={sidebarCollapsed ? text("systemMonitor") : undefined} onClick={() => { setMenuOpen(false); setToolsOpen(false); updateMonitor(true); }}>{icon(<><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></>)}<span>{text("systemMonitor")}</span></button>
           </div>}
         </div>
       </nav>
       <div className="sidebar-tools">
-        {authEnabled && <small className="shared-user" title={username}>● <span>{username}</span></small>}
+        {authEnabled && <div className="shared-user" title={`${locale === "vi" ? "Tài khoản dùng chung" : "Shared account"}: ${username}`}><i aria-hidden="true">●</i><span><strong>{username}</strong><small>{locale === "vi" ? "Tài khoản dùng chung" : "Shared account"}</small></span></div>}
         <div className="language-switch" aria-label="Language">
           <button aria-pressed={locale === "vi"} onClick={() => changeLanguage("vi")}>VI</button>
           <button aria-pressed={locale === "en"} onClick={() => changeLanguage("en")}>EN</button>
         </div>
-        {authEnabled && <button className="logout-button" aria-label={locale === "vi" ? "Đăng xuất" : "Sign out"} title={sidebarCollapsed ? (locale === "vi" ? "Đăng xuất" : "Sign out") : undefined} onClick={() => logout().finally(() => location.assign("/login"))}>↪ <span>{locale === "vi" ? "Đăng xuất" : "Sign out"}</span></button>}
+        {authEnabled && <button className="logout-button" aria-label={locale === "vi" ? "Đăng xuất" : "Sign out"} title={sidebarCollapsed ? (locale === "vi" ? "Đăng xuất" : "Sign out") : undefined} onClick={() => logout().finally(() => location.assign("/login"))}>{icon(<><path d="M10 17l5-5-5-5M15 12H3" /><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /></>)}<span>{locale === "vi" ? "Đăng xuất" : "Sign out"}</span></button>}
       </div>
     </aside>
     <main className="main-content">{children}</main>

@@ -131,7 +131,13 @@ Backend counterpart:
   `Sizing & Cost`; thứ tự bốn mục hiện có không đổi.
 - `Công cụ hệ thống` nằm cuối sidebar, mặc định thu gọn, không persist trạng thái
   vào `localStorage`; nhóm này chứa `Processing logs`, `Code catalog` và
-  `System Monitor`.
+  `System Monitor`. Nhóm nằm liền sau navigation chính, dùng chevron xoay để
+  biểu thị trạng thái và được tách khỏi vùng điều khiển phiên ở đáy.
+- Desktop có thể thu sidebar về rail `88px` nhưng không ẩn navigation. Nút trên
+  đường biên dùng chevron trái/phải theo trạng thái, có tooltip/ARIA và hitbox
+  `32px`. Navigation dùng SVG nét đơn giản thay vì glyph phụ thuộc font. Shared
+  username chỉ là nhãn tài khoản dùng chung, không phải profile menu;
+  language/logout nằm trong vùng phiên có divider riêng.
 - Bỏ `Manage` khỏi sidebar nhưng giữ route `/documents` và toàn bộ API. Jobs và
   Tổng quan vận hành mở route này bằng CTA `Tài liệu cần rà soát (N)`.
 - Đổi nhãn `/documents` thành `Hàng đợi rà soát` / `Review queue`;
@@ -189,8 +195,10 @@ Backend counterpart:
 
 ### Acceptance
 
-- Sidebar chính chỉ còn bốn mục; nhóm Công cụ hệ thống mặc định đóng và không
-  làm mất route/action hiện có.
+- Sidebar chính có năm mục sau `FE-X18`; nhóm Công cụ hệ thống mặc định đóng và
+  không làm mất route/action hiện có.
+- Collapse/expand giữ rail icon hoạt động, đổi đúng hướng chevron và không trộn
+  navigation hệ thống với shared account/language/logout.
 - Bốn CTA mở đúng URL và đúng dữ liệu đã lọc; reload/back/forward giữ state.
 - Partial API failure không làm trắng trang; empty/stale/unavailable render đúng
   contract và không fabricate dữ liệu.
