@@ -237,9 +237,10 @@ Backend counterpart:
 Frontend hiện dùng durable state, correction conflict, API typing, accessibility
 và data safety. Ưu tiên dữ liệu worker/contract trước CSS; không dựng lại baseline.
 
-Route Upload giữ một card: bỏ tiêu đề lặp, đặt chọn tệp/thư mục thành hai action
-nhỏ trong dropzone, biểu diễn profile duy nhất bằng trạng thái khóa do máy chủ
-quản lý và tách consent bằng nền riêng. `vlm_max_pages` chỉ hiện cho
+Route Upload giữ một card: cho nhập tên công việc tùy chọn với fallback tương
+thích `PDF đầu tiên +N`, đặt chọn tệp/thư mục thành hai action nhỏ trong
+dropzone, biểu diễn profile duy nhất bằng trạng thái khóa do máy chủ quản lý và
+tách consent bằng nền riêng. `vlm_max_pages` chỉ hiện cho
 `metadata + auto`, nested cùng note ngay trong field-card Phạm vi trang; cả bốn
 control cấu hình dùng cùng surface/padding và tự co theo nội dung, không kéo cao
 cả hàng. Danh sách nhiều PDF có tổng số file/dung lượng, Clear all và vùng cuộn

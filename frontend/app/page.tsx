@@ -29,7 +29,7 @@ export default function Home() {
   const router = useRouter();
   const uploadOnly = usePathname() === "/upload";
   const [state, setState] = useState<State>(emptyState);
-  const [files, setFiles] = useState<File[]>([]); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [loadError, setLoadError] = useState("");
+  const [files, setFiles] = useState<File[]>([]); const [jobName, setJobName] = useState(""); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [loadError, setLoadError] = useState("");
   const [loaded, setLoaded] = useState(false); const [stale, setStale] = useState(false); const [uploadOpen, setUploadOpen] = useState(false);
   const [urlReady, setUrlReady] = useState(false);
   const syncingUrl = useRef<string | null>(null);
@@ -45,6 +45,7 @@ export default function Home() {
   const [processingMode, setProcessingMode] = useState<ProcessingMode>("administrative_document");
   const availableProfiles: ProviderProfile[] = profiles.length ? profiles : state.ocr_methods.map((item) => ({ ...item, tasks: ["full_ocr", "metadata"], page_modes: ["all", "auto", "first,last"], max_pages: 100, processing_modes: ["administrative_document"] }));
   const engine = availableProfiles.find((item) => item.id === profileId) || availableProfiles[0]; const external = Boolean(engine?.external); const configured = engine?.status === "configured";
+  const automaticJobName = files.length ? `${files[0].name}${files.length > 1 ? ` +${files.length - 1}` : ""}` : "";
 
   useEffect(() => {
     const sync = () => {
@@ -97,8 +98,7 @@ export default function Home() {
     if (!files.length || !configured || (external && !consent)) return;
     setBusy(true); setError("");
     try {
-      const uploadName = `${files[0].name}${files.length > 1 ? ` +${files.length - 1}` : ""}`;
-      const job = await createJob({ file_count: files.length, upload_name: uploadName, cloud_data_confirmed: consent,
+      const job = await createJob({ file_count: files.length, upload_name: jobName.trim() || automaticJobName, cloud_data_confirmed: consent,
         provider_profile_id: engine.id, vlm_task: task, vlm_pages: task === "full_ocr" ? "all" : pages,
         vlm_max_pages: task === "metadata" && pages === "auto" && processingMode !== "dossier_cover" ? maxPages : 0, processing_mode: processingMode });
       for (const [index, file] of files.entries()) { setProgress(text("uploading", { current: index + 1, total: files.length, name: file.name })); await uploadFile(job.id, file); }
@@ -140,6 +140,7 @@ export default function Home() {
     {uploadOpen && <section ref={uploadPanel} className="panel upload-panel">
       <div className="section-head"><div><p className="eyebrow">PDF ONLY</p>{!uploadOnly && <h2>{text("upload")}</h2>}<p>{text("uploadHint", { files: state.limits.max_files_per_job, size: size(state.limits.max_job_upload_bytes) })} {text("pageLimit")}</p><Link className="context-help" href="/guide/reference#upload">{text("help")} →</Link></div>{!uploadOnly && <button className="icon-button" aria-label={text("close")} onClick={() => setUploadOpen(false)}>×</button>}</div>
       <div className="upload-options">
+        <label className="upload-option-card job-name-card"><span>{text("jobName")}</span><input value={jobName} maxLength={120} disabled={busy} placeholder={automaticJobName || text("jobNamePlaceholder")} onChange={(event) => setJobName(event.target.value)} /><small>{text("jobNameHint")}</small></label>
         <label className="upload-option-card"><span>{language() === "vi" ? "Chế độ xử lý" : "Processing mode"}</span><select value={processingMode} disabled={busy} onChange={(event) => setProcessingMode(event.target.value as typeof processingMode)}>{(engine?.processing_modes || ["administrative_document"]).map((mode) => <option value={mode} key={mode}>{{ administrative_document: language() === "vi" ? "Văn bản hành chính" : "Administrative document", dossier_cover: language() === "vi" ? "Bìa hồ sơ" : "Dossier cover", combined_dossier: language() === "vi" ? "Hồ sơ gộp" : "Combined dossier" }[mode]}</option>)}</select></label>
         {availableProfiles.length > 1 ? <label className="upload-option-card"><span>{text("engine")}</span><select value={engine?.id || ""} disabled={busy} onChange={(event) => { setProfileId(event.target.value); setConsent(false); }}>{availableProfiles.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label> : <div className="upload-option-card option-value locked-value"><span aria-hidden="true">🔒</span><strong>{engine?.label || "—"}</strong><small>{text("systemManaged")}</small></div>}
         <label className="upload-option-card"><span>{text("task")}</span><select value={task} disabled={busy} onChange={(event) => { const value = event.target.value as Task; setTask(value); if (value === "full_ocr") { setPages("all"); setMaxPages(0); } }}>{(engine?.tasks || ["full_ocr", "metadata"]).map((value) => <option value={value} key={value}>{text(value === "full_ocr" ? "fullOcr" : "metadata")}</option>)}</select></label>

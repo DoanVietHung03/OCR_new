@@ -77,6 +77,7 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 .upload-options { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; align-items: start; margin-top: 18px; }
 .upload-options label, .upload-options .option-value, .form-grid label { display: grid; gap: 6px; color: #526782; font-size: .78rem; font-weight: 700; }
 .upload-option-card { align-content: start; min-width: 0; border: 1px solid #d8e0ea; border-radius: 10px; padding: 12px; background: #f8fafc; }
+.job-name-card { grid-column: 1 / -1; }
 .upload-options select, .upload-options input, .form-grid select, .form-grid input { min-height: 41px; min-width: 0; border: 1px solid #c8d2df; border-radius: 8px; padding: 8px 10px; background: #fff; }
 .upload-panel :focus-visible { outline: 2px solid #526782; }
 .locked-value { grid-template-columns: auto 1fr; align-content: center; }

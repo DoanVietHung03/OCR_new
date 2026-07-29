@@ -327,7 +327,7 @@ test("folder picker selects only a PDF folder through the existing upload flow",
   await expect(page.locator(".file-list")).toContainText("second.pdf");
 });
 
-test("upload sends selected PDFs sequentially with a compact name", async ({ page }) => {
+test("upload sends selected PDFs sequentially with a custom job name", async ({ page }) => {
   const uploaded: string[] = []; let createBody: any;
   await page.route("**/api/**", async (route) => {
     const request = route.request(), url = new URL(request.url()), apiPath = url.pathname;
@@ -339,8 +339,8 @@ test("upload sends selected PDFs sequentially with a compact name", async ({ pag
     if (apiPath.endsWith(".png")) return route.fulfill({ contentType: "image/svg+xml", body: svg });
     return route.fulfill({ status: 404, json: { detail: "unmocked" } });
   });
-  await page.goto("/upload"); await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles([{ name: "first.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "second.pdf", mimeType: "application/pdf", buffer: pdf }]); await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`)); expect(uploaded).toEqual(["first.pdf", "second.pdf"]); expect(createBody).toMatchObject({ upload_name: "first.pdf +1", vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0 });
+  await page.goto("/upload"); await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles([{ name: "first.pdf", mimeType: "application/pdf", buffer: pdf }, { name: "second.pdf", mimeType: "application/pdf", buffer: pdf }]); const name = page.getByLabel(/tên công việc|job name/i); await expect(name).toHaveAttribute("placeholder", "first.pdf +1"); await name.fill("  Hồ sơ tháng 7  "); await page.getByRole("button", { name: /bắt đầu OCR|start OCR/i }).click();
+  await expect(page).toHaveURL(new RegExp(`/jobs/${id}(?:\\?.*)?$`)); expect(uploaded).toEqual(["first.pdf", "second.pdf"]); expect(createBody).toMatchObject({ upload_name: "Hồ sơ tháng 7", vlm_task: "full_ocr", vlm_pages: "all", vlm_max_pages: 0 });
 });
 
 test("default document, dirty navigation and browser back keep drafts", async ({ page }) => {
