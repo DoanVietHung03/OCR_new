@@ -708,7 +708,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   await page.route("**/api/**", async (route) => {
     const request = route.request(), apiPath = new URL(request.url()).pathname;
     if (apiPath === "/api/sizing/overview") {
-      const priced = catalog.price_profiles.length > 0;
+      const priced = catalog.price_profiles.some((item) => !item.archived);
       return route.fulfill({ json: { ...overview, known_cost: priced ? .000027 : null, total_cost: priced ? .000027 : null, unknown_cost_attempts: priced ? 0 : 1, coverage: { ...overview.coverage, billing_certainty_percent: priced ? 100 : 0, known_billing_attempts: priced ? 1 : 0 } } });
     }
     if (apiPath === "/api/sizing/jobs") { jobsQuery = new URL(request.url()).search; return route.fulfill({ json: jobs }); }
@@ -735,13 +735,20 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   await page.getByRole("button", { name: /Khám phá tài liệu|Document Explorer/i }).click(); const attempts = page.getByRole("button", { name: /Xem lần gọi|View attempts/i }); await attempts.nth(0).click(); await attempts.nth(1).click(); await expect(page.locator(".attempts-table")).toHaveCount(2); await expect(page.locator(".attempts-table").first()).toContainText(/Đầy đủ|complete/i);
   await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await expect(page.getByText(/Kịch bản · Bản xem trước|Scenario · Preview/i)).toBeVisible(); await expect(page.getByText(/Công việc\/tháng|Jobs\/month/i)).toBeVisible(); await expect(page.locator(".context-help")).toHaveCount(0); await page.getByRole("button", { name: /Tính bản xem trước|Calculate Preview/i }).click(); await expect(page.locator(".safe-json")).toContainText("insufficient_sample");
   await page.getByLabel(/Hồ sơ provider|Provider Profile/i).fill("minimax"); await page.getByLabel(/Mô hình|Model/i).fill("MiniMax-M3"); await page.getByLabel(/Nguồn tỷ giá|Exchange source/i).selectOption("vietcombank");
+  await page.getByLabel(/Hiệu lực từ|Effective from/i).fill("2026-07-01T12:00");
   await page.getByRole("button", { name: /Lấy giá và tỷ giá|Fetch price and rate/i }).click(); await expect(page.locator(".price-suggestion")).toContainText(/26[.,]?520/);
+  await expect(page.getByLabel(/Hiệu lực từ|Effective from/i)).toHaveValue("2026-07-01T12:00");
   await page.getByLabel(/Xác nhận giá và tỷ giá|Confirm suggested price/i).check(); await page.getByRole("button", { name: /Lưu hồ sơ giá|Save Price Profile/i }).click();
   await expect.poll(() => catalog.price_profiles.length).toBe(1); expect(catalog.price_profiles[0]).toMatchObject({ provider_profile_id: "minimax", model: "MiniMax-M3", suggestion_confirmed: true, maximum_input_tokens: 512000 });
+  expect(new Date(String(catalog.price_profiles[0].effective_from)).getTime()).toBe(new Date("2026-07-01T12:00").getTime());
   await expect(page.getByLabel(/Hồ sơ provider|Provider Profile/i)).toHaveValue("");
   await expect(page.locator(".saved-price-profiles")).toContainText("MiniMax-M3");
   await page.getByRole("button", { name: /Tổng quan|Overview/i }).click(); await expect(page.locator(".metric-card").filter({ hasText: /Chi phí đã biết|Known cost/i })).toContainText("0.000027");
   await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click();
+  await page.locator(".saved-price-profiles").getByRole("button", { name: /Lưu trữ|Archive/i }).click(); await expect.poll(() => catalog.price_profiles[0].archived).toBe(true);
+  await expect(page.locator(".saved-price-profiles")).toContainText(/Đã lưu trữ|Archived/i);
+  await page.getByRole("button", { name: /Tổng quan|Overview/i }).click(); await expect(page.locator(".metric-card").filter({ hasText: /Chi phí đã biết|Known cost/i })).toContainText(/Không khả dụng|Unavailable/i);
+  await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await page.locator(".saved-price-profiles").getByRole("button", { name: /Khôi phục|Restore/i }).click(); await expect.poll(() => catalog.price_profiles[0].archived).toBe(false);
   await page.getByRole("button", { name: /Lưu ảnh chụp|Save snapshot/i }).click();
   await page.getByRole("button", { name: /Lưu giữ và ảnh chụp|Retention/i }).click(); await expect(page.locator(".data-table tbody tr")).toHaveCount(1);
   const dates = page.locator('input[type="date"]'); await dates.nth(0).fill("2026-01-01"); await dates.nth(1).fill("2026-12-31"); await page.getByRole("button", { name: /Xem trước việc xóa dữ liệu đo|Preview measurement/i }).click();

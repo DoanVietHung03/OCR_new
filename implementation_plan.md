@@ -460,6 +460,8 @@ Gate backend:
 - Job mới dùng Provider Profile ID `minimax` cho `MiniMax-M3`; dữ liệu/job cũ
   mang ID `qwen` vẫn được đọc nguyên trạng và không rewrite.
 - Price Profile đã lưu hiển thị ngay dưới form; save thành công refresh Overview.
+  User chọn ngày giờ `effective_from`; lấy gợi ý giá không ghi đè lựa chọn này.
+  Archive/restore giữ nguyên profile lịch sử và refresh cost; không hard-delete.
   Cost chỉ khớp exact Provider Profile ID + model + operation/effective time,
   nên profile `minimax` hiện tại không backdate sang job `qwen` lịch sử.
 - Calculator từ chối verdict dưới sample/coverage gate, ngoài observed page

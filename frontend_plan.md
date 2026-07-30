@@ -434,6 +434,10 @@ khi đóng.
   có ID `qwen` vẫn hiển thị và lọc theo snapshot đã lưu, không đổi nhãn hồi tố.
 - Danh sách Price Profile đã lưu nằm ngay dưới form, hiển thị scope/hiệu lực và
   trạng thái; save refresh Overview/Jobs để Known cost không giữ snapshot cũ.
+- Price form dùng native `datetime-local` cho ngày hiệu lực, mặc định hiện tại;
+  thao tác lấy gợi ý giá không được đặt lại ngày giờ user đã chọn.
+- Mỗi Price Profile đã lưu có action Archive/Restore; action cập nhật catalog và
+  refresh Overview/Jobs, không thêm hard-delete.
 - Workload form chỉ nhập monthly volume + operating days/hours, một Processing
   Mode, peak/reserve/SLA/success target/retention assumption. Combined dossier
   dùng dossier volume + document/page averages; không cho input ngày/tháng mâu
