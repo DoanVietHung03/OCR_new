@@ -181,6 +181,7 @@ const errorLabels: Record<string, [string, string]> = {
   suggestion_source_unavailable: ["Không thể truy cập nguồn gợi ý", "The suggestion source is unavailable"],
   exchange_source_unavailable: ["Không thể lấy tỷ giá từ nguồn đã chọn", "The selected exchange source is unavailable"],
   invalid_exchange_source: ["Nguồn tỷ giá không hợp lệ", "Invalid exchange source"],
+  invalid_price_profile: ["Hồ sơ giá không hợp lệ hoặc bị trùng; hãy làm mới rồi tạo lại", "The Price Profile is invalid or duplicated; refresh and create it again"],
   rerun_job: ["Chạy lại công việc từ dữ liệu nguồn", "Rerun the job from source data"],
   inspect_logs: ["Kiểm tra nhật ký an toàn", "Inspect safe logs"],
   job_dispatched: ["Đã gửi công việc tới worker", "Job dispatched to worker"],

@@ -735,6 +735,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   await page.getByRole("button", { name: /Lấy giá và tỷ giá|Fetch price and rate/i }).click(); await expect(page.locator(".price-suggestion")).toContainText(/26[.,]?520/);
   await page.getByLabel(/Xác nhận giá và tỷ giá|Confirm suggested price/i).check(); await page.getByRole("button", { name: /Lưu hồ sơ giá|Save Price Profile/i }).click();
   await expect.poll(() => catalog.price_profiles.length).toBe(1); expect(catalog.price_profiles[0]).toMatchObject({ provider_profile_id: "qwen", model: "MiniMax-M3", suggestion_confirmed: true, maximum_input_tokens: 512000 });
+  await expect(page.getByLabel(/Hồ sơ provider|Provider Profile/i)).toHaveValue("");
   await page.getByRole("button", { name: /Lưu ảnh chụp|Save snapshot/i }).click();
   await page.getByRole("button", { name: /Lưu giữ và ảnh chụp|Retention/i }).click(); await expect(page.locator(".data-table tbody tr")).toHaveCount(1);
   const dates = page.locator('input[type="date"]'); await dates.nth(0).fill("2026-01-01"); await dates.nth(1).fill("2026-12-31"); await page.getByRole("button", { name: /Xem trước việc xóa dữ liệu đo|Preview measurement/i }).click();
