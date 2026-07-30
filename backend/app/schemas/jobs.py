@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
@@ -570,6 +571,33 @@ class SizingCatalogRequest(RequestModel):
     price_profiles: list[dict[str, Any]] = Field(default_factory=list)
     workload_profiles: list[dict[str, Any]] = Field(default_factory=list)
     hardware_profiles: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class PriceSuggestionRequest(RequestModel):
+    provider_profile_id: str = Field(min_length=1, max_length=128)
+    model: str = Field(min_length=1, max_length=256)
+    exchange_source: Literal["vietcombank", "agribank", "ecb"]
+
+
+class PriceSuggestionResponse(BaseModel):
+    provider_profile_id: str
+    model: str
+    billing_currency: str
+    display_currency: str
+    input_per_million: float = Field(ge=0)
+    output_per_million: float = Field(ge=0)
+    cached_per_million: float = Field(ge=0)
+    maximum_input_tokens: int | None = Field(default=None, ge=1)
+    price_basis: str
+    price_source: str
+    price_source_url: str
+    price_fetched_at: datetime
+    exchange_source: str
+    exchange_rate: float = Field(gt=0)
+    exchange_rate_kind: str
+    exchange_source_url: str
+    exchange_source_time: str | None = None
+    exchange_fetched_at: datetime
 
 
 class SizingCalculateRequest(RequestModel):

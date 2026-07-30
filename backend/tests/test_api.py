@@ -12,6 +12,31 @@ def test_ocr_data_dir_is_a_path_at_runtime():
     assert Settings(ocr_data_dir="data/jobs").ocr_data_dir == Path("data/jobs")
 
 
+def test_price_suggestion_is_typed_and_keeps_confirmation_outside_fetch(monkeypatch):
+    import app.api.routes as routes
+
+    async def suggest(provider_profile_id, model, exchange_source):
+        return {
+            "provider_profile_id": provider_profile_id, "model": model,
+            "billing_currency": "USD", "display_currency": "VND",
+            "input_per_million": .3, "output_per_million": 1.2, "cached_per_million": .06,
+            "maximum_input_tokens": 512_000, "price_basis": "standard; input <= 512k",
+            "price_source": "minimax", "price_source_url": "https://platform.minimax.io/",
+            "price_fetched_at": "2026-07-30T00:00:00Z", "exchange_source": exchange_source,
+            "exchange_rate": 26_520, "exchange_rate_kind": "sell",
+            "exchange_source_url": "https://www.vietcombank.com.vn/",
+            "exchange_source_time": "30/07/2026 08:05", "exchange_fetched_at": "2026-07-30T00:00:00Z",
+        }
+
+    monkeypatch.setattr(routes, "price_suggestion", suggest)
+    response = client.post("/api/sizing/price-suggestions", json={
+        "provider_profile_id": "qwen", "model": "MiniMax-M3", "exchange_source": "vietcombank",
+    })
+    assert response.status_code == 200
+    assert response.json()["maximum_input_tokens"] == 512_000
+    assert "suggestion_confirmed" not in response.json()
+
+
 def use_store(tmp_path, monkeypatch):
     import app.api.routes as routes
 

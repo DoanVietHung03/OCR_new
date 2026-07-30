@@ -27,6 +27,9 @@ locally actionable `X15` scope pass. `X7`/`X16` remain IN PROGRESS at the overal
 gate only because fixture/live acceptance is missing; `X14` still needs real
 benchmark fingerprints. The locally actionable `X17A`–`X17E` scope is
 implemented; `X17F` still needs real provider/fixture/server evidence.
+The Scenario Price Profile form can preview exact-model pricing and exchange
+rates from a fixed official-source allowlist; provenance and explicit user
+confirmation are required before save, and unsupported models stay unavailable.
 The frontend-only `X18` guide/reference scope is implemented with two static
 VI/EN routes, one permanent sidebar entry, and five sanitized captures. Its
 production build and non-browser checks pass; Playwright reached all 25 tests

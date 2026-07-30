@@ -26,6 +26,9 @@
 .disabled-help { display: inline-flex; }
 .field-help { display: block; margin-top: 8px; color: #697b93; }
 .safe-json { max-height: 360px; overflow: auto; padding: 16px; background: #fff; border-radius: 8px; }
+.price-suggestion { display: grid; gap: 6px; margin-top: 16px; border: 1px solid #bad8c8; border-radius: 8px; padding: 12px 14px; color: #28533d; background: #eef9f3; }
+.price-suggestion span { font-variant-numeric: tabular-nums; }
+.price-suggestion small { color: #526b5d; }
 
 .sizing-jobs-table td:first-child { white-space: nowrap; }
 .numeric { text-align: right !important; font-variant-numeric: tabular-nums; }

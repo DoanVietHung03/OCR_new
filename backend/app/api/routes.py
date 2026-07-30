@@ -34,6 +34,8 @@ from ..schemas.jobs import (
     JobResponse,
     ManualCropRequest,
     ProviderProfilesResponse,
+    PriceSuggestionRequest,
+    PriceSuggestionResponse,
     ReportsResponse,
     RerunRequest,
     DeleteSnapshotRequest,
@@ -58,6 +60,7 @@ from ..schemas.jobs import (
 from ..services.codes import CodeCatalog
 from ..services.jobs import ACTIVE, ApprovalBlocked, DELETABLE, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
 from ..services.ocr_runner import PROMPT_VERSION, configured, probe_provider
+from ..services.pricing import EXCHANGE_SOURCES, SuggestionError, exchange_quote, price_suggestion
 from ..services.system_metrics import system_metrics as read_system_metrics
 from ..services.sizing import (
     MeasurementStore, SizingCatalog, SnapshotStore, aggregate, atomic_json,
@@ -1211,15 +1214,22 @@ async def sizing_retention_apply(payload: RetentionApplyRequest):
 
 @router.get("/sizing/exchange-rate-sources")
 async def exchange_rate_sources():
-    return {"items": [
-        {"id": "vietcombank", "label": "Vietcombank", "currencies": ["VND"], "url": "https://www.vietcombank.com.vn/"},
-        {"id": "agribank", "label": "Agribank", "currencies": ["VND"], "url": "https://www.agribank.com.vn/"},
-        {"id": "ecb", "label": "ECB", "currencies": ["EUR"], "url": "https://data.ecb.europa.eu/"},
-    ]}
+    return {"items": list(EXCHANGE_SOURCES.values())}
 
 
 @router.post("/sizing/exchange-rate-suggestions")
 async def exchange_rate_suggestions(source_id: str):
-    if source_id not in {"vietcombank", "agribank", "ecb"}:
-        fail(400, "invalid_exchange_source")
-    fail(503, "exchange_source_unavailable")
+    try:
+        return {"items": [await exchange_quote(source_id)]}
+    except SuggestionError as exc:
+        code = str(exc)
+        fail(400 if code == "invalid_exchange_source" else 503, code)
+
+
+@router.post("/sizing/price-suggestions", response_model=PriceSuggestionResponse)
+async def sizing_price_suggestion(payload: PriceSuggestionRequest):
+    try:
+        return await price_suggestion(payload.provider_profile_id.strip(), payload.model.strip(), payload.exchange_source)
+    except SuggestionError as exc:
+        code = str(exc)
+        fail(400 if code in {"invalid_exchange_source", "model_price_unavailable"} else 503, code)

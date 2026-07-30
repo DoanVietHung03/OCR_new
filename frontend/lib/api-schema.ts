@@ -689,6 +689,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sizing/price-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sizing Price Suggestion */
+        post: operations["sizing_price_suggestion_api_sizing_price_suggestions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1820,6 +1837,63 @@ export interface components {
             total: number;
             /** Pages */
             pages: number;
+        };
+        /** PriceSuggestionRequest */
+        PriceSuggestionRequest: {
+            /** Provider Profile Id */
+            provider_profile_id: string;
+            /** Model */
+            model: string;
+            /**
+             * Exchange Source
+             * @enum {string}
+             */
+            exchange_source: "vietcombank" | "agribank" | "ecb";
+        };
+        /** PriceSuggestionResponse */
+        PriceSuggestionResponse: {
+            /** Provider Profile Id */
+            provider_profile_id: string;
+            /** Model */
+            model: string;
+            /** Billing Currency */
+            billing_currency: string;
+            /** Display Currency */
+            display_currency: string;
+            /** Input Per Million */
+            input_per_million: number;
+            /** Output Per Million */
+            output_per_million: number;
+            /** Cached Per Million */
+            cached_per_million: number;
+            /** Maximum Input Tokens */
+            maximum_input_tokens?: number | null;
+            /** Price Basis */
+            price_basis: string;
+            /** Price Source */
+            price_source: string;
+            /** Price Source Url */
+            price_source_url: string;
+            /**
+             * Price Fetched At
+             * Format: date-time
+             */
+            price_fetched_at: string;
+            /** Exchange Source */
+            exchange_source: string;
+            /** Exchange Rate */
+            exchange_rate: number;
+            /** Exchange Rate Kind */
+            exchange_rate_kind: string;
+            /** Exchange Source Url */
+            exchange_source_url: string;
+            /** Exchange Source Time */
+            exchange_source_time?: string | null;
+            /**
+             * Exchange Fetched At
+             * Format: date-time
+             */
+            exchange_fetched_at: string;
         };
         /** ProfileReport */
         ProfileReport: {
@@ -4045,6 +4119,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    sizing_price_suggestion_api_sizing_price_suggestions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceSuggestionResponse"];
                 };
             };
             /** @description Unprocessable Entity */

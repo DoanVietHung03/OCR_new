@@ -180,6 +180,7 @@ class SizingCatalog:
                 not str(profile.get("billing_currency", "")).isalpha()
                 or len(str(profile.get("billing_currency", ""))) != 3
                 or float(profile.get("exchange_rate", 0) or 0) > 0 and not profile.get("exchange_confirmed")
+                or profile.get("price_source_url") and not profile.get("suggestion_confirmed")
             ):
                 raise ValueError("invalid_price_profile")
         for key in ("workload_profiles", "hardware_profiles"):
@@ -285,6 +286,8 @@ def operation_cost(operation: dict[str, Any], profile: dict[str, Any] | None) ->
     if not profile or operation.get("usage_status") not in {"complete", "inconsistent"} or not usage:
         return None
     prompt, completion = usage["prompt_tokens"], usage["completion_tokens"]
+    if profile.get("maximum_input_tokens") and prompt > int(profile["maximum_input_tokens"]):
+        return None
     cached = usage.get("cached_tokens") or 0
     fixed_policy = profile.get("fixed_cost_policy", "successful_response")
     fixed_allowed = (

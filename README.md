@@ -204,6 +204,11 @@ có IP đó; không mở thêm cổng backend/frontend trực tiếp trong deplo
 Đây là hành vi có chủ ý khi provider chưa trả đủ usage hoặc chưa đạt sample và
 coverage gate. Hệ thống không thay dữ liệu thiếu bằng số `0` hay dự báo giả.
 
+Trong tab Scenario, nhập Provider Profile, đúng model và nguồn tỷ giá rồi chọn
+`Lấy giá và tỷ giá`. Hệ thống chỉ đọc các nguồn chính thức đã cho phép, hiển thị
+nguồn/thời điểm để người dùng kiểm tra và chỉ lưu Price Profile sau khi xác nhận.
+Model chưa có bộ đọc giá chính thức tiếp tục hiển thị `Unavailable`.
+
 ### Có thể tải ảnh hoặc ZIP không?
 
 Không. Hệ thống chỉ nhận PDF. PDF có mật khẩu, không hợp lệ hoặc vượt giới hạn

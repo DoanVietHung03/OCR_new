@@ -6,8 +6,8 @@ import {
   deleteSizingSnapshot, getSizingCatalog, getSizingJobs, getSizingOperations,
   getSizingOverview, getSizingSnapshots, getExchangeRateSources, patchSizingSnapshot,
   previewSizingRetention, previewSizingSnapshotDelete, putSizingCatalog,
-  suggestExchangeRate,
-  SizingCatalog, SizingJob, SizingOperations, SizingOverview, SizingSnapshots,
+  suggestPrice,
+  PriceSuggestion, SizingCatalog, SizingJob, SizingOperations, SizingOverview, SizingSnapshots,
 } from "../../lib/api";
 import { safeError, useLanguage } from "../../lib/i18n";
 import AppShell from "../app-shell";
@@ -30,7 +30,7 @@ const copy = {
     applyDelete: "Xác nhận xóa", noChart: "Cần ít nhất 2 công việc tương thích để mở biểu đồ so sánh.",
     exportCsv: "Xuất CSV", exportJson: "Xuất JSON", copyId: "Sao chép ID",
     emptySnapshots: "Chưa có ảnh chụp nào.", snapshotHint: "Lưu một kết quả xem trước để so sánh hoặc xuất lại sau.",
-    snapshotDisabled: "Hãy tính bản xem trước trước khi lưu ảnh chụp.", priceDisabled: "Hãy xác nhận tỷ giá trước khi lưu.",
+    snapshotDisabled: "Hãy tính bản xem trước trước khi lưu ảnh chụp.", priceDisabled: "Hãy xác nhận giá và tỷ giá gợi ý trước khi lưu.",
     saveWorkload: "Lưu hồ sơ khối lượng", hardware: "Hồ sơ phần cứng", saveHardware: "Lưu hồ sơ phần cứng",
     all: "Tất cả", utcStart: "Bắt đầu (UTC)", utcEnd: "Kết thúc (UTC)", unit: "Đơn vị", timezone: "Múi giờ", local: "Địa phương",
     gate: "Ngưỡng", status: "Trạng thái", available: "Khả dụng", job: "Công việc", loading: "Đang tải…",
@@ -38,7 +38,8 @@ const copy = {
     documentsPerDossier: "Văn bản / hồ sơ", pagesPerDocument: "Trang / văn bản", pagesPerJob: "Trang / công việc",
     model: "Mô hình", inputPerMillion: "Đầu vào / 1 triệu", outputPerMillion: "Đầu ra / 1 triệu", cachedPerMillion: "Cache / 1 triệu",
     exchangeSource: "Nguồn tỷ giá", manualUnavailable: "Nhập tay / không khả dụng", exchangeRate: "Tỷ giá",
-    confirmExchange: "Xác nhận tỷ giá", fetchSuggestion: "Lấy tỷ giá gợi ý", description: "Mô tả",
+    confirmExchange: "Xác nhận giá và tỷ giá gợi ý", fetchSuggestion: "Lấy giá và tỷ giá", fetchingSuggestion: "Đang lấy…", description: "Mô tả",
+    suggestionReady: "Gợi ý đã sẵn sàng", priceSource: "Nguồn giá", rateSource: "Nguồn tỷ giá", priceBasis: "Phạm vi áp dụng",
     name: "Tên", created: "Thời điểm tạo", archived: "Đã lưu trữ", active: "Đang hoạt động",
     retentionHint: "Xem trước → Xác nhận · dữ liệu đo", systemOperations: "Hoạt động hệ thống", pinnedBenchmarks: "Benchmark đã ghim",
     measurementFirst: "Ưu tiên dữ liệu đo", unavailableValue: "Không khả dụng", chartLabel: "Token prompt và completion theo công việc",
@@ -57,7 +58,7 @@ const copy = {
     applyDelete: "Confirm deletion", noChart: "At least 2 compatible jobs are required for a comparison chart.",
     exportCsv: "Export CSV", exportJson: "Export JSON", copyId: "Copy ID",
     emptySnapshots: "No snapshots yet.", snapshotHint: "Save a Preview result to compare or export it later.",
-    snapshotDisabled: "Calculate a Preview before saving a snapshot.", priceDisabled: "Confirm the exchange rate before saving.",
+    snapshotDisabled: "Calculate a Preview before saving a snapshot.", priceDisabled: "Confirm the suggested price and exchange rate before saving.",
     saveWorkload: "Save Workload Profile", hardware: "Hardware Profile", saveHardware: "Save Hardware Profile",
     all: "All", utcStart: "UTC start", utcEnd: "UTC end", unit: "Unit", timezone: "Timezone", local: "Local",
     gate: "Gate", status: "Status", available: "Available", job: "Job", loading: "Loading…",
@@ -65,7 +66,8 @@ const copy = {
     documentsPerDossier: "Documents / dossier", pagesPerDocument: "Pages / document", pagesPerJob: "Pages / job",
     model: "Model", inputPerMillion: "Input / 1M", outputPerMillion: "Output / 1M", cachedPerMillion: "Cached / 1M",
     exchangeSource: "Exchange source", manualUnavailable: "Manual / unavailable", exchangeRate: "Exchange rate",
-    confirmExchange: "Confirm exchange rate", fetchSuggestion: "Fetch suggestion", description: "Description",
+    confirmExchange: "Confirm suggested price and exchange rate", fetchSuggestion: "Fetch price and rate", fetchingSuggestion: "Fetching…", description: "Description",
+    suggestionReady: "Suggestion ready", priceSource: "Price source", rateSource: "Exchange source", priceBasis: "Price basis",
     name: "Name", created: "Created", archived: "Archived", active: "Active",
     retentionHint: "Preview → Confirm · measurement data", systemOperations: "System operations", pinnedBenchmarks: "Pinned benchmarks",
     measurementFirst: "Measurement first", unavailableValue: "Unavailable", chartLabel: "Prompt and completion tokens by job",
@@ -123,11 +125,17 @@ export default function SizingPage() {
   const [error, setError] = useState("");
   const [scenario, setScenario] = useState({ monthly_jobs: 100, operating_days: 20, operating_hours: 8, processing_mode: "administrative_document" as "administrative_document" | "dossier_cover" | "combined_dossier", peak_factor: 1.5, reserve: .25, minimum_success_rate: .95, artifact_retention_days: 30, average_pages_per_job: 1, average_documents_per_dossier: 1, average_pages_per_document: 1 });
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
-  const [price, setPrice] = useState({ id: "", provider_profile_id: "", model: "", billing_currency: "USD", display_currency: "VND", input_per_million: 0, output_per_million: 0, cached_per_million: 0, fixed_cost: 0, fixed_cost_policy: "successful_response", surcharge_rate: 0, effective_from: new Date().toISOString(), exchange_rate: 0, exchange_source: "", exchange_confirmed: false });
+  const [price, setPrice] = useState({ id: "", provider_profile_id: "", model: "", billing_currency: "USD", display_currency: "VND", input_per_million: 0, output_per_million: 0, cached_per_million: 0, fixed_cost: 0, fixed_cost_policy: "successful_response", surcharge_rate: 0, effective_from: new Date().toISOString(), exchange_rate: 0, exchange_source: "", exchange_confirmed: false, suggestion_confirmed: false, maximum_input_tokens: null as number | null, price_basis: "", price_source: "", price_source_url: "", price_fetched_at: "", exchange_rate_kind: "", exchange_source_url: "", exchange_source_time: null as string | null, exchange_fetched_at: "" });
+  const [priceSuggestion, setPriceSuggestion] = useState<PriceSuggestion | null>(null);
+  const [fetchingPrice, setFetchingPrice] = useState(false);
   const [exchangeSources, setExchangeSources] = useState<{ id: string; label: string; currencies: string[]; url: string }[]>([]);
   const [retention, setRetention] = useState({ start_date: "", end_date: "", include_system: false, include_rollups: false, include_pinned_benchmarks: false });
   const [hardware, setHardware] = useState({ id: "", description: "", cpu: "", ram_gb: 0, gpu: "" });
   const [retentionPlan, setRetentionPlan] = useState<{ plan_token: string; checksum: string; operation_count: number; rollup_count: number } | null>(null);
+  const changePriceIdentity = (changes: Partial<typeof price>) => {
+    setPriceSuggestion(null);
+    setPrice({ ...price, ...changes, exchange_confirmed: false, suggestion_confirmed: false, maximum_input_tokens: null, price_basis: "", price_source: "", price_source_url: "", price_fetched_at: "", exchange_rate_kind: "", exchange_source_url: "", exchange_source_time: null, exchange_fetched_at: "" });
+  };
 
   const load = async () => {
     try {
@@ -186,9 +194,33 @@ export default function SizingPage() {
   async function savePrice(event: FormEvent) {
     event.preventDefault(); if (!catalog) return;
     try {
-      setCatalog(await putSizingCatalog({ revision: catalog.revision, price_profiles: [...catalog.price_profiles, price], workload_profiles: catalog.workload_profiles, hardware_profiles: catalog.hardware_profiles }));
+      const savedPrice = { ...price, id: price.id || `${price.provider_profile_id}-${price.model}-${Date.now()}` };
+      setCatalog(await putSizingCatalog({ revision: catalog.revision, price_profiles: [...catalog.price_profiles, savedPrice], workload_profiles: catalog.workload_profiles, hardware_profiles: catalog.hardware_profiles }));
       setError("");
     } catch (reason) { setError(errorText(reason)); }
+  }
+  async function fetchPrice() {
+    if (!price.provider_profile_id || !price.model || !price.exchange_source) return;
+    setFetchingPrice(true);
+    try {
+      const suggestion = await suggestPrice({ provider_profile_id: price.provider_profile_id, model: price.model, exchange_source: price.exchange_source as "vietcombank" | "agribank" | "ecb" });
+      setPriceSuggestion(suggestion);
+      setPrice({
+        ...price,
+        id: price.id || `${price.provider_profile_id}-${price.model}-${Date.now()}`,
+        billing_currency: suggestion.billing_currency, display_currency: suggestion.display_currency,
+        input_per_million: suggestion.input_per_million, output_per_million: suggestion.output_per_million,
+        cached_per_million: suggestion.cached_per_million, maximum_input_tokens: suggestion.maximum_input_tokens ?? null,
+        price_basis: suggestion.price_basis, price_source: suggestion.price_source,
+        price_source_url: suggestion.price_source_url, price_fetched_at: suggestion.price_fetched_at,
+        exchange_rate: suggestion.exchange_rate, exchange_rate_kind: suggestion.exchange_rate_kind,
+        exchange_source_url: suggestion.exchange_source_url, exchange_source_time: suggestion.exchange_source_time ?? null,
+        exchange_fetched_at: suggestion.exchange_fetched_at, exchange_confirmed: false, suggestion_confirmed: false,
+        effective_from: new Date().toISOString(),
+      });
+      setError("");
+    } catch (reason) { setPriceSuggestion(null); setError(errorText(reason)); }
+    finally { setFetchingPrice(false); }
   }
   async function saveWorkload() {
     if (!catalog) return;
@@ -260,10 +292,10 @@ export default function SizingPage() {
       <label>{t.reserve}<input type="number" min="0" step=".05" value={scenario.reserve} onChange={(event) => setScenario({ ...scenario, reserve: Number(event.target.value) })} /></label>
     </div><footer className="modal-actions"><button className="button primary" type="submit">{t.calculate}</button><button className="button secondary" type="button" onClick={saveWorkload}>{t.saveWorkload}</button><span className="disabled-help" title={!result ? t.snapshotDisabled : undefined}><button className="button secondary" type="button" disabled={!result} aria-describedby={!result ? "snapshot-disabled-reason" : undefined} onClick={saveSnapshot}>{t.saveSnapshot}</button></span></footer>{!result && <small id="snapshot-disabled-reason" className="field-help">{t.snapshotDisabled}</small>}{result && <pre className="safe-json">{JSON.stringify(result, null, 2)}</pre>}</form>
     <form className="panel sizing-card" onSubmit={savePrice}><h2>{t.price}</h2><div className="form-grid sizing-form-grid">
-      <label>ID<input required value={price.id} onChange={(event) => setPrice({ ...price, id: event.target.value })} /></label><label>{t.provider}<input required value={price.provider_profile_id} onChange={(event) => setPrice({ ...price, provider_profile_id: event.target.value })} /></label><label>{t.model}<input required value={price.model} onChange={(event) => setPrice({ ...price, model: event.target.value })} /></label>
-      <label>{t.inputPerMillion}<input type="number" min="0" step=".000001" value={price.input_per_million} onChange={(event) => setPrice({ ...price, input_per_million: Number(event.target.value) })} /></label><label>{t.outputPerMillion}<input type="number" min="0" step=".000001" value={price.output_per_million} onChange={(event) => setPrice({ ...price, output_per_million: Number(event.target.value) })} /></label><label>{t.cachedPerMillion}<input type="number" min="0" step=".000001" value={price.cached_per_million} onChange={(event) => setPrice({ ...price, cached_per_million: Number(event.target.value) })} /></label>
-      <label>{t.exchangeSource}<select value={price.exchange_source} onChange={(event) => setPrice({ ...price, exchange_source: event.target.value, exchange_confirmed: false })}><option value="">{t.manualUnavailable}</option>{exchangeSources.map((source) => <option key={source.id} value={source.id}>{source.label}</option>)}</select></label><label>{t.exchangeRate}<input type="number" min="0" step=".000001" value={price.exchange_rate} onChange={(event) => setPrice({ ...price, exchange_rate: Number(event.target.value), exchange_confirmed: false })} /></label><label className="check-label"><input type="checkbox" checked={price.exchange_confirmed} onChange={(event) => setPrice({ ...price, exchange_confirmed: event.target.checked })} />{t.confirmExchange}</label>
-    </div><footer className="modal-actions"><button className="button secondary" type="button" disabled={!price.exchange_source} onClick={() => suggestExchangeRate(price.exchange_source).catch((reason) => setError(errorText(reason)))}>{t.fetchSuggestion}</button><span className="disabled-help" title={price.exchange_rate > 0 && !price.exchange_confirmed ? t.priceDisabled : undefined}><button className="button primary" type="submit" disabled={price.exchange_rate > 0 && !price.exchange_confirmed}>{t.savePrice}</button></span></footer>{price.exchange_rate > 0 && !price.exchange_confirmed && <small className="field-help">{t.priceDisabled}</small>}</form>
+      <label>{t.provider}<input required value={price.provider_profile_id} onChange={(event) => changePriceIdentity({ provider_profile_id: event.target.value })} /></label><label>{t.model}<input required value={price.model} onChange={(event) => changePriceIdentity({ model: event.target.value })} /></label>
+      <label>{t.inputPerMillion}<input type="number" min="0" step=".000001" readOnly={Boolean(priceSuggestion)} value={price.input_per_million} onChange={(event) => setPrice({ ...price, input_per_million: Number(event.target.value) })} /></label><label>{t.outputPerMillion}<input type="number" min="0" step=".000001" readOnly={Boolean(priceSuggestion)} value={price.output_per_million} onChange={(event) => setPrice({ ...price, output_per_million: Number(event.target.value) })} /></label><label>{t.cachedPerMillion}<input type="number" min="0" step=".000001" readOnly={Boolean(priceSuggestion)} value={price.cached_per_million} onChange={(event) => setPrice({ ...price, cached_per_million: Number(event.target.value) })} /></label>
+      <label>{t.exchangeSource}<select value={price.exchange_source} onChange={(event) => changePriceIdentity({ exchange_source: event.target.value, exchange_rate: 0 })}><option value="">{t.manualUnavailable}</option>{exchangeSources.map((source) => <option key={source.id} value={source.id}>{source.label}</option>)}</select></label><label>{t.exchangeRate}<input type="number" min="0" step=".000001" readOnly={Boolean(priceSuggestion)} value={price.exchange_rate} onChange={(event) => setPrice({ ...price, exchange_rate: Number(event.target.value), exchange_confirmed: false })} /></label><label className="check-label"><input type="checkbox" disabled={!price.exchange_rate} checked={priceSuggestion ? price.suggestion_confirmed : price.exchange_confirmed} onChange={(event) => setPrice({ ...price, exchange_confirmed: event.target.checked, suggestion_confirmed: priceSuggestion ? event.target.checked : false })} />{t.confirmExchange}</label>
+    </div>{priceSuggestion && <div className="price-suggestion" role="status"><strong>{t.suggestionReady}</strong><span>{price.input_per_million} / {price.output_per_million} / {price.cached_per_million} {price.billing_currency} / 1M</span><span>{price.exchange_rate.toLocaleString(locale)} {price.display_currency}/{price.billing_currency}</span><small>{t.priceBasis}: {price.price_basis}</small><small>{t.priceSource}: <a href={price.price_source_url} target="_blank" rel="noreferrer">{price.price_source}</a></small><small>{t.rateSource}: <a href={price.exchange_source_url} target="_blank" rel="noreferrer">{price.exchange_source}</a>{price.exchange_source_time ? ` · ${price.exchange_source_time}` : ""}</small></div>}<footer className="modal-actions"><button className="button secondary" type="button" disabled={!price.provider_profile_id || !price.model || !price.exchange_source || fetchingPrice} onClick={fetchPrice}>{fetchingPrice ? t.fetchingSuggestion : t.fetchSuggestion}</button><span className="disabled-help" title={(priceSuggestion && !price.suggestion_confirmed) || (price.exchange_rate > 0 && !price.exchange_confirmed) ? t.priceDisabled : undefined}><button className="button primary" type="submit" disabled={Boolean((priceSuggestion && !price.suggestion_confirmed) || (price.exchange_rate > 0 && !price.exchange_confirmed))}>{t.savePrice}</button></span></footer>{((priceSuggestion && !price.suggestion_confirmed) || (price.exchange_rate > 0 && !price.exchange_confirmed)) && <small className="field-help">{t.priceDisabled}</small>}</form>
     <form className="panel sizing-card" onSubmit={saveHardware}><h2>{t.hardware}</h2><div className="form-grid sizing-form-grid"><label>ID<input required value={hardware.id} onChange={(event) => setHardware({ ...hardware, id: event.target.value })} /></label><label>{t.description}<input required value={hardware.description} onChange={(event) => setHardware({ ...hardware, description: event.target.value })} /></label><label>CPU<input value={hardware.cpu} onChange={(event) => setHardware({ ...hardware, cpu: event.target.value })} /></label><label>RAM GB<input type="number" min="0" value={hardware.ram_gb} onChange={(event) => setHardware({ ...hardware, ram_gb: Number(event.target.value) })} /></label><label>GPU<input value={hardware.gpu} onChange={(event) => setHardware({ ...hardware, gpu: event.target.value })} /></label></div><button className="button primary" type="submit">{t.saveHardware}</button></form></div>}
 
     {view === "retention" && <div className="sizing-stack"><section className="panel sizing-card"><h2>{t.snapshots}</h2>{snapshots?.items.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>{t.name}</th><th>{t.created}</th><th>{t.status}</th><th /></tr></thead><tbody>{snapshots.items.map((item) => <tr key={item.id}><td>{item.name}</td><td>{new Date(item.created_at).toLocaleString(locale)}</td><td><span className={`sizing-status ${item.archived ? "info" : "good"}`}>{item.archived ? t.archived : t.active}</span></td><td><button className="button secondary" onClick={() => download(`${item.id}.json`, JSON.stringify(item, null, 2), "application/json")}>{t.exportJson}</button><button className="button secondary" onClick={() => patchSizingSnapshot(item.id, { revision: item.revision, archived: !item.archived }).then(() => getSizingSnapshots().then(setSnapshots))}>{t.archive}</button><button className="button danger ghost" onClick={() => removeSnapshot(item.id)}>{t.remove}</button></td></tr>)}</tbody></table></div> : <div className="snapshot-empty"><span aria-hidden="true">◇</span><b>{t.emptySnapshots}</b><p>{t.snapshotHint}</p></div>}</section>

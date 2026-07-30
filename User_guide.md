@@ -533,6 +533,11 @@ Phải có công thức và ví dụ số giả lập, ghi rõ không phải bá
 4. capacity từ throughput/latency đã đo và số worker;
 5. ví dụ `Unavailable` do thiếu usage, thiếu mẫu hoặc fingerprint không khớp.
 
+Reference cũng phải giải thích luồng tạo Price Profile: nhập Provider Profile,
+đúng model và nguồn tỷ giá, lấy bản Preview từ allowlist nguồn chính thức, kiểm
+tra URL/thời điểm/đơn vị rồi xác nhận trước khi lưu. Không suy model từ tên
+Provider Profile, không tự xác nhận và không biến lỗi nguồn thành giá `0`.
+
 ### 7.5 Glossary
 
 Tối thiểu gồm `PDF`, `OCR`, `Job`, `Document`, `Page`, `Processing Mode`,

@@ -401,10 +401,21 @@ External provider dùng API Price Profile. Self-host không hiển thị `0 USD`
 `Chưa tính chi phí hạ tầng`. X17 chỉ sizing năng lực self-host, chưa làm TCO
 điện/khấu hao/bảo trì. Internal chargeback nếu có phải ghi đúng provenance.
 
-### 7.3 Exchange-rate suggestion
+### 7.3 Price và exchange-rate suggestion
 
-Không scrape Google và không auto lấy provider price. Backend chỉ fetch tỷ giá
-khi user bấm, từ allowlist:
+Backend chỉ fetch khi user bấm, từ fixed allowlist chính thức; không scrape
+Google, không nhận URL tùy ý và không tự persist. Luồng nhập
+Provider Profile ID + exact model + exchange source trả một bản Preview gồm giá,
+tỷ giá, source URL, source/fetched time và phạm vi áp dụng; user phải xác nhận
+trước khi lưu Price Profile.
+
+Nguồn giá ban đầu là trang Pay-as-you-go chính thức của MiniMax cho exact
+`MiniMax-*`. `MiniMax-M3` dùng tier standard `input <= 512k`; Price Profile lưu
+`maximum_input_tokens=512000`, attempt vượt ngưỡng giữ cost `Unavailable` thay
+vì áp sai tier. Model/provider billing source chưa được hỗ trợ trả
+`model_price_unavailable`, không suy alias hoặc dùng bảng giá cộng đồng.
+
+Nguồn tỷ giá:
 
 - [Vietcombank](https://www.vietcombank.com.vn/vi-VN/To-chuc/Trang-chu-DCTC/KHTC---Ti-gia---DCTC)
   và [Agribank](https://www.agribank.com.vn/vn/ty-gia) cho cặp VND;
@@ -567,6 +578,7 @@ POST /api/sizing/retention/preview
 POST /api/sizing/retention/apply
 GET  /api/sizing/exchange-rate-sources
 POST /api/sizing/exchange-rate-suggestions
+POST /api/sizing/price-suggestions
 ```
 
 - Overview trả backend-aggregated series, provenance và gate; không trả job
@@ -674,7 +686,8 @@ X17 chỉ hoàn thành khi:
 
 ## 13. Ngoài phạm vi
 
-- Không tự crawl provider price.
+- Không crawl nguồn giá ngoài allowlist chính thức, không suy billing vendor từ
+  Provider Profile ID và không tự cập nhật Price Profile đã lưu.
 - Không scrape Google hoặc nhận arbitrary exchange-rate URL.
 - Không tokenizer estimate image token.
 - Không TCO điện/khấu hao/bảo trì self-host.

@@ -17,6 +17,7 @@ export type SizingJobs = Schemas["SizingJobsResponse"];
 export type SizingJob = Schemas["SizingJobSummary"];
 export type SizingOperations = Schemas["SizingOperationsResponse"];
 export type SizingCatalog = Schemas["SizingCatalogResponse"];
+export type PriceSuggestion = Schemas["PriceSuggestionResponse"];
 export type SizingSnapshot = Schemas["SnapshotResponse"];
 export type SizingSnapshots = Schemas["SnapshotsResponse"];
 export type CodeCatalog = Schemas["CodeCatalogResponse"];
@@ -117,6 +118,8 @@ export const applySizingRetention = (payload: Schemas["RetentionApplyRequest"]) 
 export const getExchangeRateSources = () => request<{ items: { id: string; label: string; currencies: string[]; url: string }[] }>("/api/sizing/exchange-rate-sources");
 export const suggestExchangeRate = (sourceId: string) =>
   request<{ items: unknown[] }>(`/api/sizing/exchange-rate-suggestions?source_id=${encodeURIComponent(sourceId)}`, { method: "POST" });
+export const suggestPrice = (payload: Schemas["PriceSuggestionRequest"]) =>
+  request<PriceSuggestion>("/api/sizing/price-suggestions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
 export const getArtifacts = (id: string) => request<Artifacts>(`/api/jobs/${encodeURIComponent(id)}/artifacts`);
 export const getCodes = () => request<CodeCatalog>("/api/codes");
 export const createCode = (payload: Schemas["CodeInput"]) =>

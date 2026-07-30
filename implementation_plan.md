@@ -453,6 +453,10 @@ Gate backend:
 - Cost matching theo profile/model/effective time; profile đã dùng immutable/
   archive-only. Tỷ giá fetch on-demand từ fixed allowlist, user xác nhận trước
   khi persist; source lỗi không ảnh hưởng OCR.
+- Price suggestion on-demand nhận Provider Profile ID + exact model + exchange
+  source, hiện hỗ trợ bảng Pay-as-you-go chính thức MiniMax và ba nguồn tỷ giá
+  Vietcombank/Agribank/ECB. Preview giữ source/time/basis, bắt xác nhận trước
+  persist; `MiniMax-M3` vượt 512k input giữ billing unknown.
 - Calculator từ chối verdict dưới sample/coverage gate, ngoài observed page
   range hoặc khác fingerprint. Scale-out chỉ trả theoretical capacity units cho
   tới khi cluster benchmark thật pass.

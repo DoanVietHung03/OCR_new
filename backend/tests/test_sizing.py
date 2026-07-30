@@ -5,6 +5,9 @@ import httpx
 import pytest
 
 from app.services.ocr_runner import request_page
+from app.services.pricing import (
+    parse_agribank_quote, parse_ecb_quote, parse_minimax_price, parse_vietcombank_quote,
+)
 from app.services.sizing import (
     MeasurementStore, SizingCatalog, SnapshotStore, aggregate,
     calculate_scenario, operation_cost, parse_usage,
@@ -28,6 +31,32 @@ def test_usage_parser_keeps_canonical_tokens_and_rejects_bad_components():
         "prompt_tokens": 2, "completion_tokens": 1,
         "prompt_tokens_details": {"cached_tokens": 3},
     }})[0] == "incomplete"
+
+
+def test_official_price_and_exchange_source_parsers_are_bounded():
+    price = parse_minimax_price("""
+      <table><tr><td>MiniMax-M3 ≤ 512k input tokens</td>
+      <td><del>$0.60</del> $0.30 / M tokens</td>
+      <td><del>$2.40</del> $1.20 / M tokens</td>
+      <td><del>$0.12</del> $0.06 / M tokens</td></tr></table>
+    """, "MiniMax-M3")
+    assert price == {
+        "billing_currency": "USD", "input_per_million": .3, "output_per_million": 1.2,
+        "cached_per_million": .06, "maximum_input_tokens": 512_000,
+        "price_basis": "standard pay-as-you-go; input <= 512k tokens",
+    }
+    assert parse_vietcombank_quote(
+        '<ExrateList DateTime="30/07/2026 08:05"><Exrate CurrencyCode="USD" Sell="26,520.00"/></ExrateList>'
+    )["exchange_rate"] == 26_520
+    assert parse_agribank_quote(
+        "<table><tr><td>USD</td><td>26120.00</td><td>26140.00</td><td>26520.00</td></tr></table>"
+    )["exchange_rate"] == 26_520
+    assert round(parse_ecb_quote("TIME_PERIOD,OBS_VALUE\n2026-07-30,1.2\n")["exchange_rate"], 6) == .833333
+
+    assert operation_cost({
+        "status": "success", "usage_status": "complete",
+        "usage": {"prompt_tokens": 512_001, "completion_tokens": 1},
+    }, {**price, "fixed_cost_policy": "successful_response"}) is None
 
 
 def test_measurements_are_atomic_recoverable_and_aggregate_without_double_count(tmp_path):

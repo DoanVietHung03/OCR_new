@@ -426,6 +426,10 @@ khi đóng.
 - Price Profile không yêu cầu user nhập usage. Exchange-rate suggestion chỉ lấy
   khi user bấm, hiển thị từng nguồn/loại/time/direct link và bắt xác nhận; không
   scrape Google, auto-average hoặc auto-update profile đã lưu.
+- Price form có một action lấy đồng thời official model price và quote từ
+  Provider Profile + exact model + exchange source; ID/giá/tỷ giá/provenance
+  được điền từ Preview, read-only cho tới khi user xác nhận rồi mới lưu. Model
+  chưa được allowlist giữ manual/unavailable, không đoán giá.
 - Workload form chỉ nhập monthly volume + operating days/hours, một Processing
   Mode, peak/reserve/SLA/success target/retention assumption. Combined dossier
   dùng dossier volume + document/page averages; không cho input ngày/tháng mâu

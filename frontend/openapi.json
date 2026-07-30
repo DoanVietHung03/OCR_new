@@ -2130,6 +2130,44 @@
         }
       }
     },
+    "/api/sizing/price-suggestions": {
+      "post": {
+        "summary": "Sizing Price Suggestion",
+        "operationId": "sizing_price_suggestion_api_sizing_price_suggestions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceSuggestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceSuggestionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -4590,6 +4628,156 @@
           "pages"
         ],
         "title": "PaginationResponse"
+      },
+      "PriceSuggestionRequest": {
+        "properties": {
+          "provider_profile_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Provider Profile Id"
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Model"
+          },
+          "exchange_source": {
+            "type": "string",
+            "enum": [
+              "vietcombank",
+              "agribank",
+              "ecb"
+            ],
+            "title": "Exchange Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "provider_profile_id",
+          "model",
+          "exchange_source"
+        ],
+        "title": "PriceSuggestionRequest"
+      },
+      "PriceSuggestionResponse": {
+        "properties": {
+          "provider_profile_id": {
+            "type": "string",
+            "title": "Provider Profile Id"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "billing_currency": {
+            "type": "string",
+            "title": "Billing Currency"
+          },
+          "display_currency": {
+            "type": "string",
+            "title": "Display Currency"
+          },
+          "input_per_million": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Input Per Million"
+          },
+          "output_per_million": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Output Per Million"
+          },
+          "cached_per_million": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Cached Per Million"
+          },
+          "maximum_input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Input Tokens"
+          },
+          "price_basis": {
+            "type": "string",
+            "title": "Price Basis"
+          },
+          "price_source": {
+            "type": "string",
+            "title": "Price Source"
+          },
+          "price_source_url": {
+            "type": "string",
+            "title": "Price Source Url"
+          },
+          "price_fetched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Price Fetched At"
+          },
+          "exchange_source": {
+            "type": "string",
+            "title": "Exchange Source"
+          },
+          "exchange_rate": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Exchange Rate"
+          },
+          "exchange_rate_kind": {
+            "type": "string",
+            "title": "Exchange Rate Kind"
+          },
+          "exchange_source_url": {
+            "type": "string",
+            "title": "Exchange Source Url"
+          },
+          "exchange_source_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Source Time"
+          },
+          "exchange_fetched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Exchange Fetched At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider_profile_id",
+          "model",
+          "billing_currency",
+          "display_currency",
+          "input_per_million",
+          "output_per_million",
+          "cached_per_million",
+          "price_basis",
+          "price_source",
+          "price_source_url",
+          "price_fetched_at",
+          "exchange_source",
+          "exchange_rate",
+          "exchange_rate_kind",
+          "exchange_source_url",
+          "exchange_fetched_at"
+        ],
+        "title": "PriceSuggestionResponse"
       },
       "ProfileReport": {
         "properties": {
