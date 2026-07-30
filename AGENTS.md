@@ -28,7 +28,7 @@ gate only because fixture/live acceptance is missing; `X14` still needs real
 benchmark fingerprints. The locally actionable `X17A`–`X17E` scope is
 implemented; `X17F` still needs real provider/fixture/server evidence.
 The frontend-only `X18` guide/reference scope is implemented with two static
-VI/EN routes, seven contextual links, and five sanitized captures. Its
+VI/EN routes, one permanent sidebar entry, and five sanitized captures. Its
 production build and non-browser checks pass; Playwright reached all 25 tests
 without a reported test failure but Windows teardown still needs a clean
 non-timeout confirmation before `X18` is called `LOCAL COMPLETE`.
@@ -170,9 +170,9 @@ revision conflict, and Continue in the browser gate.
   Logs, Report, Codes, Sizing, and User guide navigation with real routes and data; System Monitor
   remains a global dialog/deep-linkable state.
 - `/guide` and `/guide/reference` are static VI/EN help routes. They do not fetch
-  API data or persist state beyond the existing language setting. Keep exactly
-  seven contextual help placements; Review and Structure open a new tab so
-  drafts remain safe.
+  API data or persist state beyond the existing language setting. Keep guidance
+  in the permanent sidebar entry instead of repeating contextual links on
+  workflow screens.
 - `/corrections` saves and approves in one call. UI with drafts must say “Save
   and approve”; do not invent an unapproved saved-correction state. Unknown or
   non-scalar legacy fields remain visible but read-only.

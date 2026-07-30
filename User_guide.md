@@ -472,7 +472,7 @@ Focused checks phải khóa:
 
 - parity cấu trúc VI/EN;
 - ID/anchor duy nhất và tồn tại;
-- contextual link trỏ đúng target;
+- link nội bộ trỏ đúng target;
 - nhãn kỹ thuật khớp UI;
 - không có link/giá trị secret hoặc dữ liệu runtime bị sao chép.
 
@@ -544,24 +544,12 @@ Tối thiểu gồm `PDF`, `OCR`, `Job`, `Document`, `Page`, `Processing Mode`,
 
 Mỗi định nghĩa tối đa hai câu, bắt đầu bằng nghĩa nghiệp vụ trước tên kỹ thuật.
 
-## 8. Contextual help
+## 8. Điểm vào hướng dẫn
 
-V1 có đúng 7 điểm, không gắn help vào từng field/card:
-
-| Điểm đặt | Deep-link |
-|---|---|
-| Upload header | `/guide/reference#upload` |
-| Upload error/Start disabled | `/guide#errors` |
-| Job detail | `/guide/reference#job` |
-| Structure Review header | `/guide#structure-review` |
-| Review header | `/guide/reference#review` |
-| Warning/blocker area | `/guide#errors` |
-| Sizing & Cost header | `/guide/reference#sizing-cost` |
-
-Các link là secondary text link, không cạnh tranh CTA chính, không mở modal và
-không đổi state/draft. Review và Structure Review mở tab mới bằng
-`target="_blank"` + `rel="noreferrer"` và accessible copy nói rõ; Upload, Job
-detail và Sizing mở cùng tab để browser Back quay lại.
+V1 dùng một mục `Hướng dẫn sử dụng` / `User guide` cố định trong sidebar. Không
+lặp `View guidance` trên Upload, Job detail, Structure Review, Review hoặc
+Sizing & Cost. Các anchor trong `/guide` và `/guide/reference` vẫn giữ ổn định
+cho bookmark và liên kết trực tiếp.
 
 ## 9. Ảnh minh họa
 
@@ -647,7 +635,7 @@ số vì text/anchor là nguồn chuẩn.
 - Alt text mô tả mục tiêu thao tác, không chép lại caption.
 - Callout có text, không chỉ icon/màu: `Lưu ý` dùng tông xanh trung tính;
   `Cẩn trọng` trong reference dùng tông vàng cam riêng.
-- Focus ring hiện rõ trên sidebar, TOC, CTA, summary và contextual links.
+- Focus ring hiện rõ trên sidebar, TOC, CTA, summary và các link nội bộ.
 - Tuân thủ `prefers-reduced-motion`; không smooth-scroll bắt buộc.
 - Kiểm tra zoom 200% và reflow; nội dung vẫn đọc được, không che CTA.
 
@@ -658,7 +646,7 @@ số vì text/anchor là nguồn chuẩn.
 - Không persist guide state ngoài language hiện có.
 - Không đổi `/api/*`, generated types, durable job data hoặc old-job reader.
 - Không thêm auth/identity.
-- Contextual links không gửi job/document ID vào guide URL.
+- Link tới guide không gửi job/document ID vào URL.
 - Ảnh và ví dụ phải sanitized.
 - Các route hiện có và bookmark không đổi.
 - Guide không được hướng dẫn hành vi trái contract: upload ảnh/ZIP, retry toàn
@@ -676,7 +664,7 @@ số vì text/anchor là nguồn chuẩn.
 | `frontend/lib/i18n.ts` | Chỉ thêm nhãn navigation/chung cần tái sử dụng; không nhét toàn bộ guide vào dictionary global |
 | `frontend/app/globals.css` | Guide layout, TOC, quick-step, callout và responsive |
 | `frontend/public/guide/*` | Đúng 5 ảnh sanitized |
-| `frontend/tests/e2e/smoke.spec.ts` | Hai route, nav, anchor, VI/EN, contextual link, mobile và accessibility |
+| `frontend/tests/e2e/smoke.spec.ts` | Hai route, nav, anchor, VI/EN, sidebar, mobile và accessibility |
 | `frontend_plan.md` | `FE-X18` status/gate và backlink tới file này |
 | `implementation_plan.md` | `BE-X18` là `N/A`, không thêm API/schema |
 | `README.md` | Chỉ thêm link nếu README có mục tài liệu cho end user; không chép nội dung guide |
@@ -714,9 +702,9 @@ documentation framework.
 7. Parameter reference đủ 9 nhóm, gồm glossary và Sizing/Cost.
 8. Full VI/EN parity.
 
-### Giai đoạn 3 — contextual help và ảnh
+### Giai đoạn 3 — điểm vào guide và ảnh
 
-1. Thêm đúng 7 contextual deep-link đã duyệt.
+1. Giữ một mục guide cố định trong sidebar, không lặp link trên workflow.
 2. Capture/sanitize đúng 5 ảnh.
 3. Kiểm tra ảnh không chứa dữ liệu nhạy cảm.
 4. Không thay CTA chính của các workflow.
@@ -730,7 +718,7 @@ documentation framework.
 
 ### Giai đoạn 5 — regression và tài liệu
 
-1. Browser smoke cho route/nav/anchor/VI-EN/contextual links.
+1. Browser smoke cho route/nav/anchor/VI-EN/sidebar guide.
 2. Typecheck/build.
 3. OpenAPI check để chứng minh không có schema drift.
 4. Đồng bộ `frontend_plan.md`, `implementation_plan.md` và README nếu cần.
@@ -755,7 +743,7 @@ documentation framework.
 - Mỗi parameter entry thuộc inventory có anchor ổn định và đủ sáu mục.
 - CTA mở đúng `/upload`, `/`, `/documents?triage=needs_review` và
   `/?status=active`; `Tra cứu tham số` mở `/guide/reference`.
-- Đúng 7 contextual link trỏ tới anchor đã chốt.
+- Sidebar mở đúng `/guide`; các anchor đã chốt vẫn truy cập trực tiếp được.
 - Reload/back/forward giữ URL hash.
 - Không có link tới provider secret, raw response hoặc internal filesystem.
 
@@ -815,9 +803,7 @@ backend behavior chỉ để phục vụ guide.
   `Unavailable` và ví dụ giả lập mà không đưa verdict/mua sắm thiếu evidence;
 - nội dung lỗi đưa ra hành động an toàn, không yêu cầu thao tác hạ tầng;
 - mọi section, parameter, CTA, alt text, FAQ và glossary có VI/EN parity;
-- đúng 7 contextual help; Review/Structure mở tab mới, nơi không có draft mở
-  cùng tab;
-- contextual help không làm mất draft hoặc thay đổi workflow;
+- chỉ có một điểm vào guide cố định trong sidebar; workflow không lặp link;
 - đúng 5 ảnh được sanitized và text vẫn đủ nghĩa khi ảnh không tải;
 - keyboard, focus, headings, alt text, zoom và reduced motion pass;
 - layout pass tại `1440×900`, `1366×768`, `390×844`;
@@ -826,7 +812,7 @@ backend behavior chỉ để phục vụ guide.
 - `frontend_plan.md` và `implementation_plan.md` được đồng bộ trạng thái thật.
 
 Không có user-testing gate riêng. Không phát hành sidebar khi một trong hai route,
-bản EN, 7 contextual link, 5 ảnh, accessibility hoặc regression còn thiếu.
+bản EN, mục guide, 5 ảnh, accessibility hoặc regression còn thiếu.
 
 ## 18. Việc cố ý chưa làm
 
@@ -846,8 +832,9 @@ Các quyết định trên đã được user xác nhận ngày 2026-07-28. Thay
 mốc này phải cập nhật file này trước, rồi đồng bộ status/backlink `FE-X18` và
 `BE-X18`.
 
-Trạng thái 2026-07-28: implementation V1 đã có đủ hai route tĩnh, VI/EN, 9 nhóm
-reference với 38 entry, đúng 7 contextual help và 5 ảnh sanitized. Backend 62
+Trạng thái 2026-07-30: implementation V1 có đủ hai route tĩnh, VI/EN, 9 nhóm
+reference với 38 entry, một mục guide cố định trong sidebar, không lặp contextual
+help trên workflow và 5 ảnh sanitized. Backend 62
 tests, typecheck, build/prerender, OpenAPI, compileall và diff check pass.
 Playwright đã đi tới đủ 25 test không báo test lỗi nhưng runner Windows không
 thoát ở teardown trước timeout; vì acceptance yêu cầu full regression gate,

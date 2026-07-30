@@ -528,9 +528,9 @@ test("app routes deep-link and Code Catalog CRUD survives reload", async ({ page
   await nav.getByRole("link", { name: /tổng quan vận hành|operations overview/i }).click(); await expect(page).toHaveURL(/\/reports$/); await expect(page.locator(".attention-grid")).toContainText("1"); await expect(page.locator(".attention-grid").getByRole("link", { name: /mở hàng đợi rà soát|open review queue/i })).toHaveAttribute("href", "/documents?triage=needs_review"); await expect(page.locator(".report-card").first()).toContainText("91%"); await expect(page.locator(".report-card").first()).toContainText("50%"); await expect(page.locator(".report-card").first()).toContainText("100%"); await expect(page.locator(".report-card").last()).toContainText("60s"); await expect(page.locator(".provider-report")).toContainText("qwen"); await expect(page.getByRole("heading", { name: /so sánh lần chạy|run comparison/i })).toHaveCount(0);
   await page.setViewportSize({ width: 1366, height: 768 }); const attentionCards = page.locator(".attention-card"); const firstDesktopCard = await attentionCards.first().boundingBox(), lastDesktopCard = await attentionCards.last().boundingBox(); expect(lastDesktopCard!.y).toBe(firstDesktopCard!.y); expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy(); await page.setViewportSize({ width: 1440, height: 900 });
   reportsFail = true; await page.getByRole("button", { name: /làm mới|refresh/i }).click(); await expect(page.locator(".notice.warning")).toBeVisible(); await expect(page.locator(".provider-report")).toContainText("qwen"); reportsFail = false;
-  await nav.getByRole("link", { name: /sizing and cost/i }).click(); await expect(page).toHaveURL(/\/sizing$/); await expect(page.getByRole("heading", { name: "Sizing and cost" })).toBeVisible(); await expect(page.getByText(/Chưa có measurement tương thích|No compatible measurements/i)).toBeVisible(); await expect(page.locator(".data-table tbody tr")).toHaveCount(4);
-  await page.getByRole("button", { name: /công cụ hệ thống|system tools/i }).click(); await nav.getByRole("link", { name: /danh mục mã|code catalog/i }).click(); await expect(page).toHaveURL(/\/codes$/);
-  await page.getByRole("button", { name: /thêm mã|add code/i }).click(); await page.getByLabel("Code").fill("BC"); await page.getByLabel(/nhãn|label/i).fill("Báo cáo"); await page.getByRole("button", { name: /^lưu$|^save$/i }).click();
+  await nav.getByRole("link", { name: /định cỡ và chi phí|sizing and cost/i }).click(); await expect(page).toHaveURL(/\/sizing$/); await expect(page.getByRole("heading", { name: /Định cỡ và chi phí|Sizing and cost/i })).toBeVisible(); await expect(page.getByText(/Chưa có dữ liệu đo tương thích|No compatible measurements/i)).toBeVisible(); await expect(page.locator(".data-table tbody tr")).toHaveCount(4);
+  await page.getByRole("button", { name: /công cụ hệ thống|system tools/i }).click(); await nav.getByRole("link", { name: /danh mục mã|code catalog/i }).click(); await expect(page).toHaveURL(/\/codes$/); await expect(page.getByText(/chưa tự động áp dụng|not applied automatically/i)).toBeVisible();
+  await page.getByRole("button", { name: /thêm mã|add code/i }).click(); await page.getByLabel(/Mã|Code/i).fill("BC"); await page.getByLabel(/nhãn|label/i).fill("Báo cáo"); await page.getByRole("button", { name: /^lưu$|^save$/i }).click();
   let row = page.locator(".data-table tbody tr").filter({ hasText: "BC" }); await expect(row).toContainText("Báo cáo");
   await page.reload(); row = page.locator(".data-table tbody tr").filter({ hasText: "BC" }); await expect(row).toBeVisible();
   await row.getByRole("button", { name: /sửa mã|edit code/i }).click(); await page.getByLabel(/nhãn|label/i).fill("Báo cáo mới"); await page.getByRole("button", { name: /^lưu$|^save$/i }).click(); await expect(row).toContainText("Báo cáo mới");
@@ -721,24 +721,24 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
     return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
   });
   await page.goto("/sizing"); await expect(page.locator(".metric-card").filter({ hasText: /Tổng token|Total tokens/i })).toContainText("12");
-  await expect(page.locator(".metric-card").filter({ hasText: /Token \/ attempt có usage|Tokens \/ measured attempt/i })).toContainText("12");
-  await page.getByLabel(/Số job hiển thị|Jobs shown/i).selectOption("10");
-  await page.getByLabel(/Provider Profile/i).fill("qwen");
+  await expect(page.locator(".metric-card").filter({ hasText: /Token \/ lần gọi có usage|Tokens \/ measured attempt/i })).toContainText("12");
+  await page.getByLabel(/Số công việc hiển thị|Jobs shown/i).selectOption("10");
+  await page.getByLabel(/Hồ sơ provider|Provider Profile/i).fill("qwen");
   await page.getByRole("button", { name: /Làm mới|Refresh/i }).click();
   await expect.poll(() => jobsQuery).toContain("provider_profile_id=qwen");
   expect(jobsQuery).toContain("page_size=10"); expect(jobsQuery).not.toContain("unit=");
   if (process.env.UPDATE_GUIDE_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "public/guide/sizing.png"), fullPage: true }); }
-  await page.getByRole("button", { name: /Document Explorer/i }).click(); const attempts = page.getByRole("button", { name: /Xem attempts|View attempts/i }); await attempts.nth(0).click(); await attempts.nth(1).click(); await expect(page.locator(".attempts-table")).toHaveCount(2); await expect(page.locator(".attempts-table").first()).toContainText("complete");
-  await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await page.getByRole("button", { name: /Tính Preview|Calculate Preview/i }).click(); await expect(page.locator(".safe-json")).toContainText("insufficient_sample");
-  await page.getByRole("button", { name: /Lưu snapshot|Save snapshot/i }).click();
-  await page.getByRole("button", { name: /Retention/i }).click(); await expect(page.locator(".data-table tbody tr")).toHaveCount(1);
-  const dates = page.locator('input[type="date"]'); await dates.nth(0).fill("2026-01-01"); await dates.nth(1).fill("2026-12-31"); await page.getByRole("button", { name: /Preview xóa|Preview measurement/i }).click();
+  await page.getByRole("button", { name: /Khám phá tài liệu|Document Explorer/i }).click(); const attempts = page.getByRole("button", { name: /Xem lần gọi|View attempts/i }); await attempts.nth(0).click(); await attempts.nth(1).click(); await expect(page.locator(".attempts-table")).toHaveCount(2); await expect(page.locator(".attempts-table").first()).toContainText(/Đầy đủ|complete/i);
+  await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await expect(page.getByText(/Kịch bản · Bản xem trước|Scenario · Preview/i)).toBeVisible(); await expect(page.getByText(/Công việc\/tháng|Jobs\/month/i)).toBeVisible(); await expect(page.locator(".context-help")).toHaveCount(0); await page.getByRole("button", { name: /Tính bản xem trước|Calculate Preview/i }).click(); await expect(page.locator(".safe-json")).toContainText("insufficient_sample");
+  await page.getByRole("button", { name: /Lưu ảnh chụp|Save snapshot/i }).click();
+  await page.getByRole("button", { name: /Lưu giữ và ảnh chụp|Retention/i }).click(); await expect(page.locator(".data-table tbody tr")).toHaveCount(1);
+  const dates = page.locator('input[type="date"]'); await dates.nth(0).fill("2026-01-01"); await dates.nth(1).fill("2026-12-31"); await page.getByRole("button", { name: /Xem trước việc xóa dữ liệu đo|Preview measurement/i }).click();
   await expect(page.locator(".retention-preview-operations")).toHaveText("1");
   await expect(page.locator(".retention-preview-rollups")).toHaveText("0");
   await dates.nth(1).fill("2026-11-30");
   await expect(page.locator(".retention-preview")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i })).toHaveCount(0);
-  await dates.nth(1).fill("2026-12-31"); await page.getByRole("button", { name: /Preview xóa|Preview measurement/i }).click();
+  await dates.nth(1).fill("2026-12-31"); await page.getByRole("button", { name: /Xem trước việc xóa dữ liệu đo|Preview measurement/i }).click();
   await page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i }).click(); await expect(page.getByRole("button", { name: /Xác nhận xóa|Confirm deletion/i })).toHaveCount(0);
 });
 

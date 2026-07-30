@@ -19,7 +19,7 @@
 .sizing-status.info { color: #185fb8; background: #e9f2ff; }
 .sizing-status.subtle { font-weight: 700; }
 
-.sizing-form-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
+.sizing-form-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 16px; }
 .sizing-form-grid input, .sizing-form-grid select { color: #182338; background: #fff; }
 .sizing-form-grid input::placeholder { color: #8997aa; }
 .sizing-card .modal-actions { margin-top: 18px; flex-wrap: wrap; }
@@ -50,7 +50,7 @@
 .outline-danger { background: transparent; }
 .solid-danger { color: #fff; background: #b1271b; }
 .solid-danger:hover { background: #921e15; }
-.check-label { align-content: center; grid-template-columns: auto 1fr; }
+.check-label { min-height: 68px; align-content: center; grid-template-columns: auto 1fr; }
 .check-label input { min-height: auto; accent-color: #1768d4; }
 
 @media (max-width: 700px) {

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { SizingJob } from "../../lib/api";
 
-export default function SizingChart({ jobs }: { jobs: SizingJob[] }) {
+export default function SizingChart({ jobs, label }: { jobs: SizingJob[]; label: string }) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!host.current || jobs.length < 2) return;
@@ -35,5 +35,5 @@ export default function SizingChart({ jobs }: { jobs: SizingJob[] }) {
     });
     return () => { window.removeEventListener("resize", resize); chart?.dispose(); };
   }, [jobs]);
-  return jobs.length >= 2 ? <div ref={host} className="sizing-chart" role="img" aria-label="Prompt and completion tokens by job" /> : null;
+  return jobs.length >= 2 ? <div ref={host} className="sizing-chart" role="img" aria-label={label} /> : null;
 }

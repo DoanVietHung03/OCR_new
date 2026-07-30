@@ -239,9 +239,6 @@ h3 { color: #293b57; font-size: .82rem; letter-spacing: .05em; text-transform: u
 .login-card .button { justify-content: center; width: 100%; }
 .warning { color: #8b5c08; }
 
-.context-help { display: inline-block; margin-top: 6px; color: #1768d4; font-size: .82rem; font-weight: 750; text-decoration: none; }
-.context-help:hover { text-decoration: underline; }
-.review-help { margin: 0 0 14px; }
 .guide-hero { display: grid; gap: 10px; margin-bottom: 24px; padding: 28px; border: 1px solid #d9e2ee; border-radius: 14px; background: linear-gradient(135deg, #f7faff, #fff); }
 .guide-hero h1, .guide-hero p { margin: 0; }
 .guide-hero > p { max-width: 720px; color: #52647c; line-height: 1.55; }

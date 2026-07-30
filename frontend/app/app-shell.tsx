@@ -105,7 +105,7 @@ export default function AppShell({ children, onNew, onJobs }: { children: ReactN
       <div className="monitor-grid">
         {meter(text("cpu"), metrics?.cpu_percent)}
         {meter(text("memory"), metrics?.memory_percent)}
-        {metrics?.cpu && <article className="monitor-card"><div><span>CPU</span><strong>{metrics.cpu.logical_cores ?? "—"}</strong></div><small>{metrics.cpu.model || text("unavailable")} · {metrics.cpu.physical_cores ?? "—"} {text("physicalCores")} · load {metrics.cpu.load_1m ?? "—"}/{metrics.cpu.load_5m ?? "—"}/{metrics.cpu.load_15m ?? "—"}</small></article>}
+        {metrics?.cpu && <article className="monitor-card"><div><span>CPU</span><strong>{metrics.cpu.logical_cores ?? "—"}</strong></div><small>{metrics.cpu.model || text("unavailable")} · {metrics.cpu.physical_cores ?? "—"} {text("physicalCores")} · {locale === "vi" ? "tải" : "load"} {metrics.cpu.load_1m ?? "—"}/{metrics.cpu.load_5m ?? "—"}/{metrics.cpu.load_15m ?? "—"}</small></article>}
         {metrics?.runtime && <article className="monitor-card"><div><span>{text("runtime")}</span><strong>{metrics.runtime.os_family}</strong></div><small>{metrics.runtime.architecture} · Python {metrics.runtime.python_version}</small></article>}
         <article className="monitor-card disk-card"><div><span>{text("disk")}</span><strong>{metrics?.disk ? percent(metrics.disk.percent) : "—"}</strong></div>
           {metrics?.disk && <><div className="meter"><i style={{ width: percent(metrics.disk.percent) }} /></div><small>{text("used")}: {bytes(metrics.disk.used_bytes)} · {text("free")}: {bytes(metrics.disk.free_bytes)}</small></>}

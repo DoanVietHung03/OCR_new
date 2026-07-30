@@ -476,7 +476,8 @@ và acceptance duy nhất: [`User_guide.md`](User_guide.md).
 - Tutorial chính dùng một Văn bản hành chính với `Metadata` + `Tự động`; Bìa và
   Hồ sơ gộp là nhánh sau. Browser tips thu gọn, không biến guide thành khóa học
   tin học.
-- VI/EN parity đầy đủ; đúng 7 contextual help, 5 ảnh sanitized và parameter
+- VI/EN parity đầy đủ; một sidebar guide cố định, không lặp contextual help trên
+  các màn hình workflow; giữ 5 ảnh sanitized và parameter
   entry sáu phần. Dynamic provider/price/measurement/capacity chỉ được giải thích,
   không sao chép vào guide tĩnh.
 - Sizing reference phải giữ semantics `Unavailable`, fingerprint và gate
@@ -484,7 +485,7 @@ và acceptance duy nhất: [`User_guide.md`](User_guide.md).
   mua sắm khi thiếu evidence.
 - Dùng TypeScript data, semantic HTML, native anchor/details và CSS hiện có;
   không thêm MDX, CMS, search, tour, analytics hoặc dependency.
-- Chỉ đánh dấu `LOCAL COMPLETE` khi cả hai route, VI/EN, 7 link, 5 ảnh,
+- Chỉ đánh dấu `LOCAL COMPLETE` khi cả hai route, VI/EN, sidebar guide, 5 ảnh,
   accessibility tại ba viewport và full regression gate cùng pass. Không có
   user-testing gate riêng.
 
@@ -492,7 +493,8 @@ và acceptance duy nhất: [`User_guide.md`](User_guide.md).
 thái live evidence của `FE-X17`.
 
 Đã hoàn thành hai route tĩnh `/guide` và `/guide/reference`, VI/EN dùng language
-state hiện có, đúng một sidebar item, đúng 7 contextual help và 5 ảnh fixture
+state hiện có, đúng một sidebar item, không lặp contextual help trên các màn hình
+workflow và có 5 ảnh fixture
 sanitized. Reference có 9 nhóm, 38 entry với anchor ổn định và sáu phần nội
 dung. Follow-up UI thêm scroll-spy/`aria-current` cho mục lục hai route, bỏ hai
 CTA đầu guide bị trùng navigation, tách `Lưu ý` xanh trung tính và `Cẩn trọng`
@@ -538,7 +540,7 @@ thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
 5. **Sizing:** `FE-X17A → FE-X17F` theo backend counterpart; Preview trước,
    chart/calculator/retention/snapshot mở dần theo data gate.
 6. **User guide:** `FE-X18`; audit UI/OpenAPI trước, rồi triển khai đồng thời
-   workflow guide, parameter reference, VI/EN, contextual help và evidence ảnh.
+   workflow guide, parameter reference, VI/EN, sidebar guide và evidence ảnh.
 7. **Shared demo auth:** backend `BE-X19` trước; sau đó `/login`, AppShell logout,
    session-expired draft safety và cuối cùng Nginx/direct-port live smoke.
 
@@ -582,7 +584,7 @@ thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
 | Report/export/URL | `X14` LOCAL COMPLETE; LIVE SAMPLE PENDING; `X15` PASS LOCAL | Benchmark fingerprint thật |
 | Sidebar re-decoration | LOCAL COMPLETE 2026-07-28 (`X14`/`X15`) | Navigation mới, actionable report, exact deep-link, partial error và ba viewport pass |
 | Token/cost/sizing | `X17A`–`X17E` LOCAL COMPLETE; `X17F` LIVE PENDING | One-PDF/provider Preview → bốn fixture → 20-job capacity gate |
-| User guide/reference | `X18` IMPLEMENTED; browser teardown pending | Hai route tĩnh, inventory đủ, VI/EN, 7 contextual link, 5 ảnh và accessibility; xác nhận runner thoát sạch sau 25 test |
+| User guide/reference | `X18` IMPLEMENTED; browser teardown pending | Hai route tĩnh, inventory đủ, VI/EN, một sidebar guide, 5 ảnh và accessibility; xác nhận runner thoát sạch sau 25 test |
 | Shared demo auth | `X19` LOCAL COMPLETE; LIVE GATE PENDING | Exact host-port closure và full authenticated OCR smoke |
 | Dashboard hierarchy refinement | LOCAL COMPLETE 2026-07-28 | Hai nhóm metric có một scope note; terminal không có progress; delete ở menu phụ; sidebar VI/EN dùng selected blue |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |

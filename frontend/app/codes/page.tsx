@@ -6,10 +6,15 @@ import { safeError, text, useLanguage } from "../../lib/i18n";
 import AppShell from "../app-shell";
 
 const groups = ["reserve_mode", "use_mode", "doc_type", "confidence", "language", "retention", "backup_status", "physical_status"] as const;
+const groupLabels = {
+  vi: { reserve_mode: "Chế độ dự phòng", use_mode: "Chế độ sử dụng", doc_type: "Loại văn bản", confidence: "Độ tin cậy", language: "Ngôn ngữ", retention: "Thời hạn bảo quản", backup_status: "Trạng thái sao lưu", physical_status: "Tình trạng vật lý" },
+  en: { reserve_mode: "Reserve mode", use_mode: "Use mode", doc_type: "Document type", confidence: "Confidence", language: "Language", retention: "Retention", backup_status: "Backup status", physical_status: "Physical status" },
+} as const;
 const blank: CodeInput = { group: "doc_type", code: "", label: "", keywords: "", order: 0, active: true };
 
 export default function CodesPage() {
-  useLanguage();
+  const [locale] = useLanguage();
+  const groupLabel = (group: typeof groups[number]) => groupLabels[locale][group];
   const [catalog, setCatalog] = useState<CodeCatalog | null>(null); const [form, setForm] = useState<CodeInput | null>(null);
   const [editing, setEditing] = useState(""); const [filter, setFilter] = useState("all"); const [error, setError] = useState("");
   const load = () => getCodes().then((value) => { setCatalog(value); setError(""); }).catch(showError);
@@ -24,13 +29,13 @@ export default function CodesPage() {
     <header className="page-header"><div><p className="eyebrow">TT 05/2025/TT-BNV</p><h1>{text("codes")}</h1><p>{text("codesSubtitle")}</p></div><button className="button primary" onClick={() => { setEditing(""); setForm(blank); }}>＋ {text("addCode")}</button></header>
     {error && <div className="notice error" role="alert">{error}<button className="button secondary" onClick={load}>{text("refresh")}</button></div>}
     {form && <form className="panel code-form" onSubmit={save}><div className="section-head"><h2>{editing ? text("editCode") : text("addCode")}</h2><button className="icon-button" type="button" aria-label={text("close")} onClick={() => setForm(null)}>×</button></div><div className="form-grid">
-      <label>{text("group")}<select disabled={!!editing} value={form.group} onChange={(event) => setForm({ ...form, group: event.target.value as CodeInput["group"] })}>{groups.map((group) => <option key={group}>{group}</option>)}</select></label>
-      <label>Code<input required maxLength={32} disabled={!!editing} value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} /></label>
+      <label>{text("group")}<select disabled={!!editing} value={form.group} onChange={(event) => setForm({ ...form, group: event.target.value as CodeInput["group"] })}>{groups.map((group) => <option value={group} key={group}>{groupLabel(group)}</option>)}</select></label>
+      <label>{locale === "vi" ? "Mã" : "Code"}<input required maxLength={32} disabled={!!editing} value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} /></label>
       <label>{text("label")}<input required maxLength={200} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} /></label>
       <label>{text("keywords")}<input maxLength={500} value={form.keywords} onChange={(event) => setForm({ ...form, keywords: event.target.value })} /></label>
       <label>{text("order")}<input type="number" min="0" max="10000" value={form.order} onChange={(event) => setForm({ ...form, order: Number(event.target.value) })} /></label>
       <label className="check-label"><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} />{text("active")}</label>
     </div><footer className="modal-actions"><button className="button secondary" type="button" onClick={() => setForm(null)}>{text("close")}</button><button className="button primary" type="submit">{text("save")}</button></footer></form>}
-    <section className="panel data-panel"><div className="code-tabs"><button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>{text("allStatuses")}</button>{groups.map((group) => <button className={filter === group ? "active" : ""} key={group} onClick={() => setFilter(group)}>{group}</button>)}</div><div className="table-scroll"><table className="data-table"><thead><tr><th>{text("group")}</th><th>Code</th><th>{text("label")}</th><th>{text("keywords")}</th><th>{text("order")}</th><th>{text("status")}</th><th>{text("actions")}</th></tr></thead><tbody>{items.map((item) => <tr key={item.code}><td>{item.group}</td><td><b>{item.code}</b></td><td>{item.label}</td><td>{item.keywords}</td><td>{item.order}</td><td><span className={`status ${item.active ? "configured" : ""}`}>{item.active ? text("active") : text("hidden")}</span></td><td><div className="actions"><button className="button secondary" onClick={() => edit(item)}>{text("editCode")}</button><button className="button danger ghost" onClick={() => remove(item)}>{text("delete")}</button></div></td></tr>)}</tbody></table></div>{!items.length && <p className="empty">{text("noCodes")}</p>}</section>
+    <section className="panel data-panel"><div className="code-tabs"><button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>{text("allStatuses")}</button>{groups.map((group) => <button className={filter === group ? "active" : ""} key={group} onClick={() => setFilter(group)}>{groupLabel(group)}</button>)}</div><div className="table-scroll"><table className="data-table"><thead><tr><th>{text("group")}</th><th>{locale === "vi" ? "Mã" : "Code"}</th><th>{text("label")}</th><th>{text("keywords")}</th><th>{text("order")}</th><th>{text("status")}</th><th>{text("actions")}</th></tr></thead><tbody>{items.map((item) => <tr key={item.code}><td>{groupLabel(item.group)}</td><td><b>{item.code}</b></td><td>{item.label}</td><td>{item.keywords}</td><td>{item.order}</td><td><span className={`status ${item.active ? "configured" : ""}`}>{item.active ? text("active") : text("hidden")}</span></td><td><div className="actions"><button className="button secondary" onClick={() => edit(item)}>{text("editCode")}</button><button className="button danger ghost" onClick={() => remove(item)}>{text("delete")}</button></div></td></tr>)}</tbody></table></div>{!items.length && <p className="empty">{text("noCodes")}</p>}</section>
   </AppShell>;
 }

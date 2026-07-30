@@ -488,7 +488,7 @@ thuộc `X17F`/live evidence trong [`incomlpeted.md`](incomlpeted.md).
 - `BE-X18` không block Milestone C và không thay đổi evidence gate của `BE-X17`.
 
 Regression backend giữ nguyên và pass 62 tests; OpenAPI không drift. Frontend
-đã triển khai route/content/contextual help/ảnh theo `FE-X18`; browser full-suite
+đã triển khai route/content/sidebar guide/ảnh theo `FE-X18`; browser full-suite
 đã chạy tới đủ 25 test không báo test lỗi nhưng Windows teardown chưa thoát sạch
 trước timeout, nên không suy diễn đây là live/provider evidence.
 
