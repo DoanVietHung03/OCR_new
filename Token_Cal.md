@@ -408,6 +408,9 @@ Google, không nhận URL tùy ý và không tự persist. Luồng nhập
 Provider Profile ID + exact model + exchange source trả một bản Preview gồm giá,
 tỷ giá, source URL, source/fetched time và phạm vi áp dụng; user phải xác nhận
 trước khi lưu Price Profile.
+Ngay dưới form, UI liệt kê Price Profile đã lưu cùng provider, model, đơn giá,
+thời điểm hiệu lực, tỷ giá và trạng thái. Save thành công phải tải lại Overview
+để `Known cost` phản ánh catalog mới nếu operation khớp.
 
 Nguồn giá ban đầu là trang Pay-as-you-go chính thức của MiniMax cho exact
 `MiniMax-*`. `MiniMax-M3` dùng tier standard `input <= 512k`; Price Profile lưu

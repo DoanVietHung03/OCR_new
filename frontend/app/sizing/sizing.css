@@ -11,6 +11,7 @@
 .metric-card { display: grid; min-height: 94px; align-content: center; gap: 8px; border-radius: 8px; padding: 16px; background: #fff; }
 .metric-card span { color: #65768e; font-size: 13px; }
 .metric-card strong { color: #14243c; font-size: 24px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.metric-card small { color: #697b93; font-size: .72rem; line-height: 1.35; }
 
 .sizing-status { display: inline-flex; width: fit-content; align-items: center; border-radius: 999px; padding: 5px 9px; font-size: .75rem; font-weight: 800; white-space: nowrap; }
 .sizing-status.good { color: #087448; background: #e7f7ee; }
@@ -29,6 +30,8 @@
 .price-suggestion { display: grid; gap: 6px; margin-top: 16px; border: 1px solid #bad8c8; border-radius: 8px; padding: 12px 14px; color: #28533d; background: #eef9f3; }
 .price-suggestion span { font-variant-numeric: tabular-nums; }
 .price-suggestion small { color: #526b5d; }
+.saved-price-profiles { margin-top: 22px; border-top: 1px solid #d5dee9; padding-top: 18px; }
+.saved-price-profiles .table-scroll { margin-top: 12px; }
 
 .sizing-jobs-table td:first-child { white-space: nowrap; }
 .numeric { text-align: right !important; font-variant-numeric: tabular-nums; }

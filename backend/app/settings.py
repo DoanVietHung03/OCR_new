@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     ocr_data_dir: Path = Path("data/jobs")
-    ocr_provider: str = "qwen"
+    ocr_provider: str = "minimax"
     ocr_base_url: str = ""
     ocr_api_key: str = ""
     ocr_model: str = ""

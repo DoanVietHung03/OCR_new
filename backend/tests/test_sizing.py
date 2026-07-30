@@ -10,7 +10,7 @@ from app.services.pricing import (
 )
 from app.services.sizing import (
     MeasurementStore, SizingCatalog, SnapshotStore, aggregate,
-    calculate_scenario, operation_cost, parse_usage,
+    calculate_scenario, operation_cost, parse_usage, price_for,
 )
 
 
@@ -80,6 +80,20 @@ def test_measurements_are_atomic_recoverable_and_aggregate_without_double_count(
     assert summary["total_tokens"] == 12
     assert summary["response_usage_percent"] == 100
     assert summary["duration_ms_p95"] == 20
+
+
+def test_price_profile_matches_exact_provider_model_and_operation_time():
+    profile = {
+        "provider_profile_id": "minimax", "model": "MiniMax-M3",
+        "effective_from": "2026-07-30T08:00:00+00:00",
+    }
+    operation = {
+        "provider_profile_id": "minimax", "model": "MiniMax-M3",
+        "started_at": "2026-07-30T09:00:00+00:00",
+    }
+    assert price_for(operation, [profile]) is profile
+    assert price_for({**operation, "provider_profile_id": "qwen"}, [profile]) is None
+    assert price_for({**operation, "started_at": "2026-07-30T07:00:00+00:00"}, [profile]) is None
 
 
 def test_catalog_cost_snapshot_and_calculator_contracts(tmp_path):

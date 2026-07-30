@@ -10,6 +10,7 @@ client = TestClient(app)
 
 def test_ocr_data_dir_is_a_path_at_runtime():
     assert Settings(ocr_data_dir="data/jobs").ocr_data_dir == Path("data/jobs")
+    assert Settings(_env_file=None).ocr_provider == "minimax"
 
 
 def test_price_suggestion_is_typed_and_keeps_confirmation_outside_fetch(monkeypatch):
@@ -30,7 +31,7 @@ def test_price_suggestion_is_typed_and_keeps_confirmation_outside_fetch(monkeypa
 
     monkeypatch.setattr(routes, "price_suggestion", suggest)
     response = client.post("/api/sizing/price-suggestions", json={
-        "provider_profile_id": "qwen", "model": "MiniMax-M3", "exchange_source": "vietcombank",
+        "provider_profile_id": "minimax", "model": "MiniMax-M3", "exchange_source": "vietcombank",
     })
     assert response.status_code == 200
     assert response.json()["maximum_input_tokens"] == 512_000
@@ -75,7 +76,7 @@ def test_create_upload_start_is_one_shot(tmp_path, monkeypatch, pdf_bytes):
     assert first.status_code == second.status_code == 200
     assert first.json()["status"] == second.json()["status"] == "starting"
     assert calls == [job["id"]]
-    assert store.read(job["id"])["provider"] == "qwen"
+    assert store.read(job["id"])["provider"] == "minimax"
     assert [
         event.get("status") for event in store.read(job["id"])["events"]
         if event.get("code") == "job_status_changed"
@@ -215,7 +216,7 @@ def test_readiness_gates_start_without_losing_durable_state(tmp_path, monkeypatc
         return "unreachable"
 
     monkeypatch.setattr(routes, "probe_provider", unavailable)
-    check = client.post("/api/engines/qwen/check")
+    check = client.post("/api/engines/minimax/check")
     start = client.post(f"/api/jobs/{job['id']}/start")
 
     assert check.json()["status"] == "unreachable"
@@ -564,7 +565,7 @@ def test_provider_profiles_are_allowlisted_and_safe(tmp_path, monkeypatch):
     assert profiles.status_code == 200
     profile = profiles.json()["profiles"][0]
     assert profile == {
-        "id": "qwen", "label": "Qwen", "external": False,
+        "id": "minimax", "label": "MiniMax", "external": False,
         "status": "configured", "tasks": ["full_ocr", "metadata"],
         "page_modes": ["all", "auto", "first,last"], "max_pages": 100,
         "processing_modes": ["administrative_document", "dossier_cover", "combined_dossier"],
@@ -573,11 +574,11 @@ def test_provider_profiles_are_allowlisted_and_safe(tmp_path, monkeypatch):
     assert "provider.test" not in profiles.text
 
     job = client.post("/api/jobs", json={
-        "file_count": 1, "provider_profile_id": "qwen", "vlm_task": "metadata",
+        "file_count": 1, "provider_profile_id": "minimax", "vlm_task": "metadata",
         "vlm_pages": "first,last", "vlm_max_pages": 3,
     })
     assert job.status_code == 200
-    assert (job.json()["provider_profile_id"], job.json()["vlm_pages"]) == ("qwen", "first,last")
+    assert (job.json()["provider_profile_id"], job.json()["vlm_pages"]) == ("minimax", "first,last")
 
     invalid = client.post("/api/jobs", json={"file_count": 1, "provider_profile_id": "attacker"})
     assert invalid.status_code == 400
@@ -589,7 +590,7 @@ def test_create_rejects_unconfigured_or_unsupported_profile_capabilities(tmp_pat
     import app.api.routes as routes
 
     profile = {
-        "id": "qwen", "label": "Qwen", "external": False, "status": "configured",
+        "id": "minimax", "label": "MiniMax", "external": False, "status": "configured",
         "tasks": ["metadata"], "page_modes": ["all"], "max_pages": 2,
         "processing_modes": ["administrative_document"],
     }

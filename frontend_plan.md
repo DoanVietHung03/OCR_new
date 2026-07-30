@@ -430,6 +430,10 @@ khi đóng.
   Provider Profile + exact model + exchange source; ID/giá/tỷ giá/provenance
   được điền từ Preview, read-only cho tới khi user xác nhận rồi mới lưu. Model
   chưa được allowlist giữ manual/unavailable, không đoán giá.
+- Provider Profile hiển thị `MiniMax` cho job mới dùng `MiniMax-M3`; job lịch sử
+  có ID `qwen` vẫn hiển thị và lọc theo snapshot đã lưu, không đổi nhãn hồi tố.
+- Danh sách Price Profile đã lưu nằm ngay dưới form, hiển thị scope/hiệu lực và
+  trạng thái; save refresh Overview/Jobs để Known cost không giữ snapshot cũ.
 - Workload form chỉ nhập monthly volume + operating days/hours, một Processing
   Mode, peak/reserve/SLA/success target/retention assumption. Combined dossier
   dùng dossier volume + document/page averages; không cho input ngày/tháng mâu

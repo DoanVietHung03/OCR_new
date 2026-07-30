@@ -21,6 +21,13 @@ def completed_job(store: JobStore, pdf_bytes: bytes) -> dict:
     }])
 
 
+def test_new_job_default_is_minimax_and_explicit_legacy_provider_is_preserved(tmp_path):
+    store = JobStore(tmp_path)
+    assert store.create({"file_count": 1})["provider_profile_id"] == "minimax"
+    legacy = store.create({"file_count": 1, "provider": "qwen", "provider_profile_id": "qwen"})
+    assert (legacy["provider"], legacy["provider_profile_id"]) == ("qwen", "qwen")
+
+
 def test_filesystem_boundary_and_invalid_upload_is_terminal(tmp_path, pdf_bytes):
     store = JobStore(tmp_path)
     job = store.create({"file_count": 1, "provider": "qwen"})

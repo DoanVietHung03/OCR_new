@@ -208,6 +208,8 @@ Trong tab Scenario, nhập Provider Profile, đúng model và nguồn tỷ giá 
 `Lấy giá và tỷ giá`. Hệ thống chỉ đọc các nguồn chính thức đã cho phép, hiển thị
 nguồn/thời điểm để người dùng kiểm tra và chỉ lưu Price Profile sau khi xác nhận.
 Model chưa có bộ đọc giá chính thức tiếp tục hiển thị `Unavailable`.
+Với cấu hình hiện tại, job mới dùng Provider Profile `minimax` và model
+`MiniMax-M3`; ID `qwen` chỉ còn xuất hiện trên dữ liệu lịch sử và không bị rewrite.
 
 ### Có thể tải ảnh hoặc ZIP không?
 
