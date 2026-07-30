@@ -534,11 +534,12 @@ Phải có công thức và ví dụ số giả lập, ghi rõ không phải bá
 5. ví dụ `Unavailable` do thiếu usage, thiếu mẫu hoặc fingerprint không khớp.
 
 Reference cũng phải giải thích luồng tạo Price Profile: nhập Provider Profile,
-đúng model, nguồn tỷ giá và Ngày hiệu lực, lấy bản Preview từ allowlist nguồn
-chính thức, kiểm tra URL/thời điểm/đơn vị rồi xác nhận trước khi lưu. Ngày hiệu
-lực phản ánh lúc bảng giá bắt đầu áp dụng và không bị thao tác lấy gợi ý ghi đè.
-Profile cũ được archive để ngừng áp dụng nhưng vẫn giữ lịch sử và có thể restore;
-không hard-delete từ UI.
+đúng model và nguồn tỷ giá, lấy bản Preview từ allowlist nguồn chính thức, kiểm
+tra URL/thời điểm/đơn vị rồi xác nhận trước khi lưu. Nếu có tỷ giá thực tế/hợp
+đồng từ hóa đơn/sao kê, user bật manual override, nhập rate và xác nhận lại.
+UI hiện profile active mới nhất; profile cũ/archived nằm trong lịch sử thu gọn và
+có thể restore. Overview/Scenario phải phân biệt billing currency gốc với display
+currency ước tính, đồng thời hiện coverage và sensitivity ±1%.
 Không suy model từ tên Provider Profile, không tự xác nhận và không biến lỗi
 nguồn thành giá `0`.
 

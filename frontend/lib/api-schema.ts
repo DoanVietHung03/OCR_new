@@ -1680,6 +1680,40 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** LatestPriceEstimate */
+        LatestPriceEstimate: {
+            /**
+             * Value Kind
+             * @constant
+             */
+            value_kind: "estimated_latest_price";
+            /** Profile Id */
+            profile_id: string;
+            /** Billing Amount */
+            billing_amount: number;
+            /** Billing Currency */
+            billing_currency: string;
+            /** Display Amount */
+            display_amount?: number | null;
+            /** Display Currency */
+            display_currency?: string | null;
+            /** Exchange Rate */
+            exchange_rate?: number | null;
+            /** Exchange Source */
+            exchange_source?: string | null;
+            /** Exchange Rate Kind */
+            exchange_rate_kind?: string | null;
+            /** Exchange Source Time */
+            exchange_source_time?: string | null;
+            /** Exchange Fetched At */
+            exchange_fetched_at?: string | null;
+            /** Estimated Attempts */
+            estimated_attempts: number;
+            /** Coverage Percent */
+            coverage_percent?: number | null;
+            /** Sensitivity 1 Percent */
+            sensitivity_1_percent?: number | null;
+        };
         /** LimitsResponse */
         LimitsResponse: {
             /** Max Files Per Job */
@@ -1848,7 +1882,7 @@ export interface components {
              * Exchange Source
              * @enum {string}
              */
-            exchange_source: "vietcombank" | "agribank" | "ecb";
+            exchange_source: "vietcombank" | "agribank" | "vietinbank" | "techcombank" | "bidv" | "ecb";
         };
         /** PriceSuggestionResponse */
         PriceSuggestionResponse: {
@@ -2201,6 +2235,12 @@ export interface components {
             estimated_monthly_tokens?: number | null;
             /** Estimated Monthly Known Cost */
             estimated_monthly_known_cost?: number | null;
+            /**
+             * Latest Price Forecast Available
+             * @default false
+             */
+            latest_price_forecast_available: boolean;
+            estimated_monthly_price?: components["schemas"]["LatestPriceEstimate"] | null;
             /** Self Host Tco */
             self_host_tco?: null;
         } & {
@@ -2470,6 +2510,7 @@ export interface components {
             known_cost?: number | null;
             /** Total Cost */
             total_cost?: number | null;
+            latest_price_estimate?: components["schemas"]["LatestPriceEstimate"] | null;
             /**
              * Unknown Cost Attempts
              * @default 0

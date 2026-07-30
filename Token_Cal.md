@@ -363,7 +363,7 @@ Price Profile gắn:
 - optional fixed cost/request + bắt buộc policy:
   `successful_response`, `any_http_response` hoặc `every_started_attempt`;
 - surcharge/tax;
-- `effective_from`;
+- thời điểm fetch/lưu để audit;
 - optional display currency, confirmed exchange rate và source provenance.
 
 Báo cáo luôn giữ số tiền billing currency; display currency chỉ là quy đổi.
@@ -375,6 +375,13 @@ Operation dùng profile mới nhất có `effective_from <= started_at`. Profile
 
 User không nhập usage. Worker tự lấy provider `usage`. Không có Price Profile thì
 token vẫn xem được, cost `Unavailable`.
+
+Ngoài báo cáo lịch sử trên, Overview/Scenario có phép **ước tính theo hồ sơ giá
+đang hoạt động mới nhất**. Phép tính này áp lại đơn giá mới nhất cho mọi operation
+có exact Provider Profile ID + model, không phụ thuộc ngày chạy job. USD/billing
+currency là số gốc; VND/display currency luôn ghi `ước tính`, kèm tỷ giá,
+nguồn/thời điểm, coverage và biên độ ±1%. Không đổi tên hoặc ghi đè
+`known_cost` lịch sử.
 
 ### 7.2 Cost formula
 
@@ -408,11 +415,12 @@ Google, không nhận URL tùy ý và không tự persist. Luồng nhập
 Provider Profile ID + exact model + exchange source trả một bản Preview gồm giá,
 tỷ giá, source URL, source/fetched time và phạm vi áp dụng; user phải xác nhận
 trước khi lưu Price Profile.
-Form cho nhập `effective_from` bằng ngày giờ địa phương, mặc định hiện tại; lấy
-gợi ý giá không được ghi đè thời điểm user đã chọn.
-Ngay dưới form, UI liệt kê Price Profile đã lưu cùng provider, model, đơn giá,
-thời điểm hiệu lực, tỷ giá và trạng thái. Save thành công phải tải lại Overview
-để `Known cost` phản ánh catalog mới nếu operation khớp.
+Form tự lưu thời điểm lấy giá; user không phải backdate profile. Sau khi lấy gợi
+ý, user có thể thay tỷ giá ngân hàng bằng tỷ giá thực tế/hợp đồng từ hóa đơn hoặc
+sao kê và phải xác nhận lại.
+Ngay dưới form, UI chỉ hiện Price Profile đang hoạt động mới nhất; các profile
+cũ/archived nằm trong phần lịch sử thu gọn. Save thành công phải tải lại Overview
+để phép ước tính mới phản ánh catalog nếu operation khớp.
 User có thể archive/restore profile ngay trong danh sách; profile archived không
 tham gia tính cost nhưng vẫn giữ lịch sử và provenance.
 
@@ -424,8 +432,11 @@ vì áp sai tier. Model/provider billing source chưa được hỗ trợ trả
 
 Nguồn tỷ giá:
 
-- [Vietcombank](https://www.vietcombank.com.vn/vi-VN/To-chuc/Trang-chu-DCTC/KHTC---Ti-gia---DCTC)
-  và [Agribank](https://www.agribank.com.vn/vn/ty-gia) cho cặp VND;
+- [Vietcombank](https://www.vietcombank.com.vn/vi-VN/To-chuc/Trang-chu-DCTC/KHTC---Ti-gia---DCTC),
+  [Agribank](https://www.agribank.com.vn/vn/ty-gia),
+  [VietinBank](https://www.vietinbank.vn/vi/doanh-nghiep/ty-gia-khdn),
+  [Techcombank](https://techcombank.com/cong-cu-tien-ich/ty-gia) và
+  [BIDV](https://bidv.com.vn/vn/ty-gia-ngoai-te) cho cặp VND;
 - [ECB](https://data.ecb.europa.eu/key-figures/ecb-interest-rates-and-exchange-rates/exchange-rates)
   cho reference pair được hỗ trợ.
 
@@ -435,8 +446,8 @@ ngoại tệ từ VND, làm nổi bật bank selling rate nhưng user phải ch�
 
 - Memory cache 15 phút; quote quá 24 giờ mang `Stale`.
 - Source lỗi có thể hiển thị cache cũ có cảnh báo, không auto-apply.
-- Quote chỉ áp cho đúng source date. Profile backdated cần historical quote đúng
-  ngày hoặc manual input.
+- Quote tự động chỉ là quote tại thời điểm fetch. Tỷ giá thực tế/hợp đồng phải
+  nhập tay và được gắn provenance `actual_or_contract`.
 - Confirmed quote mới persist vào Price Profile và không tự đổi.
 - Fixed URL allowlist chống SSRF; timeout/error sanitized.
 - Local tests dùng response fixture; live-source failure không ảnh hưởng OCR.

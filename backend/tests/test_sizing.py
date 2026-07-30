@@ -6,11 +6,12 @@ import pytest
 
 from app.services.ocr_runner import request_page
 from app.services.pricing import (
-    parse_agribank_quote, parse_ecb_quote, parse_minimax_price, parse_vietcombank_quote,
+    parse_agribank_quote, parse_bidv_quote, parse_ecb_quote, parse_minimax_price,
+    parse_techcombank_quote, parse_vietcombank_quote,
 )
 from app.services.sizing import (
     MeasurementStore, SizingCatalog, SnapshotStore, aggregate,
-    calculate_scenario, operation_cost, parse_usage, price_for,
+    calculate_scenario, latest_price_estimate, operation_cost, parse_usage, price_for,
 )
 
 
@@ -51,6 +52,19 @@ def test_official_price_and_exchange_source_parsers_are_bounded():
     assert parse_agribank_quote(
         "<table><tr><td>USD</td><td>26120.00</td><td>26140.00</td><td>26520.00</td></tr></table>"
     )["exchange_rate"] == 26_520
+    vietin = parse_agribank_quote(
+        "<p>Bảng tỷ giá được cập nhật lúc 16:45:00 ngày 30/07/2026</p>"
+        "<table><tr><td>USD</td><td># 26.032</td><td>26.097</td><td>26.477</td></tr></table>"
+    )
+    assert (vietin["exchange_rate"], vietin["source_time"]) == (26_477, "16:45:00 ngày 30/07/2026")
+    assert parse_techcombank_quote(json.dumps({"exchangeRate": {
+        "data": [{"sourceCurrency": "USD", "label": "USD (50,100)", "askRate": "26460", "inputDate": "2026-07-30T16:32:01Z"}],
+        "updatedTimes": ["16:32:00"],
+    }}))["exchange_rate"] == 26_460
+    assert parse_bidv_quote(json.dumps({
+        "hour": "14:50", "day_vi": "30/07/2026",
+        "data": [{"currency": "USD", "ban": "26,490"}],
+    }))["exchange_rate"] == 26_490
     assert round(parse_ecb_quote("TIME_PERIOD,OBS_VALUE\n2026-07-30,1.2\n")["exchange_rate"], 6) == .833333
 
     assert operation_cost({
@@ -96,6 +110,29 @@ def test_price_profile_matches_exact_provider_model_and_operation_time():
     assert price_for({**operation, "started_at": "2026-07-30T07:00:00+00:00"}, [profile]) is None
 
 
+def test_latest_price_estimate_reprices_old_usage_and_marks_vnd_as_estimated():
+    profile = {
+        "id": "latest", "provider_profile_id": "minimax", "model": "MiniMax-M3",
+        "billing_currency": "USD", "display_currency": "VND",
+        "effective_from": "2026-07-30T08:00:00+00:00",
+        "input_per_million": .3, "output_per_million": 1.2, "cached_per_million": .06,
+        "exchange_rate": 26_500, "exchange_source": "vietcombank",
+        "exchange_rate_kind": "sell", "exchange_source_time": "30/07/2026 08:05",
+    }
+    operation = {
+        "provider_profile_id": "minimax", "model": "MiniMax-M3",
+        "started_at": "2026-07-01T00:00:00+00:00", "status": "success",
+        "usage_status": "complete",
+        "usage": {"prompt_tokens": 1000, "completion_tokens": 100, "cached_tokens": 0},
+    }
+    estimate = latest_price_estimate([operation], [profile])
+    assert estimate
+    assert estimate["billing_amount"] == pytest.approx(.00042)
+    assert estimate["display_amount"] == pytest.approx(11.13)
+    assert estimate["sensitivity_1_percent"] == pytest.approx(.1113)
+    assert estimate["coverage_percent"] == 100
+
+
 def test_catalog_cost_snapshot_and_calculator_contracts(tmp_path):
     catalog = SizingCatalog(tmp_path)
     profile = {
@@ -123,11 +160,23 @@ def test_catalog_cost_snapshot_and_calculator_contracts(tmp_path):
 
     result = calculate_scenario(
         {"monthly_jobs": 100, "operating_days": 20, "operating_hours": 5, "peak_factor": 2, "reserve": .25},
-        {"sample_count": 20, "billing_certainty_percent": 100, "total_cost": 1, "job_duration_seconds_p95": 60},
+        {
+            "sample_count": 20, "billing_certainty_percent": 100, "total_cost": 1,
+            "job_duration_seconds_p95": 60,
+            "latest_price_estimate": {
+                "value_kind": "estimated_latest_price", "profile_id": "price-1",
+                "billing_amount": 2, "billing_currency": "USD",
+                "display_amount": 53_000, "display_currency": "VND",
+                "exchange_rate": 26_500, "estimated_attempts": 20,
+                "coverage_percent": 100, "sensitivity_1_percent": 530,
+            },
+        },
     )
     assert result["required_capacity_jobs_per_hour"] == 2.5
     assert result["theoretical_capacity_units"] == 1
     assert result["capacity_verdict"] == "screening_only"
+    assert result["estimated_monthly_price"]["billing_amount"] == 10
+    assert result["estimated_monthly_price"]["sensitivity_1_percent"] == 2_650
 
 
 def test_provider_retry_and_invalid_ocr_keep_attempt_usage(tmp_path, monkeypatch):

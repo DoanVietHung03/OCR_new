@@ -38,6 +38,12 @@ def test_price_suggestion_is_typed_and_keeps_confirmation_outside_fetch(monkeypa
     assert "suggestion_confirmed" not in response.json()
 
 
+def test_exchange_rate_sources_include_large_vietnamese_banks():
+    response = client.get("/api/sizing/exchange-rate-sources")
+    assert response.status_code == 200
+    assert {"vietinbank", "techcombank", "bidv"} <= {item["id"] for item in response.json()["items"]}
+
+
 def use_store(tmp_path, monkeypatch):
     import app.api.routes as routes
 

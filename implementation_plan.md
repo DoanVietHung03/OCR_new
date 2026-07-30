@@ -193,6 +193,10 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
 - Cost lịch sử chỉ dùng provider usage + Price Profile versioned. `known_cost`
   không được gọi `total_cost` khi billing chưa chắc chắn; self-host không hiện
   chi phí bằng zero khi chưa có TCO.
+- Overview/Scenario tách riêng ước tính theo Price Profile active mới nhất cho
+  exact provider/model. Billing currency là số gốc; display currency ghi rõ là
+  quy đổi ước tính, kèm source/time/coverage và sensitivity ±1%; không thay nghĩa
+  hoặc rewrite `known_cost` lịch sử.
 - Calculator thuộc backend, dùng nearest-rank và gate tối thiểu 20 compatible
   jobs; cost forecast còn yêu cầu billing certainty ≥95%. Công thức chỉ cho
   capacity screening; SLA đạt cần load test đo queue wait/end-to-end.
@@ -454,16 +458,18 @@ Gate backend:
   archive-only. Tỷ giá fetch on-demand từ fixed allowlist, user xác nhận trước
   khi persist; source lỗi không ảnh hưởng OCR.
 - Price suggestion on-demand nhận Provider Profile ID + exact model + exchange
-  source, hiện hỗ trợ bảng Pay-as-you-go chính thức MiniMax và ba nguồn tỷ giá
-  Vietcombank/Agribank/ECB. Preview giữ source/time/basis, bắt xác nhận trước
+  source, hiện hỗ trợ bảng Pay-as-you-go chính thức MiniMax và sáu nguồn tỷ giá
+  Vietcombank/Agribank/VietinBank/Techcombank/BIDV/ECB. Preview giữ source/time/basis, bắt xác nhận trước
   persist; `MiniMax-M3` vượt 512k input giữ billing unknown.
 - Job mới dùng Provider Profile ID `minimax` cho `MiniMax-M3`; dữ liệu/job cũ
   mang ID `qwen` vẫn được đọc nguyên trạng và không rewrite.
-- Price Profile đã lưu hiển thị ngay dưới form; save thành công refresh Overview.
-  User chọn ngày giờ `effective_from`; lấy gợi ý giá không ghi đè lựa chọn này.
-  Archive/restore giữ nguyên profile lịch sử và refresh cost; không hard-delete.
-  Cost chỉ khớp exact Provider Profile ID + model + operation/effective time,
-  nên profile `minimax` hiện tại không backdate sang job `qwen` lịch sử.
+- Price Profile active mới nhất hiển thị ngay dưới form; profile cũ/archived nằm
+  trong lịch sử thu gọn. Save thành công refresh Overview. Thời điểm fetch/lưu
+  được ghi tự động; user có thể xác nhận tỷ giá thực tế/hợp đồng bằng manual
+  override. Archive/restore giữ nguyên provenance và refresh estimate.
+- Cost lịch sử vẫn khớp exact provider/model/operation time. Phép estimate mới
+  áp profile active mới nhất cho operation exact provider/model bất kể ngày chạy,
+  nên không cần backdate nhưng cũng không suy alias provider/model.
 - Calculator từ chối verdict dưới sample/coverage gate, ngoài observed page
   range hoặc khác fingerprint. Scale-out chỉ trả theoretical capacity units cho
   tới khi cluster benchmark thật pass.

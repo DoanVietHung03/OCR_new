@@ -4276,6 +4276,146 @@
         ],
         "title": "JobResponse"
       },
+      "LatestPriceEstimate": {
+        "properties": {
+          "value_kind": {
+            "type": "string",
+            "const": "estimated_latest_price",
+            "title": "Value Kind"
+          },
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "billing_amount": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Billing Amount"
+          },
+          "billing_currency": {
+            "type": "string",
+            "title": "Billing Currency"
+          },
+          "display_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Amount"
+          },
+          "display_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Currency"
+          },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Rate"
+          },
+          "exchange_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Source"
+          },
+          "exchange_rate_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Rate Kind"
+          },
+          "exchange_source_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Source Time"
+          },
+          "exchange_fetched_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Fetched At"
+          },
+          "estimated_attempts": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Estimated Attempts"
+          },
+          "coverage_percent": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Percent"
+          },
+          "sensitivity_1_percent": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sensitivity 1 Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value_kind",
+          "profile_id",
+          "billing_amount",
+          "billing_currency",
+          "estimated_attempts"
+        ],
+        "title": "LatestPriceEstimate"
+      },
       "LimitsResponse": {
         "properties": {
           "max_files_per_job": {
@@ -4648,6 +4788,9 @@
             "enum": [
               "vietcombank",
               "agribank",
+              "vietinbank",
+              "techcombank",
+              "bidv",
               "ecb"
             ],
             "title": "Exchange Source"
@@ -5596,6 +5739,21 @@
             ],
             "title": "Estimated Monthly Known Cost"
           },
+          "latest_price_forecast_available": {
+            "type": "boolean",
+            "title": "Latest Price Forecast Available",
+            "default": false
+          },
+          "estimated_monthly_price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestPriceEstimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "self_host_tco": {
             "type": "null",
             "title": "Self Host Tco"
@@ -6273,6 +6431,16 @@
               }
             ],
             "title": "Total Cost"
+          },
+          "latest_price_estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestPriceEstimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "unknown_cost_attempts": {
             "type": "integer",

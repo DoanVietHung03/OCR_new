@@ -305,6 +305,52 @@ def operation_cost(operation: dict[str, Any], profile: dict[str, Any] | None) ->
     return total * (1 + float(profile.get("surcharge_rate", 0)))
 
 
+def latest_price_estimate(
+    operations: list[dict[str, Any]], profiles: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    final = [item for item in operations if item.get("status") != "in_progress"]
+    identities = {(item.get("provider_profile_id"), item.get("model")) for item in final}
+    profile = max(
+        (
+            item for item in profiles
+            if not item.get("archived")
+            and (item.get("provider_profile_id"), item.get("model")) in identities
+        ),
+        key=lambda item: str(item.get("price_fetched_at") or item.get("effective_from") or item.get("id", "")),
+        default=None,
+    )
+    if not profile:
+        return None
+    costs = [
+        operation_cost(item, profile)
+        for item in final
+        if item.get("provider_profile_id") == profile.get("provider_profile_id")
+        and item.get("model") == profile.get("model")
+    ]
+    known = [value for value in costs if value is not None]
+    if not known:
+        return None
+    billing_amount = sum(known)
+    rate = float(profile.get("exchange_rate", 0) or 0)
+    display_amount = billing_amount * rate if rate > 0 else None
+    return {
+        "value_kind": "estimated_latest_price",
+        "profile_id": str(profile.get("id", "")),
+        "billing_amount": billing_amount,
+        "billing_currency": str(profile.get("billing_currency", "")),
+        "display_amount": display_amount,
+        "display_currency": str(profile.get("display_currency", "")) if display_amount is not None else None,
+        "exchange_rate": rate or None,
+        "exchange_source": str(profile.get("exchange_source", "")) or None,
+        "exchange_rate_kind": str(profile.get("exchange_rate_kind", "")) or None,
+        "exchange_source_time": profile.get("exchange_source_time"),
+        "exchange_fetched_at": profile.get("exchange_fetched_at"),
+        "estimated_attempts": len(known),
+        "coverage_percent": 100 * len(known) / len(final) if final else None,
+        "sensitivity_1_percent": display_amount * .01 if display_amount is not None else None,
+    }
+
+
 def aggregate(operations: list[dict[str, Any]], *, sample_count: int, price_profiles: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     final = [item for item in operations if item.get("status") != "in_progress"]
     responses = [item for item in final if item.get("response_bytes") is not None]
@@ -326,6 +372,7 @@ def aggregate(operations: list[dict[str, Any]], *, sample_count: int, price_prof
         "unknown_cost_attempts": len(final) - len(known),
         "response_attempts": len(responses), "complete_usage_attempts": len(complete),
         "known_billing_attempts": len(known), "total_attempts": len(final),
+        "latest_price_estimate": latest_price_estimate(final, price_profiles or []),
     }
 
 
@@ -338,6 +385,22 @@ def merge_aggregates(items: list[dict[str, Any]]) -> dict[str, Any]:
     known_billing = sum(int(item.get("known_billing_attempts", 0)) for item in items)
     known_costs = [item.get("known_cost") for item in items if item.get("known_cost") is not None]
     fully_known = total_attempts > 0 and known_billing == total_attempts
+    estimates = [item["latest_price_estimate"] for item in items if item.get("latest_price_estimate")]
+    estimate = None
+    if estimates and len({item["profile_id"] for item in estimates}) == 1:
+        estimated_attempts = sum(int(item["estimated_attempts"]) for item in estimates)
+        billing_amount = sum(float(item["billing_amount"]) for item in estimates)
+        display_values = [item.get("display_amount") for item in estimates]
+        estimate = {
+            **estimates[0],
+            "billing_amount": billing_amount,
+            "display_amount": sum(float(value) for value in display_values) if all(value is not None for value in display_values) else None,
+            "estimated_attempts": estimated_attempts,
+            "coverage_percent": 100 * estimated_attempts / total_attempts if total_attempts else None,
+        }
+        estimate["sensitivity_1_percent"] = (
+            estimate["display_amount"] * .01 if estimate["display_amount"] is not None else None
+        )
     return {
         "sample_count": sum(int(item.get("sample_count", 0)) for item in items),
         "operation_count": total_attempts,
@@ -353,6 +416,7 @@ def merge_aggregates(items: list[dict[str, Any]]) -> dict[str, Any]:
         "unknown_cost_attempts": total_attempts - known_billing,
         "response_attempts": response_attempts, "complete_usage_attempts": complete_usage,
         "known_billing_attempts": known_billing, "total_attempts": total_attempts,
+        "latest_price_estimate": estimate,
     }
 
 
@@ -370,6 +434,17 @@ def calculate_scenario(payload: dict[str, Any], aggregate_data: dict[str, Any]) 
     sample_count = int(aggregate_data.get("sample_count", 0))
     tokens_per_job = aggregate_data.get("total_tokens", 0) / sample_count if sample_count else None
     known_cost_per_job = aggregate_data.get("known_cost") / sample_count if sample_count and aggregate_data.get("known_cost") is not None else None
+    latest = aggregate_data.get("latest_price_estimate")
+    latest_ok = enough and latest and (latest.get("coverage_percent") or 0) >= 95
+    monthly_estimate = None
+    if latest_ok and sample_count:
+        factor = monthly / sample_count
+        monthly_estimate = {
+            **latest,
+            "billing_amount": latest["billing_amount"] * factor,
+            "display_amount": latest["display_amount"] * factor if latest.get("display_amount") is not None else None,
+            "sensitivity_1_percent": latest["sensitivity_1_percent"] * factor if latest.get("sensitivity_1_percent") is not None else None,
+        }
     return {
         "average_jobs_per_hour": monthly / days / hours,
         "peak_jobs_per_hour": monthly / days / hours * peak,
@@ -380,6 +455,8 @@ def calculate_scenario(payload: dict[str, Any], aggregate_data: dict[str, Any]) 
         "cost_forecast_available": enough and billing_ok and aggregate_data.get("total_cost") is not None,
         "estimated_monthly_tokens": monthly * tokens_per_job if tokens_per_job is not None else None,
         "estimated_monthly_known_cost": monthly * known_cost_per_job if enough and billing_ok and known_cost_per_job is not None else None,
+        "latest_price_forecast_available": bool(latest_ok),
+        "estimated_monthly_price": monthly_estimate,
         "self_host_tco": None,
         "value_kind": "calculated",
     }

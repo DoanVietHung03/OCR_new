@@ -475,6 +475,23 @@ class SizingCoverage(BaseModel):
     total_attempts: int = 0
 
 
+class LatestPriceEstimate(BaseModel):
+    value_kind: Literal["estimated_latest_price"]
+    profile_id: str
+    billing_amount: float = Field(ge=0)
+    billing_currency: str
+    display_amount: float | None = Field(default=None, ge=0)
+    display_currency: str | None = None
+    exchange_rate: float | None = Field(default=None, gt=0)
+    exchange_source: str | None = None
+    exchange_rate_kind: str | None = None
+    exchange_source_time: str | None = None
+    exchange_fetched_at: str | None = None
+    estimated_attempts: int = Field(ge=0)
+    coverage_percent: float | None = Field(default=None, ge=0, le=100)
+    sensitivity_1_percent: float | None = Field(default=None, ge=0)
+
+
 class SizingOverviewResponse(BaseModel):
     generated_at: str
     sample_count: int = 0
@@ -489,6 +506,7 @@ class SizingOverviewResponse(BaseModel):
     duration_ms_p95: float | None = None
     known_cost: float | None = None
     total_cost: float | None = None
+    latest_price_estimate: LatestPriceEstimate | None = None
     unknown_cost_attempts: int = 0
     series: list[dict[str, Any]] = Field(default_factory=list)
     provenance: dict[str, Any] = Field(default_factory=dict)
@@ -576,7 +594,7 @@ class SizingCatalogRequest(RequestModel):
 class PriceSuggestionRequest(RequestModel):
     provider_profile_id: str = Field(min_length=1, max_length=128)
     model: str = Field(min_length=1, max_length=256)
-    exchange_source: Literal["vietcombank", "agribank", "ecb"]
+    exchange_source: Literal["vietcombank", "agribank", "vietinbank", "techcombank", "bidv", "ecb"]
 
 
 class PriceSuggestionResponse(BaseModel):
@@ -633,6 +651,8 @@ class SizingCalculateResponse(PublicModel):
     cost_forecast_available: bool
     estimated_monthly_tokens: float | None = None
     estimated_monthly_known_cost: float | None = None
+    latest_price_forecast_available: bool = False
+    estimated_monthly_price: LatestPriceEstimate | None = None
     self_host_tco: None = None
 
 

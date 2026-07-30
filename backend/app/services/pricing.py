@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+import json
 import re
 import time
 from datetime import datetime, timezone
@@ -16,6 +17,9 @@ import httpx
 MINIMAX_PRICING_URL = "https://platform.minimax.io/docs/guides/pricing-paygo"
 VIETCOMBANK_URL = "https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx"
 AGRIBANK_URL = "https://www.agribank.com.vn/vn/ty-gia"
+VIETINBANK_URL = "https://www.vietinbank.vn/vi/doanh-nghiep/ty-gia-khdn"
+TECHCOMBANK_URL = "https://techcombank.com/content/techcombank/web/vn/vi/cong-cu-tien-ich/ty-gia/_jcr_content.exchange-rates.integration.json"
+BIDV_URL = "https://bidv.com.vn/ServicesBIDV/ExchangeDetailServlet"
 ECB_URL = "https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A?lastNObservations=1&format=csvdata"
 EXCHANGE_SOURCES = {
     "vietcombank": {
@@ -25,6 +29,9 @@ EXCHANGE_SOURCES = {
         "url": "https://www.vietcombank.com.vn/vi-VN/To-chuc/Trang-chu-DCTC/KHTC---Ti-gia---DCTC",
     },
     "agribank": {"id": "agribank", "label": "Agribank", "currencies": ["VND"], "url": AGRIBANK_URL},
+    "vietinbank": {"id": "vietinbank", "label": "VietinBank", "currencies": ["VND"], "url": VIETINBANK_URL},
+    "techcombank": {"id": "techcombank", "label": "Techcombank", "currencies": ["VND"], "url": "https://techcombank.com/cong-cu-tien-ich/ty-gia"},
+    "bidv": {"id": "bidv", "label": "BIDV", "currencies": ["VND"], "url": "https://bidv.com.vn/vn/ty-gia-ngoai-te"},
     "ecb": {"id": "ecb", "label": "ECB", "currencies": ["EUR"], "url": "https://data.ecb.europa.eu/"},
 }
 _cache: dict[str, tuple[float, str]] = {}
@@ -97,6 +104,15 @@ def _current_price(cell: str) -> float:
     return float(values[-1])
 
 
+def _vnd_rate(value: str) -> float:
+    value = re.sub(r"[^\d.,]", "", value)
+    if "," in value:
+        value = value.replace(",", "")
+    elif re.fullmatch(r"\d{1,3}(?:\.\d{3})+", value):
+        value = value.replace(".", "")
+    return float(value)
+
+
 def parse_minimax_price(content: str, model: str) -> dict[str, Any]:
     parser = _TableParser()
     parser.feed(content)
@@ -133,12 +149,37 @@ def parse_agribank_quote(content: str, currency: str = "USD") -> dict[str, Any]:
     parser.feed(content)
     try:
         row = next(row for row in parser.rows if row and row[0].strip() == currency)
-        rate = float(row[-1].replace(",", ""))
+        rate = _vnd_rate(row[-1])
     except (StopIteration, ValueError) as exc:
         raise SuggestionError("exchange_source_unavailable") from exc
     plain = " ".join(" ".join(parser.text).split())
-    source_time = (re.search(r"(\d{1,2}:\d{2}\s+ngày\s+\d{1,2}/\d{1,2}/\d{4})", plain) or [None])[0]
+    source_time = (re.search(r"(\d{1,2}:\d{2}(?::\d{2})?\s+ngày\s+\d{1,2}/\d{1,2}/\d{4})", plain) or [None])[0]
     return {"display_currency": "VND", "exchange_rate": rate, "rate_kind": "sell", "source_time": source_time}
+
+
+def parse_techcombank_quote(content: str, currency: str = "USD") -> dict[str, Any]:
+    try:
+        payload = json.loads(content)["exchangeRate"]
+        item = next(
+            item for item in payload["data"]
+            if item.get("sourceCurrency") == currency and item.get("askRate")
+        )
+        rate = _vnd_rate(item["askRate"])
+        source_time = item.get("inputDate")
+    except (json.JSONDecodeError, KeyError, StopIteration, TypeError, ValueError) as exc:
+        raise SuggestionError("exchange_source_unavailable") from exc
+    return {"display_currency": "VND", "exchange_rate": rate, "rate_kind": "sell", "source_time": source_time or None}
+
+
+def parse_bidv_quote(content: str, currency: str = "USD") -> dict[str, Any]:
+    try:
+        payload = json.loads(content)
+        item = next(item for item in payload["data"] if item.get("currency") == currency)
+        rate = _vnd_rate(item["ban"])
+    except (json.JSONDecodeError, KeyError, StopIteration, TypeError, ValueError) as exc:
+        raise SuggestionError("exchange_source_unavailable") from exc
+    source_time = " ".join(value for value in (payload.get("hour"), payload.get("day_vi")) if value)
+    return {"display_currency": "VND", "exchange_rate": rate, "rate_kind": "sell", "source_time": source_time or None}
 
 
 def parse_ecb_quote(content: str) -> dict[str, Any]:
@@ -157,6 +198,12 @@ async def exchange_quote(source_id: str) -> dict[str, Any]:
         quote = parse_vietcombank_quote(await _get_text(VIETCOMBANK_URL))
     elif source_id == "agribank":
         quote = parse_agribank_quote(await _get_text(AGRIBANK_URL))
+    elif source_id == "vietinbank":
+        quote = parse_agribank_quote(await _get_text(VIETINBANK_URL))
+    elif source_id == "techcombank":
+        quote = parse_techcombank_quote(await _get_text(TECHCOMBANK_URL))
+    elif source_id == "bidv":
+        quote = parse_bidv_quote(await _get_text(BIDV_URL))
     else:
         quote = parse_ecb_quote(await _get_text(ECB_URL))
     return {

@@ -432,12 +432,17 @@ khi đóng.
   chưa được allowlist giữ manual/unavailable, không đoán giá.
 - Provider Profile hiển thị `MiniMax` cho job mới dùng `MiniMax-M3`; job lịch sử
   có ID `qwen` vẫn hiển thị và lọc theo snapshot đã lưu, không đổi nhãn hồi tố.
-- Danh sách Price Profile đã lưu nằm ngay dưới form, hiển thị scope/hiệu lực và
-  trạng thái; save refresh Overview/Jobs để Known cost không giữ snapshot cũ.
-- Price form dùng native `datetime-local` cho ngày hiệu lực, mặc định hiện tại;
-  thao tác lấy gợi ý giá không được đặt lại ngày giờ user đã chọn.
+- Ngay dưới form chỉ hiển thị Price Profile active mới nhất; profile cũ/archived
+  nằm trong `<details>` lịch sử. Save refresh Overview/Jobs để estimate không giữ
+  snapshot cũ.
+- Form tự ghi thời điểm fetch/lưu, không yêu cầu user backdate. Sau Preview, user
+  có thể bật tỷ giá thực tế/hợp đồng, nhập rate và xác nhận lại; provenance ghi
+  `actual_or_contract`.
 - Mỗi Price Profile đã lưu có action Archive/Restore; action cập nhật catalog và
   refresh Overview/Jobs, không thêm hard-delete.
+- Overview/Scenario gọi kết quả này là estimate theo giá mới nhất: billing
+  currency là số gốc; display currency ghi `estimated`, source/time/coverage và
+  sensitivity ±1%. Không đổi nhãn `known_cost` lịch sử thành số quy đổi tự động.
 - Workload form chỉ nhập monthly volume + operating days/hours, một Processing
   Mode, peak/reserve/SLA/success target/retention assumption. Combined dossier
   dùng dossier volume + document/page averages; không cho input ngày/tháng mâu
