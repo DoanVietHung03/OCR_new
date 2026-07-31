@@ -1,6 +1,6 @@
 # Kế hoạch User guide
 
-**Trạng thái: SCOPE LOCKED 2026-07-28 — NOT IMPLEMENTED.**
+**Trạng thái: IMPLEMENTED; SIZING SYNCED 2026-07-31; FULL BROWSER GATE PENDING.**
 
 Tài liệu này là nguồn chuẩn chi tiết của `FE-X18` cho hai route frontend
 `/guide` và `/guide/reference`. Counterpart [`BE-X18`](implementation_plan.md#be-x18)
@@ -103,8 +103,9 @@ vòng user-testing riêng.
 | 7 | `#structure-review` | Xác nhận cấu trúc hồ sơ | Sửa boundary/type rồi tiếp tục extraction |
 | 8 | `#review-approve` | Rà soát, sửa và duyệt | Kiểm tra nguồn, xử lý blocker và duyệt |
 | 9 | `#results` | Kết quả sau hoàn thành | Tìm report, artifact, log và review queue |
-| 10 | `#errors` | Lỗi và cách phục hồi | Chọn hành động theo tình huống |
-| 11 | `#faq` | Câu hỏi thường gặp | Tra nhanh câu trả lời và đi tới reference |
+| 10 | `#sizing-cost` | Định cỡ và chi phí | Đọc dữ liệu đo, Known cost và lập kịch bản |
+| 11 | `#errors` | Lỗi và cách phục hồi | Chọn hành động theo tình huống |
+| 12 | `#faq` | Câu hỏi thường gặp | Tra nhanh câu trả lời và đi tới reference |
 
 `Mẹo thao tác trên trình duyệt` là một `<details>` phụ, không phải section trong
 workflow chính.
@@ -514,6 +515,9 @@ mục đích, vị trí và lúc cần operator; không mở rộng thành tài 
 Reference phải giúp user đọc và sử dụng kết quả, không tự đưa khuyến nghị mua
 sắm khi evidence chưa đủ:
 
+- bộ lọc Provider Profile, task, Processing Mode, UTC start/end, unit, số job và
+  timezone áp dụng cho cùng tập dữ liệu KPI, biểu đồ và bảng; Provider Profile
+  là dropdown gồm cấu hình hiện hành và identity lịch sử chỉ để lọc;
 - giải thích input/output token, bytes, latency, service time, throughput,
   percentile, coverage, billing certainty và capacity;
 - giải thích measurement fingerprint, benchmark fingerprint và vì sao sample
@@ -522,6 +526,10 @@ sắm khi evidence chưa đủ:
   gian `n≥5` chỉ khi có bucket thời gian, P95/capacity screening `n≥20`;
 - `Unavailable`, `insufficient` hoặc partial cost phải giữ nguyên ý nghĩa, không
   chuyển thành `0`, chart hoặc verdict giả;
+- phân biệt `Known cost` lịch sử cần Price Profile khớp chính xác provider,
+  model và thời điểm operation với `ước tính theo giá mới nhất` dùng profile
+  active mới nhất cùng identity; popup Chi tiết nêu VND, nguồn/thời điểm tỷ giá,
+  coverage và sensitivity ±1%;
 - nêu quyết định nào mỗi mức evidence hỗ trợ và khi nào phải chờ benchmark thật;
 - không khẳng định GPU/provider/cấu hình cụ thể nếu thiếu sample tương thích.
 
@@ -533,16 +541,21 @@ Phải có công thức và ví dụ số giả lập, ghi rõ không phải bá
 4. capacity từ throughput/latency đã đo và số worker;
 5. ví dụ `Unavailable` do thiếu usage, thiếu mẫu hoặc fingerprint không khớp.
 
-Reference cũng phải giải thích luồng tạo Price Profile: nhập Provider Profile,
-đúng model và nguồn tỷ giá, lấy bản Preview từ allowlist nguồn chính thức, kiểm
-tra URL/thời điểm/đơn vị rồi xác nhận trước khi lưu. Nếu có tỷ giá thực tế/hợp
-đồng từ hóa đơn/sao kê, user bật manual override, nhập rate và xác nhận lại.
+Reference cũng phải giải thích luồng tạo Price Profile: chọn Provider Profile và
+model liên kết từ dropdown do backend cấu hình, chọn Vietcombank, Agribank,
+VietinBank, Techcombank, BIDV hoặc ECB, lấy bản Preview từ allowlist nguồn chính
+thức, kiểm tra URL/thời điểm/đơn vị rồi xác nhận trước khi lưu. Nếu có tỷ giá
+thực tế/hợp đồng từ hóa đơn/sao kê, user bật manual override, nhập rate lớn hơn
+0 và vẫn xác nhận lại.
 UI hiện profile active mới nhất; profile cũ/archived nằm trong lịch sử thu gọn và
 có thể restore. Overview/Scenario phải phân biệt billing currency gốc với display
 currency ước tính, đồng thời hiện coverage và sensitivity ±1%.
 Provider/model được chọn từ dropdown; các ô giá/tỷ giá để trống trước khi nhập
 hoặc lấy gợi ý. Version mới thay version cũ cùng provider/model, và số lượng lịch
 sử không tính profile hiện dùng.
+Trong Scenario, `hệ số tải đỉnh = 1,5` nghĩa là tải cao điểm bằng 1,5 lần tải
+trung bình; `dự phòng = 0,25` nghĩa là cộng thêm 25% năng lực. Tooltip giữ phần
+giải thích này khỏi làm form dài. Chỉ lưu snapshot sau khi Preview đã được tính.
 Không suy model từ tên Provider Profile, không tự xác nhận và không biến lỗi
 nguồn thành giá `0`.
 
@@ -577,7 +590,7 @@ số vì text/anchor là nguồn chuẩn.
 2. Job detail với status/progress;
 3. Review workspace với field, evidence, warning và `Lưu và duyệt`;
 4. Structure Review của một hồ sơ gộp;
-5. Sizing & Cost với số liệu, sample gate và `Unavailable`.
+5. Sizing & Cost tại tab Scenario với Price Profile, nguồn tỷ giá và hồ sơ hiện dùng.
 
 ### 9.2 Quy tắc asset
 
@@ -845,8 +858,8 @@ Các quyết định trên đã được user xác nhận ngày 2026-07-28. Thay
 mốc này phải cập nhật file này trước, rồi đồng bộ status/backlink `FE-X18` và
 `BE-X18`.
 
-Trạng thái 2026-07-30: implementation V1 có đủ hai route tĩnh, VI/EN, 9 nhóm
-reference với 38 entry, một mục guide cố định trong sidebar, không lặp contextual
+Trạng thái 2026-07-31: implementation V1 có đủ hai route tĩnh, VI/EN, 12 section
+workflow và 9 nhóm reference với 41 entry, một mục guide cố định trong sidebar, không lặp contextual
 help trên workflow và 5 ảnh sanitized. Backend 62
 tests, typecheck, build/prerender, OpenAPI, compileall và diff check pass.
 Playwright đã đi tới đủ 25 test không báo test lỗi nhưng runner Windows không

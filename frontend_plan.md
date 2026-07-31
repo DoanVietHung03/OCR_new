@@ -528,7 +528,7 @@ thái live evidence của `FE-X17`.
 Đã hoàn thành hai route tĩnh `/guide` và `/guide/reference`, VI/EN dùng language
 state hiện có, đúng một sidebar item, không lặp contextual help trên các màn hình
 workflow và có 5 ảnh fixture
-sanitized. Reference có 9 nhóm, 38 entry với anchor ổn định và sáu phần nội
+sanitized. Workflow có 12 section; Reference có 9 nhóm, 41 entry với anchor ổn định và sáu phần nội
 dung. Follow-up UI thêm scroll-spy/`aria-current` cho mục lục hai route, bỏ hai
 CTA đầu guide bị trùng navigation, tách `Lưu ý` xanh trung tính và `Cẩn trọng`
 vàng cam trong reference; guide không gọi API, không thêm dependency/schema/persistence. Gate local
@@ -537,6 +537,10 @@ compileall và diff check. Browser runner thực thi đủ 25 test không báo t
 nhưng tiến trình teardown trên Windows không thoát trước timeout; vì vậy bằng
 chứng browser full-suite vẫn được ghi rõ là teardown pending, không dùng để
 thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
+
+Đồng bộ ngày 2026-07-31 bổ sung workflow Sizing & Cost, bộ lọc Sizing, phân biệt
+Known cost với ước tính theo giá mới nhất, Price Profile/Scenario hiện hành và
+ảnh `sizing.png` mới. Guide vẫn tĩnh, không gọi API và không sao chép giá động.
 
 ### FE-X19
 

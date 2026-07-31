@@ -73,7 +73,7 @@ export function GuideBody() {
       <div className="guide-example"><b>{l.example}</b><p>{help.example[locale]}</p></div>
       {section.note && <p className="guide-callout"><b>{l.note}:</b> {section.note[locale]}</p>}
       {image && <figure><Image src={`/guide/${image.file}`} width={1200} height={750} alt={image.alt[locale]} /><figcaption>{image.caption[locale]}</figcaption></figure>}
-      {["choose-mode", "job-status", "review-approve", "results"].includes(section.id) && <Link href={`/guide/reference#${section.id === "choose-mode" ? "processing" : section.id === "job-status" ? "job" : section.id === "review-approve" ? "review" : "reports-artifacts"}`}>{l.reference} →</Link>}
+      {["choose-mode", "job-status", "review-approve", "results", "sizing-cost"].includes(section.id) && <Link href={`/guide/reference#${section.id === "choose-mode" ? "processing" : section.id === "job-status" ? "job" : section.id === "review-approve" ? "review" : section.id === "sizing-cost" ? "sizing-cost" : "reports-artifacts"}`}>{l.reference} →</Link>}
     </section>;
   })}
   <details className="guide-tips"><summary>{locale === "vi" ? "Mẹo thao tác trên trình duyệt" : "Browser tips"}</summary><ul><li>{locale === "vi" ? "Dùng Ctrl+F để tìm thuật ngữ và Back để quay lại màn hình công việc." : "Use Ctrl+F to find a term and Back to return to your workflow."}</li><li>{locale === "vi" ? "Tab/Shift+Tab di chuyển focus; Enter/Space mở details và kích hoạt nút." : "Tab/Shift+Tab moves focus; Enter/Space opens details and activates buttons."}</li><li>{locale === "vi" ? "Không reload khi đang nhập correction chưa lưu." : "Do not reload while editing an unsaved correction."}</li></ul></details>

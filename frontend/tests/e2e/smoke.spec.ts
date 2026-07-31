@@ -733,7 +733,6 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   await page.getByRole("button", { name: /Làm mới|Refresh/i }).click();
   await expect.poll(() => jobsQuery).toContain("provider_profile_id=minimax");
   expect(jobsQuery).toContain("page_size=10"); expect(jobsQuery).not.toContain("unit=");
-  if (process.env.UPDATE_GUIDE_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "public/guide/sizing.png"), fullPage: true }); }
   await page.getByRole("button", { name: /Khám phá tài liệu|Document Explorer/i }).click(); const attempts = page.getByRole("button", { name: /Xem lần gọi|View attempts/i }); await attempts.nth(0).click(); await attempts.nth(1).click(); await expect(page.locator(".attempts-table")).toHaveCount(2); await expect(page.locator(".attempts-table").first()).toContainText(/Đầy đủ|complete/i);
   await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await expect(page.getByText(/Kịch bản · Bản xem trước|Scenario · Preview/i)).toBeVisible(); await expect(page.getByText(/Công việc\/tháng|Jobs\/month/i)).toBeVisible(); await expect(page.locator(".page-header .eyebrow")).toHaveCount(0); await expect(page.locator(".scenario-info")).toHaveCount(2); await page.getByRole("button", { name: /Tính bản xem trước|Calculate Preview/i }).click(); await expect(page.getByText(/Năng lực yêu cầu|Required capacity/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /Lấy giá và tỷ giá|Fetch price and rate/i })).toBeDisabled();
@@ -751,6 +750,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   expect(catalog.price_profiles[0].effective_from).toBe(now);
   await expect(page.getByLabel(/Hồ sơ provider|Provider Profile/i)).toHaveValue("");
   await expect(page.locator(".saved-price-profiles")).toContainText("MiniMax-M3");
+  if (process.env.UPDATE_GUIDE_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "public/guide/sizing.png"), fullPage: true }); }
   await page.getByLabel(/Hồ sơ provider|Provider Profile/i).selectOption("minimax"); await page.getByLabel(/Mô hình|Model/i).selectOption("MiniMax-M3"); await page.getByLabel(/Nguồn tỷ giá|Exchange source/i).selectOption("vietcombank");
   await page.getByRole("button", { name: /Lấy giá và tỷ giá|Fetch price and rate/i }).click();
   await page.getByLabel(/xác nhận giá cùng tỷ giá|confirm the price and exchange rate/i).check(); await page.getByRole("button", { name: /Lưu hồ sơ giá|Save Price Profile/i }).click();
@@ -788,9 +788,10 @@ test("static user guide keeps routes, anchors, language and mobile reflow withou
   await page.goto("/guide");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hướng dẫn sử dụng");
   await expect(page.locator("#primary-navigation").getByRole("link", { name: "Hướng dẫn sử dụng" })).toHaveClass(/active/);
-  await expect(page.locator(".guide-section")).toHaveCount(11);
-  await expect(page.locator(".guide-plain")).toHaveCount(11);
-  await expect(page.locator(".guide-example")).toHaveCount(11);
+  await expect(page.locator(".guide-section")).toHaveCount(12);
+  await expect(page.locator(".guide-plain")).toHaveCount(12);
+  await expect(page.locator(".guide-example")).toHaveCount(12);
+  await expect(page.locator("#sizing-cost .guide-example")).toContainText("25%");
   await expect(page.locator("#ocr-basics .guide-plain")).toContainText("máy tự tin đến đâu");
   await expect(page.locator("#structure-review .guide-example")).toContainText("trang 2–4");
   await expect(page.locator(".guide-section figure img")).toHaveCount(5);
@@ -806,7 +807,10 @@ test("static user guide keeps routes, anchors, language and mobile reflow withou
   await page.goto("/guide/reference#sizing-cost");
   await expect(page.locator("#sizing-cost")).toBeVisible();
   await expect(page.locator(".guide-toc a.active")).toHaveAttribute("href", "#sizing-cost");
-  await expect(page.locator(".reference-entry")).toHaveCount(38);
+  await expect(page.locator(".reference-entry")).toHaveCount(41);
+  await expect(page.locator("#sizing-filters")).toContainText("dropdown");
+  await expect(page.locator("#known-cost")).toContainText("latest-price");
+  await expect(page.locator("#price-suggestion")).toContainText("BIDV");
   await expect(page.locator("#sample-gates")).toContainText("1/2/5/20");
   await expect(page.locator("#term-unavailable")).toContainText("Different from zero");
   await expect(page.locator(".reference-caution").first()).toHaveCSS("background-color", "rgb(255, 243, 214)");
