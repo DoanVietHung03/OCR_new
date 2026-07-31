@@ -433,6 +433,11 @@ Scenario dùng icon thông tin cho peak/reserve thay vì helper text cố địn
 Preview giá là card trung tính, nguồn nằm trên một dòng provenance; nút enabled
 dùng màu primary và disabled dùng xám rõ ràng. Ba giá quy đổi VND nằm ở ba cột
 riêng.
+Provider/model dropdown ưu tiên `GET /api/provider-profiles`; backend lấy ID và
+exact safe model từ `OCR_PROVIDER`/`OCR_MODEL`, không đưa file `.env`, URL, key
+hoặc header xuống browser. Overview dùng cùng danh sách provider; legacy
+catalog/job chỉ bổ sung lựa chọn để lọc lịch sử. Chi tiết VND/tỷ giá/sensitivity
+trong metric card dùng native `<details>` popup.
 
 Nguồn giá ban đầu là trang Pay-as-you-go chính thức của MiniMax cho exact
 `MiniMax-*`. `MiniMax-M3` dùng tier standard `input <= 512k`; Price Profile lưu

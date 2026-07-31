@@ -43,7 +43,7 @@ export default function Home() {
   const [reviewCount, setReviewCount] = useState<number | null>(null);
   const [task, setTask] = useState<Task>("full_ocr"); const [pages, setPages] = useState<PageMode>("all"); const [maxPages, setMaxPages] = useState(0);
   const [processingMode, setProcessingMode] = useState<ProcessingMode>("administrative_document");
-  const availableProfiles: ProviderProfile[] = profiles.length ? profiles : state.ocr_methods.map((item) => ({ ...item, tasks: ["full_ocr", "metadata"], page_modes: ["all", "auto", "first,last"], max_pages: 100, processing_modes: ["administrative_document"] }));
+  const availableProfiles: ProviderProfile[] = profiles.length ? profiles : state.ocr_methods.map((item) => ({ ...item, model: "", tasks: ["full_ocr", "metadata"], page_modes: ["all", "auto", "first,last"], max_pages: 100, processing_modes: ["administrative_document"] }));
   const engine = availableProfiles.find((item) => item.id === profileId) || availableProfiles[0]; const external = Boolean(engine?.external); const configured = engine?.status === "configured";
   const automaticJobName = files.length ? `${files[0].name}${files.length > 1 ? ` +${files.length - 1}` : ""}` : "";
 

@@ -314,6 +314,7 @@ class EngineResponse(PublicModel):
 
 
 class ProviderProfileResponse(EngineResponse):
+    model: str
     tasks: list[Literal["full_ocr", "metadata"]]
     page_modes: list[Literal["all", "auto", "first,last"]]
     max_pages: int

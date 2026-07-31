@@ -84,7 +84,7 @@ sign-off Milestone C. Đặc tả chi tiết nằm tại
 | Thuật ngữ | Nghĩa chuẩn |
 |---|---|
 | Frontend | Browser Next.js hiện tại dùng typed API, dữ liệu thật và durable state |
-| Provider Profile | Lựa chọn OCR do server định nghĩa; public contract chỉ có ID, nhãn, capability và readiness an toàn |
+| Provider Profile | Lựa chọn OCR do server định nghĩa; public contract chỉ có ID, nhãn, exact safe model, capability và readiness an toàn |
 | Processing Mode | Lựa chọn cấp job: `administrative_document`, `dossier_cover` hoặc `combined_dossier`; độc lập với Provider Profile |
 | OCR Job | Source PDFs, lifecycle, documents, artifacts, audit và safe events được lưu trong job JSON/artifacts |
 | Source PDF | Một PDF nguồn bất biến; trong `combined_dossier` nhiều PDF tương ứng đúng một logical document và có proposal/confirmation riêng |
@@ -463,6 +463,9 @@ Gate backend:
   persist; `MiniMax-M3` vượt 512k input giữ billing unknown.
 - Job mới dùng Provider Profile ID `minimax` cho `MiniMax-M3`; dữ liệu/job cũ
   mang ID `qwen` vẫn được đọc nguyên trạng và không rewrite.
+- `GET /api/provider-profiles` trả exact safe model từ `OCR_MODEL`; Overview và
+  Scenario dùng danh sách này cho dropdown. Không trả URL, key, header hoặc nội
+  dung `.env`.
 - Price Profile active mới nhất hiển thị ngay dưới form; profile cũ/archived nằm
   trong lịch sử thu gọn. Save thành công refresh Overview. Thời điểm fetch/lưu
   được ghi tự động; user có thể xác nhận tỷ giá thực tế/hợp đồng bằng manual

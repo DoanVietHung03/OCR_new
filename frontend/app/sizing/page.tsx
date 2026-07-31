@@ -4,10 +4,10 @@ import { FormEvent, Fragment, useEffect, useState } from "react";
 import {
   ApiError, applySizingRetention, calculateSizing, createSizingSnapshot,
   deleteSizingSnapshot, getSizingCatalog, getSizingJobs, getSizingOperations,
-  getSizingOverview, getSizingSnapshots, getExchangeRateSources, patchSizingSnapshot,
+  getSizingOverview, getSizingSnapshots, getExchangeRateSources, getProviderProfiles, patchSizingSnapshot,
   previewSizingRetention, previewSizingSnapshotDelete, putSizingCatalog,
   suggestPrice,
-  PriceSuggestion, SizingCatalog, SizingJob, SizingOperations, SizingOverview, SizingSnapshots,
+  PriceSuggestion, ProviderProfile, SizingCatalog, SizingJob, SizingOperations, SizingOverview, SizingSnapshots,
 } from "../../lib/api";
 import { safeError, useLanguage } from "../../lib/i18n";
 import AppShell from "../app-shell";
@@ -28,7 +28,7 @@ const copy = {
     snapshots: "Ảnh chụp đã lưu", archive: "Lưu trữ", restore: "Khôi phục", remove: "Xóa", previewDelete: "Xem trước việc xóa dữ liệu đo",
     previewReady: "Bản xem trước đã sẵn sàng", rollups: "Dữ liệu tổng hợp",
     applyDelete: "Xác nhận xóa", noChart: "Cần ít nhất 2 công việc tương thích để mở biểu đồ so sánh.",
-    exportCsv: "Xuất CSV", exportJson: "Xuất JSON", copyId: "Sao chép ID",
+    exportCsv: "Xuất CSV", exportJson: "Xuất JSON", copyId: "Sao chép ID", details: "Chi tiết",
     emptySnapshots: "Chưa có ảnh chụp nào.", snapshotHint: "Lưu một kết quả xem trước để so sánh hoặc xuất lại sau.",
     snapshotDisabled: "Hãy tính bản xem trước trước khi lưu ảnh chụp.", priceDisabled: "Hãy xác nhận giá và tỷ giá trước khi lưu.",
     saveWorkload: "Lưu hồ sơ khối lượng", hardware: "Hồ sơ phần cứng", saveHardware: "Lưu hồ sơ phần cứng",
@@ -65,7 +65,7 @@ const copy = {
     snapshots: "Saved snapshots", archive: "Archive", restore: "Restore", remove: "Delete", previewDelete: "Preview measurement deletion",
     previewReady: "Preview ready", rollups: "Rollups",
     applyDelete: "Confirm deletion", noChart: "At least 2 compatible jobs are required for a comparison chart.",
-    exportCsv: "Export CSV", exportJson: "Export JSON", copyId: "Copy ID",
+    exportCsv: "Export CSV", exportJson: "Export JSON", copyId: "Copy ID", details: "Details",
     emptySnapshots: "No snapshots yet.", snapshotHint: "Save a Preview result to compare or export it later.",
     snapshotDisabled: "Calculate a Preview before saving a snapshot.", priceDisabled: "Confirm the suggested price and exchange rate before saving.",
     saveWorkload: "Save Workload Profile", hardware: "Hardware Profile", saveHardware: "Save Hardware Profile",
@@ -150,6 +150,7 @@ export default function SizingPage() {
   const [fetchingPrice, setFetchingPrice] = useState(false);
   const [savingPrice, setSavingPrice] = useState(false);
   const [exchangeSources, setExchangeSources] = useState<{ id: string; label: string; currencies: string[]; url: string }[]>([]);
+  const [providerProfiles, setProviderProfiles] = useState<ProviderProfile[]>([]);
   const [retention, setRetention] = useState({ start_date: "", end_date: "", include_system: false, include_rollups: false, include_pinned_benchmarks: false });
   const [hardware, setHardware] = useState({ id: "", description: "", cpu: "", ram_gb: 0, gpu: "" });
   const [retentionPlan, setRetentionPlan] = useState<{ plan_token: string; checksum: string; operation_count: number; rollup_count: number } | null>(null);
@@ -164,6 +165,7 @@ export default function SizingPage() {
         getSizingOverview(filters), getSizingJobs(jobFilters(filters), 1, jobLimit), getSizingCatalog(), getSizingSnapshots(),
       ]);
       setOverview(nextOverview); setJobs(nextJobs.items); setCatalog(nextCatalog); setSnapshots(nextSnapshots); setError("");
+      getProviderProfiles().then((value) => setProviderProfiles(value.profiles)).catch(() => {});
     } catch (reason) { setError(errorText(reason)); }
   };
   useEffect(() => {
@@ -174,6 +176,7 @@ export default function SizingPage() {
     setTimezone(params.get("tz") || "UTC"); setJobLimit(initialLimit);
     getSizingOverview(initial).then(setOverview).catch((reason) => setError(errorText(reason)));
     Promise.all([getSizingJobs(jobFilters(initial), 1, initialLimit), getSizingCatalog(), getSizingSnapshots()]).then(([j, c, s]) => { setJobs(j.items); setCatalog(c); setSnapshots(s); }).catch((reason) => setError(errorText(reason)));
+    getProviderProfiles().then((value) => setProviderProfiles(value.profiles)).catch(() => {});
     getExchangeRateSources().then((value) => setExchangeSources(value.items)).catch(() => setExchangeSources([]));
   }, []);
   useEffect(() => {
@@ -302,9 +305,15 @@ export default function SizingPage() {
   ).at(-1);
   const profileTime = (item: SizingCatalog["price_profiles"][number]) => String(item.price_fetched_at || item.effective_from || item.id);
   const priceHistory = (catalog?.price_profiles.filter((item) => item !== latestPrice) || []).sort((left, right) => profileTime(right).localeCompare(profileTime(left)));
-  const providerOptions = [...new Set(["minimax", ...(catalog?.price_profiles.map((item) => String(item.provider_profile_id || "")) || [])].filter(Boolean))];
+  const providerOptions = [...new Set([
+    ...(providerProfiles.length ? providerProfiles.map((item) => item.id) : ["minimax"]),
+    ...(catalog?.price_profiles.map((item) => String(item.provider_profile_id || "")) || []),
+  ].filter(Boolean))];
+  const filterProviderOptions = [...new Set([...providerOptions, ...jobs.map((item) => item.provider_profile_id || "")].filter(Boolean))];
+  const providerLabel = (id: string) => providerProfiles.find((item) => item.id === id)?.label || id;
+  const selectedProviderProfile = providerProfiles.find((item) => item.id === price.provider_profile_id);
   const modelOptions = [...new Set([
-    ...(price.provider_profile_id === "minimax" ? ["MiniMax-M3"] : []),
+    ...(selectedProviderProfile?.model ? [selectedProviderProfile.model] : price.provider_profile_id === "minimax" ? ["MiniMax-M3"] : []),
     ...(catalog?.price_profiles.filter((item) => item.provider_profile_id === price.provider_profile_id).map((item) => String(item.model || "")) || []),
   ].filter(Boolean))];
   const hasPriceValues = [price.input_per_million, price.output_per_million, price.cached_per_million].every((value) => value != null);
@@ -329,7 +338,7 @@ export default function SizingPage() {
     <nav className="code-tabs sizing-tabs" aria-label={t.title}>{(["overview", "explorer", "calculator", "retention"] as View[]).map((item) => <button key={item} className={view === item ? "active" : ""} onClick={() => setView(item)}>{t[item]}</button>)}</nav>
 
     {view === "overview" && <><section className="panel sizing-filters"><h2>{t.filters}</h2><div className="form-grid">
-      <label>{t.provider}<input value={filters.provider_profile_id} onChange={(event) => setFilters({ ...filters, provider_profile_id: event.target.value })} /></label>
+      <label>{t.provider}<select value={filters.provider_profile_id} onChange={(event) => setFilters({ ...filters, provider_profile_id: event.target.value })}><option value="">{t.all}</option>{filterProviderOptions.map((value) => <option key={value} value={value}>{providerLabel(value)}</option>)}</select></label>
       <label>{t.task}<select value={filters.task} onChange={(event) => setFilters({ ...filters, task: event.target.value })}><option value="">{t.all}</option>{["full_ocr", "metadata", "segmentation", "readiness_probe"].map((value) => <option value={value} key={value}>{taskLabel(value)}</option>)}</select></label>
       <label>{t.mode}<select value={filters.processing_mode} onChange={(event) => setFilters({ ...filters, processing_mode: event.target.value })}><option value="">{t.all}</option>{["administrative_document", "dossier_cover", "combined_dossier"].map((value) => <option value={value} key={value}>{modeLabel(value)}</option>)}</select></label>
       <label>{t.utcStart}<input type="date" value={filters.start_date} onChange={(event) => setFilters({ ...filters, start_date: event.target.value })} /></label><label>{t.utcEnd}<input type="date" value={filters.end_date} onChange={(event) => setFilters({ ...filters, end_date: event.target.value })} /></label>
@@ -344,7 +353,7 @@ export default function SizingPage() {
       <article className="metric-card"><span>{t.tokensPerMeasuredAttempt}</span><strong>{overview?.coverage.complete_usage_attempts ? Math.round(overview.total_tokens / overview.coverage.complete_usage_attempts).toLocaleString(locale) : t.unavailableValue}</strong></article>
       <article className="metric-card"><span>{t.usage}</span><strong>{pct(overview?.coverage.response_usage_percent, t.unavailableValue)}</strong></article>
       <article className="metric-card"><span>{t.billing}</span><strong>{pct(overview?.latest_price_estimate?.coverage_percent, t.unavailableValue)}</strong></article>
-      <article className="metric-card"><span>{t.knownCost}</span><strong>{overview?.latest_price_estimate ? `${money(overview.latest_price_estimate.billing_amount, t.unavailableValue)} ${overview.latest_price_estimate.billing_currency}` : t.unavailableValue}</strong>{overview?.latest_price_estimate?.display_amount != null && <small>{overview.latest_price_estimate.display_amount.toLocaleString(locale, { maximumFractionDigits: 2 })} {overview.latest_price_estimate.display_currency} · {t.estimated}<br />{t.rateSource}: {overview.latest_price_estimate.exchange_source || t.unavailableValue} · {overview.latest_price_estimate.exchange_rate?.toLocaleString(locale)}{overview.latest_price_estimate.exchange_source_time || overview.latest_price_estimate.exchange_fetched_at ? ` · ${overview.latest_price_estimate.exchange_source_time || new Date(String(overview.latest_price_estimate.exchange_fetched_at)).toLocaleString(locale)}` : ""}<br />{t.sensitivity}: {overview.latest_price_estimate.sensitivity_1_percent?.toLocaleString(locale, { maximumFractionDigits: 2 })} {overview.latest_price_estimate.display_currency}</small>}{!overview?.latest_price_estimate && overview?.operation_count ? <small>{t.knownCostHint}</small> : null}</article>
+      <article className="metric-card metric-cost-card"><span>{t.knownCost}</span><strong>{overview?.latest_price_estimate ? `${money(overview.latest_price_estimate.billing_amount, t.unavailableValue)} ${overview.latest_price_estimate.billing_currency}` : t.unavailableValue}</strong>{overview?.latest_price_estimate?.display_amount != null && <details className="metric-cost-details"><summary>{t.details}</summary><div className="metric-cost-popover"><span>{overview.latest_price_estimate.display_amount.toLocaleString(locale, { maximumFractionDigits: 2 })} {overview.latest_price_estimate.display_currency} · {t.estimated}</span><span>{t.rateSource}: {overview.latest_price_estimate.exchange_source || t.unavailableValue} · {overview.latest_price_estimate.exchange_rate?.toLocaleString(locale)}</span>{overview.latest_price_estimate.exchange_source_time || overview.latest_price_estimate.exchange_fetched_at ? <span>{overview.latest_price_estimate.exchange_source_time || new Date(String(overview.latest_price_estimate.exchange_fetched_at)).toLocaleString(locale)}</span> : null}<span>{t.sensitivity}: {overview.latest_price_estimate.sensitivity_1_percent?.toLocaleString(locale, { maximumFractionDigits: 2 })} {overview.latest_price_estimate.display_currency}</span></div></details>}{!overview?.latest_price_estimate && overview?.operation_count ? <small>{t.knownCostHint}</small> : null}</article>
     </section>
     <section className="panel sizing-card"><div className="section-head"><div><h2>{overview?.operation_count ? t.overview : t.unavailable}</h2><p>{t.honest}</p></div><span className={`sizing-status ${statusTone(overview?.value_kind || "unavailable")}`}>{valueLabel(overview?.value_kind || "unavailable")}</span></div>
       <SizingChart jobs={jobs} label={t.chartLabel} />{jobs.length < 2 && <div className="notice warning sizing-notice"><span aria-hidden="true">⚠</span><p>{t.noChart}</p></div>}
@@ -365,7 +374,7 @@ export default function SizingPage() {
       <label><span className="field-label">{t.reserve}<button className="scenario-info" type="button" title={t.reserveHelp} aria-label={`${t.reserve}: ${t.reserveHelp}`}>i</button></span><input type="number" min="0" max="500" step="5" value={scenario.reserve * 100} onChange={(event) => setScenario({ ...scenario, reserve: Number(event.target.value) / 100 })} /></label>
     </div><footer className="modal-actions"><button className="button primary" type="submit">{t.calculate}</button><button className="button secondary" type="button" onClick={saveWorkload}>{t.saveWorkload}</button><span className="disabled-help" title={!result ? t.snapshotDisabled : undefined}><button className="button secondary" type="button" disabled={!result} aria-describedby={!result ? "snapshot-disabled-reason" : undefined} onClick={saveSnapshot}>{t.saveSnapshot}</button></span></footer>{!result && <small id="snapshot-disabled-reason" className="field-help">{t.snapshotDisabled}</small>}{result && <div className="price-suggestion" role="status"><strong>{t.previewReady}</strong><span>{t.requiredCapacity}: {result.required_capacity_jobs_per_hour.toLocaleString(locale, { maximumFractionDigits: 2 })} {t.jobs}/h</span><span>{t.monthlyTokens}: {result.estimated_monthly_tokens?.toLocaleString(locale, { maximumFractionDigits: 0 }) ?? t.unavailableValue}</span><span>{t.monthlyEstimate}: {result.estimated_monthly_price ? `${money(result.estimated_monthly_price.billing_amount, t.unavailableValue)} ${result.estimated_monthly_price.billing_currency}` : t.unavailableValue}</span>{result.estimated_monthly_price?.display_amount != null && <small>{result.estimated_monthly_price.display_amount.toLocaleString(locale, { maximumFractionDigits: 2 })} {result.estimated_monthly_price.display_currency} · {t.estimated}<br />{t.rateSource}: {result.estimated_monthly_price.exchange_source || t.unavailableValue} · {result.estimated_monthly_price.exchange_rate?.toLocaleString(locale)}{result.estimated_monthly_price.exchange_source_time || result.estimated_monthly_price.exchange_fetched_at ? ` · ${result.estimated_monthly_price.exchange_source_time || new Date(String(result.estimated_monthly_price.exchange_fetched_at)).toLocaleString(locale)}` : ""}<br />{t.sensitivity}: {result.estimated_monthly_price.sensitivity_1_percent?.toLocaleString(locale, { maximumFractionDigits: 2 })} {result.estimated_monthly_price.display_currency}</small>}</div>}</form>
     <form className="panel sizing-card" onSubmit={savePrice}><h2>{t.price}</h2><p className="field-help price-steps">{t.priceSteps}</p><div className="form-grid sizing-form-grid">
-      <label>{t.provider}<select required value={price.provider_profile_id} onChange={(event) => changePriceIdentity({ provider_profile_id: event.target.value, model: "" })}><option value="">{t.chooseProvider}</option>{providerOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label><label>{t.model}<select required disabled={!price.provider_profile_id} value={price.model} onChange={(event) => changePriceIdentity({ model: event.target.value })}><option value="">{t.chooseModel}</option>{modelOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label>{t.provider}<select required value={price.provider_profile_id} onChange={(event) => changePriceIdentity({ provider_profile_id: event.target.value, model: "" })}><option value="">{t.chooseProvider}</option>{providerOptions.map((value) => <option key={value} value={value}>{providerLabel(value)}</option>)}</select></label><label>{t.model}<select required disabled={!price.provider_profile_id} value={price.model} onChange={(event) => changePriceIdentity({ model: event.target.value })}><option value="">{t.chooseModel}</option>{modelOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
       <label>{t.inputPerMillion}<input type="number" min="0" step=".000001" placeholder={t.inputPlaceholder} readOnly={Boolean(priceSuggestion)} value={price.input_per_million ?? ""} onChange={(event) => setPrice({ ...price, input_per_million: numberOrNull(event.target.value) })} /></label><label>{t.outputPerMillion}<input type="number" min="0" step=".000001" placeholder={t.inputPlaceholder} readOnly={Boolean(priceSuggestion)} value={price.output_per_million ?? ""} onChange={(event) => setPrice({ ...price, output_per_million: numberOrNull(event.target.value) })} /></label><label>{t.cachedPerMillion}<input type="number" min="0" step=".000001" placeholder={t.inputPlaceholder} readOnly={Boolean(priceSuggestion)} value={price.cached_per_million ?? ""} onChange={(event) => setPrice({ ...price, cached_per_million: numberOrNull(event.target.value) })} /></label>
       <label>{t.exchangeSource}<select value={price.exchange_source === "manual" && priceSuggestion ? priceSuggestion.exchange_source : price.exchange_source} onChange={(event) => changePriceIdentity({ exchange_source: event.target.value, exchange_rate: null })}><option value="">{t.manualUnavailable}</option>{exchangeSources.map((source) => <option key={source.id} value={source.id}>{source.label}</option>)}</select></label><label>{t.exchangeRate}<input type="number" min="0" step=".000001" placeholder={t.ratePlaceholder} readOnly={Boolean(priceSuggestion && price.exchange_source !== "manual")} value={price.exchange_rate ?? ""} onChange={(event) => setPrice({ ...price, exchange_rate: numberOrNull(event.target.value), exchange_confirmed: false, suggestion_confirmed: false })} /></label>
     </div>{priceSuggestion && <div className="price-preview" role="status"><div><strong>{t.suggestionReady}</strong><span>{price.input_per_million} / {price.output_per_million} / {price.cached_per_million} {price.billing_currency} / 1M · {price.exchange_rate?.toLocaleString(locale) ?? "—"} {price.display_currency}/{price.billing_currency}</span></div><small>{t.priceBasis}: {price.price_basis}</small><small>{t.priceSource}: <a href={price.price_source_url} target="_blank" rel="noreferrer">{price.price_source} ↗</a> · {t.rateSource}: {price.exchange_source_url ? <a href={price.exchange_source_url} target="_blank" rel="noreferrer">{price.exchange_source} ↗</a> : t.manualActualRate}{price.exchange_source_time ? ` · ${price.exchange_source_time}` : ""}</small></div>}

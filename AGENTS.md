@@ -134,9 +134,9 @@ revision conflict, and Continue in the browser gate.
   `temperature`, and `messages` with `image_url`. Keep JSON enforcement in the
   prompt/parser; do not add provider-specific `thinking` fields or require
   optional `response_format` support.
-- The frontend may expose server-defined Provider Profile IDs, labels, capabilities,
-  and safe readiness. The browser must never receive or submit arbitrary provider
-  URLs, keys, headers, or models.
+- The frontend may expose server-defined Provider Profile IDs, labels, exact safe
+  configured model, capabilities, and safe readiness. The browser must never
+  receive or submit arbitrary provider URLs, keys, headers, or models.
 - Readiness distinguishes configured/reachable/ready using a sanitized synthetic
   provider request. Create/upload may proceed when configured; readiness gates
   `/start` and `/continue` without losing uploaded or confirmed state.

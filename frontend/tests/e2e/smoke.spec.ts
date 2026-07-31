@@ -721,6 +721,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
     if (apiPath === "/api/sizing/snapshots" && request.method() === "POST") { const body = request.postDataJSON(); const item = { id: "snapshot-1", revision: 0, archived: false, created_at: now, ...body }; snapshots = [item]; return route.fulfill({ status: 201, json: item }); }
     if (apiPath === "/api/sizing/retention/preview") return route.fulfill({ json: { plan_token: "a".repeat(32), checksum: "b".repeat(64), operation_count: 1, rollup_count: 0 } });
     if (apiPath === "/api/sizing/retention/apply") return route.fulfill({ json: { deleted_operations: 1, deleted_rollups: 0 } });
+    if (apiPath === "/api/provider-profiles") return route.fulfill({ json: { profiles: [{ id: "minimax", label: "MiniMax", model: "MiniMax-M3", external: true, status: "configured", tasks: ["full_ocr", "metadata"], page_modes: ["all", "auto", "first,last"], max_pages: 100, processing_modes: ["administrative_document", "dossier_cover", "combined_dossier"] }] } });
     if (apiPath === "/api/sizing/exchange-rate-sources") return route.fulfill({ json: { items: [{ id: "vietcombank", label: "Vietcombank", currencies: ["VND"], url: "https://www.vietcombank.com.vn/" }] } });
     if (apiPath === "/api/sizing/price-suggestions") return route.fulfill({ json: { provider_profile_id: "minimax", model: "MiniMax-M3", billing_currency: "USD", display_currency: "VND", input_per_million: .3, output_per_million: 1.2, cached_per_million: .06, maximum_input_tokens: 512000, price_basis: "standard pay-as-you-go; input <= 512k tokens", price_source: "minimax", price_source_url: "https://platform.minimax.io/docs/guides/pricing-paygo", price_fetched_at: now, exchange_source: "vietcombank", exchange_rate: 26520, exchange_rate_kind: "sell", exchange_source_url: "https://www.vietcombank.com.vn/", exchange_source_time: "30/07/2026 08:05", exchange_fetched_at: now } });
     return route.fulfill({ status: 404, json: { detail: { code: "unmocked", message: "unmocked" } } });
@@ -728,7 +729,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   await page.goto("/sizing"); await expect(page.locator(".metric-card").filter({ hasText: /Tổng token|Total tokens/i })).toContainText("12");
   await expect(page.locator(".metric-card").filter({ hasText: /Token \/ lần gọi có usage|Tokens \/ measured attempt/i })).toContainText("12");
   await page.getByLabel(/Số công việc hiển thị|Jobs shown/i).selectOption("10");
-  await page.getByLabel(/Hồ sơ provider|Provider Profile/i).fill("minimax");
+  await page.getByLabel(/Hồ sơ provider|Provider Profile/i).selectOption("minimax");
   await page.getByRole("button", { name: /Làm mới|Refresh/i }).click();
   await expect.poll(() => jobsQuery).toContain("provider_profile_id=minimax");
   expect(jobsQuery).toContain("page_size=10"); expect(jobsQuery).not.toContain("unit=");
@@ -759,7 +760,8 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   await expect(page.locator(".saved-price-profiles .price-profile-table").first().locator("tbody tr")).toHaveCount(1);
   await expect(page.locator(".saved-price-profiles")).toContainText(/Đang dùng|In use/i);
   await expect(page.locator(".price-profile-table thead").first()).toContainText(/Đầu vào.*Đầu ra.*Cache.*Đầu vào VND.*Đầu ra VND.*Cache VND|Input.*Output.*Cached.*Input VND.*Output VND.*Cached VND/i);
-  await page.getByRole("button", { name: /Tổng quan|Overview/i }).click(); await expect(page.locator(".metric-card").filter({ hasText: /Ước tính theo giá mới nhất|Latest-price estimate/i })).toContainText("0.000027 USD"); await expect(page.locator(".metric-card").filter({ hasText: /Ước tính theo giá mới nhất|Latest-price estimate/i })).toContainText(/VND/);
+  await expect(page.locator(".price-profile-table tbody td").first()).toHaveCSS("text-align", "center");
+  await page.getByRole("button", { name: /Tổng quan|Overview/i }).click(); const costCard = page.locator(".metric-card").filter({ hasText: /Ước tính theo giá mới nhất|Latest-price estimate/i }); await expect(costCard).toContainText("0.000027 USD"); await expect(costCard.locator(".metric-cost-popover")).not.toBeVisible(); await costCard.getByText(/Chi tiết|Details/i).click(); await expect(costCard.locator(".metric-cost-popover")).toContainText(/VND/);
   await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click();
   await page.locator(".saved-price-profiles").getByRole("button", { name: /Lưu trữ|Archive/i }).click(); await expect.poll(() => catalog.price_profiles[1].archived).toBe(true);
   await expect(page.locator(".saved-price-profiles")).toContainText(/Đã lưu trữ|Archived/i);

@@ -12,6 +12,10 @@
 .metric-card span { color: #65768e; font-size: 13px; }
 .metric-card strong { color: #14243c; font-size: 24px; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .metric-card small { color: #697b93; font-size: .72rem; line-height: 1.35; }
+.metric-cost-card { position: relative; }
+.metric-cost-details summary { width: fit-content; color: #315f96; font-size: .75rem; font-weight: 700; cursor: pointer; }
+.metric-cost-popover { position: absolute; z-index: 8; top: calc(100% - 6px); right: 10px; display: grid; min-width: 250px; gap: 6px; border: 1px solid #cbd6e3; border-radius: 8px; padding: 12px; color: #42546d; background: #fff; box-shadow: 0 10px 24px rgb(24 46 79 / 16%); }
+.metric-cost-popover span { font-size: .78rem; }
 
 .sizing-status { display: inline-flex; width: fit-content; align-items: center; border-radius: 999px; padding: 5px 9px; font-size: .75rem; font-weight: 800; white-space: nowrap; }
 .sizing-status.good { color: #087448; background: #e7f7ee; }
@@ -46,6 +50,7 @@
 .saved-price-profiles h3 { color: #14243c; font-size: 1rem; letter-spacing: 0; text-transform: none; }
 .saved-price-profiles .table-scroll { margin-top: 12px; }
 .price-profile-table { min-width: 1320px; }
+.price-profile-table th, .price-profile-table td { text-align: center !important; vertical-align: middle; }
 
 .sizing-jobs-table td:first-child { white-space: nowrap; }
 .numeric { text-align: right !important; font-variant-numeric: tabular-nums; }
@@ -78,6 +83,7 @@
   .sizing-tabs { overflow-x: auto; }
   .sizing-card { padding: 16px; }
   .retention-warning { margin: -16px -16px 16px; }
+  .metric-cost-popover { right: auto; left: 0; min-width: min(250px, calc(100vw - 48px)); }
 }
 @media print {
   .sidebar, .sizing-tabs, button, .sizing-filters { display: none !important; }

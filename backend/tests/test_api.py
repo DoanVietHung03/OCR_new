@@ -571,7 +571,7 @@ def test_provider_profiles_are_allowlisted_and_safe(tmp_path, monkeypatch):
     assert profiles.status_code == 200
     profile = profiles.json()["profiles"][0]
     assert profile == {
-        "id": "minimax", "label": "MiniMax", "external": False,
+        "id": "minimax", "label": "MiniMax", "model": "test-model", "external": False,
         "status": "configured", "tasks": ["full_ocr", "metadata"],
         "page_modes": ["all", "auto", "first,last"], "max_pages": 100,
         "processing_modes": ["administrative_document", "dossier_cover", "combined_dossier"],

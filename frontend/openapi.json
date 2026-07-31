@@ -4969,6 +4969,10 @@
             "type": "string",
             "title": "Status"
           },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
           "tasks": {
             "items": {
               "type": "string",
@@ -5015,6 +5019,7 @@
           "id",
           "label",
           "status",
+          "model",
           "tasks",
           "page_modes",
           "max_pages",

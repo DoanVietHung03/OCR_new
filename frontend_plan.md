@@ -445,6 +445,11 @@ khi đóng.
   helper text cố định. Price suggestion dùng card trung tính gọn; hai checkbox
   cùng một hàng khi đủ chỗ; CTA enabled/disabled phân biệt xanh/xám. Bảng tách
   cả ba cột USD và ba cột VND, làm tròn VND để dễ so sánh.
+- Overview dùng Provider Profile dropdown từ `GET /api/provider-profiles`; form
+  giá dùng cả provider ID và exact safe model do backend đọc từ cấu hình môi
+  trường. Dữ liệu legacy trong catalog/job chỉ là fallback để vẫn lọc được lịch
+  sử. Card chi phí chỉ hiện billing amount; tỷ giá, VND và sensitivity nằm trong
+  native `<details>` popup. Bảng Price Profile căn giữa header và giá trị.
 - Form tự ghi thời điểm fetch/lưu, không yêu cầu user backdate. Sau Preview, user
   có thể bật tỷ giá thực tế/hợp đồng, nhập rate và xác nhận lại; provenance ghi
   `actual_or_contract`.
@@ -576,7 +581,7 @@ thay đổi bất kỳ live gate nào của `X17` hoặc Milestone C.
 | UI block | Public source |
 |---|---|
 | Dashboard | `GET /api/state`, gồm filter tổng hợp `status=active` |
-| Provider configuration | `GET /api/provider-profiles`, engine readiness endpoint |
+| Provider configuration | `GET /api/provider-profiles`, gồm exact safe model, và engine readiness endpoint |
 | Upload | limits, `processing_mode` và create/upload/start endpoints |
 | Segmentation | `source_pdfs[]`, per-source confirm, `/continue` và revision conflict |
 | Lifecycle action | cancel, typed rerun mode, delete-preview và bulk-delete |

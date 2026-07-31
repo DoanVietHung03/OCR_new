@@ -252,6 +252,7 @@ def provider_profiles() -> list[dict]:
     return [{
         "id": settings.ocr_provider,
         "label": "MiniMax" if settings.ocr_provider == "minimax" else settings.ocr_provider.replace("_", " ").title(),
+        "model": settings.ocr_model,
         "external": settings.ocr_endpoint_external,
         "status": "configured" if configured(settings.ocr_base_url, settings.ocr_model) else "not_configured",
         "tasks": ["full_ocr", "metadata"],

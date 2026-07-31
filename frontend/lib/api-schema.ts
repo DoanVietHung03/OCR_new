@@ -1951,6 +1951,8 @@ export interface components {
             external: boolean;
             /** Status */
             status: string;
+            /** Model */
+            model: string;
             /** Tasks */
             tasks: ("full_ocr" | "metadata")[];
             /** Page Modes */
