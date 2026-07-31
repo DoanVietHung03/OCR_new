@@ -305,16 +305,16 @@ export default function SizingPage() {
   ).at(-1);
   const profileTime = (item: SizingCatalog["price_profiles"][number]) => String(item.price_fetched_at || item.effective_from || item.id);
   const priceHistory = (catalog?.price_profiles.filter((item) => item !== latestPrice) || []).sort((left, right) => profileTime(right).localeCompare(profileTime(left)));
-  const providerOptions = [...new Set([
-    ...(providerProfiles.length ? providerProfiles.map((item) => item.id) : ["minimax"]),
+  const providerOptions = providerProfiles.length ? providerProfiles.map((item) => item.id) : ["minimax"];
+  const filterProviderOptions = [...new Set([
+    ...providerOptions,
     ...(catalog?.price_profiles.map((item) => String(item.provider_profile_id || "")) || []),
+    ...jobs.map((item) => item.provider_profile_id || ""),
   ].filter(Boolean))];
-  const filterProviderOptions = [...new Set([...providerOptions, ...jobs.map((item) => item.provider_profile_id || "")].filter(Boolean))];
   const providerLabel = (id: string) => providerProfiles.find((item) => item.id === id)?.label || id;
   const selectedProviderProfile = providerProfiles.find((item) => item.id === price.provider_profile_id);
   const modelOptions = [...new Set([
     ...(selectedProviderProfile?.model ? [selectedProviderProfile.model] : price.provider_profile_id === "minimax" ? ["MiniMax-M3"] : []),
-    ...(catalog?.price_profiles.filter((item) => item.provider_profile_id === price.provider_profile_id).map((item) => String(item.model || "")) || []),
   ].filter(Boolean))];
   const hasPriceValues = [price.input_per_million, price.output_per_million, price.cached_per_million].every((value) => value != null);
   const hasExchangeRate = Number(price.exchange_rate) > 0;

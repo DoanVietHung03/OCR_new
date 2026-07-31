@@ -40,7 +40,20 @@ class MigrationTest(unittest.TestCase):
                         "revision": 2,
                         "price_profiles": [
                             {
-                                "id": "price-1",
+                                "id": "price-old-qwen",
+                                "provider_profile_id": "qwen",
+                                "model": "MiniMax-M3",
+                                "effective_from": "2026-07-10T00:00:00+00:00",
+                                "archived": True,
+                            },
+                            {
+                                "id": "price-active-qwen",
+                                "provider_profile_id": "qwen",
+                                "model": "MiniMax-M3",
+                                "effective_from": "2026-07-20T00:00:00+00:00",
+                            },
+                            {
+                                "id": "price-current",
                                 "provider_profile_id": "minimax",
                                 "model": "MiniMax-M3",
                                 "effective_from": "2026-07-30T00:00:00+00:00",
@@ -50,18 +63,45 @@ class MigrationTest(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            snapshots = root / "_sizing" / "snapshots"
+            snapshots.mkdir(parents=True)
+            (snapshots / "snapshot-1.json").write_text(
+                json.dumps(
+                    {
+                        "id": "snapshot-1",
+                        "provenance": {
+                            "filters": {"provider_profile_id": "qwen"}
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
 
             updates, replacements, earliest, warnings = migrate.plan(root)
-            self.assertEqual(replacements, 4)
+            self.assertEqual(replacements, 7)
             self.assertEqual(earliest, "2026-07-01T00:00:00+00:00")
             self.assertEqual(warnings, [])
             backup = root / "_migration_backups" / "test"
             migrate.apply(root, updates, backup)
 
             self.assertEqual(migrate.plan(root)[1], 0)
+            profiles = migrate.load(root / "_sizing.json")["price_profiles"]
+            self.assertTrue(
+                all(profile["provider_profile_id"] == "minimax" for profile in profiles)
+            )
             self.assertEqual(
-                migrate.load(root / "_sizing.json")["price_profiles"][0]["effective_from"],
+                [profile["id"] for profile in profiles if not profile.get("archived")],
+                ["price-current"],
+            )
+            self.assertEqual(
+                profiles[2]["effective_from"],
                 earliest,
+            )
+            self.assertEqual(
+                migrate.load(snapshots / "snapshot-1.json")["provenance"]["filters"][
+                    "provider_profile_id"
+                ],
+                "minimax",
             )
             self.assertTrue((backup / "manifest.json").exists())
 

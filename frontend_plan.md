@@ -430,12 +430,13 @@ khi đóng.
   Provider Profile + exact model + exchange source; ID/giá/tỷ giá/provenance
   được điền từ Preview, read-only cho tới khi user xác nhận rồi mới lưu. Model
   chưa được allowlist giữ manual/unavailable, không đoán giá.
-- Provider Profile hiển thị `MiniMax` cho job mới dùng `MiniMax-M3`; job lịch sử
-  có ID `qwen` vẫn hiển thị và lọc theo snapshot đã lưu, không đổi nhãn hồi tố.
+- Provider Profile hiển thị `MiniMax` cho job mới dùng `MiniMax-M3`; runtime vẫn
+  đọc/lọc ID lịch sử `qwen`. Migration offline được user phê duyệt có thể sửa
+  identity MiniMax-M3 đã gắn nhầm sau dry-run và backup.
 - Ngay dưới form chỉ hiển thị Price Profile active mới nhất; profile cũ/archived
   nằm trong `<details>` lịch sử. Save refresh Overview/Jobs để estimate không giữ
   snapshot cũ.
-- Provider/model dùng dropdown native từ lựa chọn hỗ trợ/đã lưu; giá và tỷ giá
+- Provider/model của form giá dùng dropdown native từ cấu hình backend hiện hành; giá và tỷ giá
   mặc định để trống. UI nêu thứ tự lấy giá → chọn/nhập tỷ giá → xác nhận → lưu
   và hiện lý do cho mọi action bị khóa. Version mới tự archive version cũ cùng
   exact provider/model; restore cũng chỉ thay version cùng identity. Bảng tách

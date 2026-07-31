@@ -423,7 +423,8 @@ cũ/archived nằm trong phần lịch sử thu gọn. Save thành công phải 
 để phép ước tính mới phản ánh catalog nếu operation khớp.
 User có thể archive/restore profile ngay trong danh sách; profile archived không
 tham gia tính cost nhưng vẫn giữ lịch sử và provenance.
-Provider Profile và model dùng dropdown từ các lựa chọn hỗ trợ/đã lưu. Form để
+Provider Profile và model của form giá chỉ dùng dropdown cấu hình hiện hành từ
+`GET /api/provider-profiles`; identity đã lưu chỉ xuất hiện trong bộ lọc lịch sử. Form để
 trống giá và tỷ giá cho tới khi user nhập hoặc lấy gợi ý, nêu rõ thứ tự
 Lấy giá → chọn/nhập tỷ giá → xác nhận → lưu. Version mới tự archive version cũ
 cùng exact provider/model; restore một version cũng archive version đang dùng

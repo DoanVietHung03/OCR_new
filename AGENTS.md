@@ -30,8 +30,9 @@ implemented; `X17F` still needs real provider/fixture/server evidence.
 The Scenario Price Profile form can preview exact-model pricing and exchange
 rates from a fixed official-source allowlist; provenance and explicit user
 confirmation are required before save, and unsupported models stay unavailable.
-New MiniMax-M3 jobs use Provider Profile ID `minimax`; persisted jobs with the
-legacy `qwen` ID remain readable and must not be rewritten.
+New MiniMax-M3 jobs use Provider Profile ID `minimax`; runtime reads legacy
+`qwen` jobs without rewriting them. An explicitly approved offline migration may
+relabel confirmed MiniMax-M3 history only after dry-run, worker stop, and backup.
 The frontend-only `X18` guide/reference scope is implemented with two static
 VI/EN routes, one permanent sidebar entry, and five sanitized captures. Its
 production build and non-browser checks pass; Playwright reached all 25 tests

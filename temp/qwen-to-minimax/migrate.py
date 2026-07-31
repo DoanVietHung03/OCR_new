@@ -46,6 +46,7 @@ def operation_paths(root: Path) -> list[Path]:
             *root.glob("*/provider_operations/*.json"),
             *(root / "_sizing" / "system_operations").glob("*.json"),
             *(root / "_sizing" / "rollups").glob("*.json"),
+            *(root / "_sizing" / "snapshots").glob("*.json"),
         ]
     )
 
@@ -73,8 +74,10 @@ def plan(root: Path) -> tuple[dict[Path, dict[str, Any]], int, str | None, list[
             earliest = min(earliest, started_at) if earliest else started_at
 
     catalog_path = root / "_sizing.json"
-    if earliest and catalog_path.exists():
+    if catalog_path.exists():
         catalog = load(catalog_path)
+        before = json.dumps(catalog, sort_keys=True)
+        replacements += replace_identity(catalog)
         profiles = [
             item
             for item in catalog.get("price_profiles", [])
@@ -82,16 +85,29 @@ def plan(root: Path) -> tuple[dict[Path, dict[str, Any]], int, str | None, list[
             and item.get("model") == MODEL
             and not item.get("archived")
         ]
-        if profiles:
-            profile = min(profiles, key=lambda item: str(item.get("effective_from", "")))
+        if len(profiles) > 1:
+            latest = max(
+                profiles,
+                key=lambda item: (
+                    str(item.get("price_fetched_at") or item.get("effective_from") or ""),
+                    str(item.get("id", "")),
+                ),
+            )
+            for profile in profiles:
+                if profile is not latest:
+                    profile["archived"] = True
+            profiles = [latest]
+        if earliest and profiles:
+            profile = profiles[0]
             if str(profile.get("effective_from", "")) > earliest:
                 profile["effective_from"] = earliest
-                catalog["revision"] = int(catalog.get("revision", 0)) + 1
-                updates[catalog_path] = catalog
-        else:
+        elif earliest:
             warnings.append(
                 f"No active {NEW_PROVIDER}/{MODEL} price profile; Known cost will remain unavailable."
             )
+        if json.dumps(catalog, sort_keys=True) != before:
+            catalog["revision"] = int(catalog.get("revision", 0)) + 1
+            updates[catalog_path] = catalog
     elif earliest:
         warnings.append("No _sizing.json catalog; Known cost will remain unavailable.")
 

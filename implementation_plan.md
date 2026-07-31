@@ -461,8 +461,11 @@ Gate backend:
   source, hiện hỗ trợ bảng Pay-as-you-go chính thức MiniMax và sáu nguồn tỷ giá
   Vietcombank/Agribank/VietinBank/Techcombank/BIDV/ECB. Preview giữ source/time/basis, bắt xác nhận trước
   persist; `MiniMax-M3` vượt 512k input giữ billing unknown.
-- Job mới dùng Provider Profile ID `minimax` cho `MiniMax-M3`; dữ liệu/job cũ
-  mang ID `qwen` vẫn được đọc nguyên trạng và không rewrite.
+- Job mới dùng Provider Profile ID `minimax` cho `MiniMax-M3`; runtime vẫn đọc
+  dữ liệu/job cũ mang ID `qwen` mà không tự rewrite. Migration offline được user
+  phê duyệt có thể đổi lịch sử MiniMax-M3 đã xác nhận sau dry-run, dừng worker và
+  backup; phạm vi gồm job/operation/rollup, price-profile history và snapshot
+  filter, đồng thời chỉ giữ price profile cùng identity mới nhất ở trạng thái active.
 - `GET /api/provider-profiles` trả exact safe model từ `OCR_MODEL`; Overview và
   Scenario dùng danh sách này cho dropdown. Không trả URL, key, header hoặc nội
   dung `.env`.
@@ -471,8 +474,8 @@ Gate backend:
   được ghi tự động; user có thể xác nhận tỷ giá thực tế/hợp đồng bằng manual
   override. Archive/restore giữ nguyên provenance và refresh estimate.
 - Version mới tự archive version cũ cùng exact provider/model; restore một
-  version cũng archive version đang dùng cùng identity. Provider/model được chọn
-  từ danh sách hỗ trợ/đã lưu để tránh tạo identity do lỗi gõ.
+  version cũng archive version đang dùng cùng identity. Provider/model của form
+  giá chỉ lấy từ cấu hình backend hiện hành; identity đã lưu chỉ dùng để lọc lịch sử.
 - Cost lịch sử vẫn khớp exact provider/model/operation time. Phép estimate mới
   áp profile active mới nhất cho operation exact provider/model bất kể ngày chạy,
   nên không cần backdate nhưng cũng không suy alias provider/model.
