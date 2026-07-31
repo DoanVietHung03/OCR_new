@@ -30,8 +30,9 @@ eager-task/fake-provider; không thay thế lần chạy `63-btc.pdf` qua provid
   `so_tai_lieu=33`; với `full_ocr`, xác nhận metadata provider chỉ nhận prompt
   image-only nhưng labeled-value conflict vẫn bị validation cục bộ xóa
   confidence/bbox, và mọi crop còn available phải chứa đúng nhãn + giá trị;
-- chạy cùng payload OpenAI-compatible tối thiểu với cấu hình hiện tại và một Qwen
-  VLM; xác nhận readiness, metadata, full OCR và segmentation đều trả JSON hợp lệ;
+- chạy cùng payload OpenAI-compatible tối thiểu với cấu hình hiện tại và một VLM
+  độc lập thứ hai; xác nhận readiness, metadata, full OCR và segmentation đều trả
+  JSON hợp lệ;
 - ghi bằng chứng đã khử nhạy cảm vào `implementation_plan.md#be-c-evidence`.
 
 ## 2. X16 — Segmentation hồ sơ gộp thật

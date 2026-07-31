@@ -2,7 +2,7 @@ from app.services.jobs import JobStore
 
 def test_job_persists_across_store_restart(tmp_path, pdf_bytes):
     first = JobStore(tmp_path)
-    job = first.create({"file_count": 1, "ocr_method": "qwen"})
+    job = first.create({"file_count": 1, "ocr_method": "minimax"})
     first.add_pdf(job["id"], "document.pdf", pdf_bytes)
     restarted = JobStore(tmp_path)
     restored = restarted.read(job["id"])

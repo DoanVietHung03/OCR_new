@@ -462,10 +462,11 @@ Gate backend:
   Vietcombank/Agribank/VietinBank/Techcombank/BIDV/ECB. Preview giữ source/time/basis, bắt xác nhận trước
   persist; `MiniMax-M3` vượt 512k input giữ billing unknown.
 - Job mới dùng Provider Profile ID `minimax` cho `MiniMax-M3`; runtime vẫn đọc
-  dữ liệu/job cũ mang ID `qwen` mà không tự rewrite. Migration offline được user
-  phê duyệt có thể đổi lịch sử MiniMax-M3 đã xác nhận sau dry-run, dừng worker và
-  backup; phạm vi gồm job/operation/rollup, price-profile history và snapshot
-  filter, đồng thời chỉ giữ price profile cùng identity mới nhất ở trạng thái active.
+  dữ liệu/job mang provider ID lịch sử mà không tự rewrite. Migration offline
+  được user phê duyệt có thể đổi lịch sử MiniMax-M3 đã xác nhận sau dry-run,
+  dừng worker và backup; phạm vi gồm job/operation/rollup, price-profile history
+  và snapshot filter, đồng thời chỉ giữ price profile cùng identity mới nhất ở
+  trạng thái active.
 - `GET /api/provider-profiles` trả exact safe model từ `OCR_MODEL`; Overview và
   Scenario dùng danh sách này cho dropdown. Không trả URL, key, header hoặc nội
   dung `.env`.
@@ -723,7 +724,8 @@ vì vậy sign-off Milestone C tổng thể bên dưới vẫn **PENDING**.
 - Partial-page result, correction reload, crop, approval, rerun, delete: _pending_
 - Missing canonical field, blocker/warning và rerun snapshot: _pending_
 - Provider configured/reachable/ready probe không lộ secret: _pending_
-- Cùng payload chạy current VLM và một Qwen VLM cho metadata/full OCR/segmentation:
+- Cùng payload chạy cấu hình hiện tại và một VLM OpenAI-compatible độc lập thứ hai
+  cho metadata/full OCR/segmentation:
   _pending_
 - Field evidence tối thiểu của job mới: _pending_
 - Ba Processing Mode, capability và readiness gate tại start/continue: _pending_

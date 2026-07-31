@@ -210,7 +210,7 @@ Trong tab Scenario, chọn Provider Profile và model từ dropdown do backend �
 nguồn/thời điểm để người dùng kiểm tra và chỉ lưu Price Profile sau khi xác nhận.
 Model chưa có bộ đọc giá chính thức tiếp tục hiển thị `Unavailable`.
 Với cấu hình hiện tại, job mới dùng Provider Profile `minimax` và model
-`MiniMax-M3`; ID `qwen` chỉ còn xuất hiện trên dữ liệu lịch sử và không bị rewrite.
+`MiniMax-M3`; các provider ID lịch sử vẫn đọc được và không bị tự động rewrite.
 
 ### Có thể tải ảnh hoặc ZIP không?
 

@@ -106,7 +106,7 @@ def test_price_profile_matches_exact_provider_model_and_operation_time():
         "started_at": "2026-07-30T09:00:00+00:00",
     }
     assert price_for(operation, [profile]) is profile
-    assert price_for({**operation, "provider_profile_id": "qwen"}, [profile]) is None
+    assert price_for({**operation, "provider_profile_id": "other-provider"}, [profile]) is None
     assert price_for({**operation, "started_at": "2026-07-30T07:00:00+00:00"}, [profile]) is None
 
 

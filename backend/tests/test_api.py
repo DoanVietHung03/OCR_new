@@ -133,9 +133,9 @@ def test_sizing_local_workflow_catalog_drilldown_calculate_snapshot_and_retentio
     import app.api.routes as routes
 
     store = use_store(tmp_path, monkeypatch)
-    job = store.create({"file_count": 1, "provider_profile_id": "qwen", "model": "test-model"})
+    job = store.create({"file_count": 1, "provider_profile_id": "minimax", "model": "test-model"})
     target = routes.sizing_measurements.begin({
-        "job_id": job["id"], "provider_profile_id": "qwen", "model": "test-model",
+        "job_id": job["id"], "provider_profile_id": "minimax", "model": "test-model",
         "task": "metadata", "processing_mode": "administrative_document",
         "document_id": "doc", "page_index": 0,
     }, operation_id="op_test", attempt=1, request_bytes=10)
@@ -145,7 +145,7 @@ def test_sizing_local_workflow_catalog_drilldown_calculate_snapshot_and_retentio
     })
     catalog = client.put("/api/sizing/catalog", json={
         "revision": 0, "workload_profiles": [], "hardware_profiles": [], "price_profiles": [{
-            "id": "p", "provider_profile_id": "qwen", "model": "test-model",
+            "id": "p", "provider_profile_id": "minimax", "model": "test-model",
             "billing_currency": "USD",
             "effective_from": "2020-01-01T00:00:00+00:00", "input_per_million": 1,
             "output_per_million": 2, "fixed_cost_policy": "successful_response",
@@ -159,7 +159,7 @@ def test_sizing_local_workflow_catalog_drilldown_calculate_snapshot_and_retentio
     jobs = client.get("/api/sizing/jobs").json()
     assert jobs["items"][0]["job_id"] == job["id"]
     filtered = client.get("/api/sizing/jobs", params={
-        "provider_profile_id": "qwen", "task": "metadata",
+        "provider_profile_id": "minimax", "task": "metadata",
         "processing_mode": "administrative_document", "page_size": 10,
         "start_date": jobs["items"][0]["started_at"][:10],
         "end_date": jobs["items"][0]["started_at"][:10],
@@ -640,7 +640,7 @@ def test_typed_evidence_projection_keeps_legacy_job_readable_without_rewrite(tmp
 
 def test_documents_events_and_reports_are_real_safe_projections(tmp_path, monkeypatch, pdf_bytes):
     store = use_store(tmp_path, monkeypatch)
-    job = store.create({"file_count": 1, "provider": "qwen", "model": "test"})
+    job = store.create({"file_count": 1, "provider": "minimax", "model": "test"})
     store.add_pdf(job["id"], "report.pdf", pdf_bytes)
     store.update(job["id"], status="completed", correction_count=1, page_count=2,
                  started_at="2026-07-21T10:00:00+00:00", completed_at="2026-07-21T10:02:00+00:00", logs=[
@@ -668,7 +668,7 @@ def test_documents_events_and_reports_are_real_safe_projections(tmp_path, monkey
     assert "must-not-leak" not in client.get(f"/api/events?job_id={job['id']}").text
     review_events = client.get(f"/api/events?job_id={job['id']}&category=review&code=document_approved").json()
     assert [(event["category"], event["document_id"]) for event in review_events["items"]] == [("review", "report & 1")]
-    scoped_events = client.get(f"/api/events?provider_profile_id=qwen&document_id=report%20%26%201").json()
+    scoped_events = client.get(f"/api/events?provider_profile_id=minimax&document_id=report%20%26%201").json()
     assert [event["code"] for event in scoped_events["items"]] == ["document_approved"]
 
     report = client.get("/api/reports").json()
@@ -683,7 +683,7 @@ def test_documents_events_and_reports_are_real_safe_projections(tmp_path, monkey
         "confidence_coverage": 0.667, "evidence_coverage": 0.333,
         "warning_documents": 1,
     }
-    assert report["profiles"][0]["provider_profile_id"] == "qwen"
+    assert report["profiles"][0]["provider_profile_id"] == "minimax"
     assert report["profiles"][0]["operations"] == report["operations"]
     assert report["benchmark_samples"] is None
     assert client.get("/api/state").json()["metrics"] == {

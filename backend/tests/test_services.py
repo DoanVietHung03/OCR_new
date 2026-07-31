@@ -8,7 +8,7 @@ from app.services.ocr_runner import message_text, parse_json_object, request_bod
 
 
 def completed_job(store: JobStore, pdf_bytes: bytes) -> dict:
-    job = store.create({"file_count": 1, "provider": "qwen", "model": "test"})
+    job = store.create({"file_count": 1, "provider": "minimax", "model": "test"})
     store.add_pdf(job["id"], "document.pdf", pdf_bytes)
     return store.update(job["id"], status="completed", documents=[{
         "id": "document",
@@ -24,16 +24,16 @@ def completed_job(store: JobStore, pdf_bytes: bytes) -> dict:
 def test_new_job_default_is_minimax_and_explicit_legacy_provider_is_preserved(tmp_path):
     store = JobStore(tmp_path)
     assert store.create({"file_count": 1})["provider_profile_id"] == "minimax"
-    legacy = store.create({"file_count": 1, "provider": "qwen", "provider_profile_id": "qwen"})
-    assert (legacy["provider"], legacy["provider_profile_id"]) == ("qwen", "qwen")
+    legacy = store.create({"file_count": 1, "provider": "legacy-provider", "provider_profile_id": "legacy-provider"})
+    assert (legacy["provider"], legacy["provider_profile_id"]) == ("legacy-provider", "legacy-provider")
 
 
 def test_filesystem_boundary_and_invalid_upload_is_terminal(tmp_path, pdf_bytes):
     store = JobStore(tmp_path)
-    job = store.create({"file_count": 1, "provider": "qwen"})
+    job = store.create({"file_count": 1, "provider": "minimax"})
     assert store.add_pdf(job["id"], "folder/doc.pdf", pdf_bytes)["status"] == "ready"
 
-    invalid = store.create({"file_count": 1, "provider": "qwen"})
+    invalid = store.create({"file_count": 1, "provider": "minimax"})
     with pytest.raises(ValueError, match="invalid_path"):
         store.add_pdf(invalid["id"], "../escape.pdf", pdf_bytes)
     assert store.read(invalid["id"])["failure"]["code"] == "invalid_path"
@@ -85,7 +85,7 @@ def test_approval_without_correction_is_audited(tmp_path, pdf_bytes):
 
 def test_legacy_and_new_store_preserve_unknown_fields(tmp_path, pdf_bytes):
     store = JobStore(tmp_path)
-    job = store.create({"file_count": 1, "provider": "qwen"})
+    job = store.create({"file_count": 1, "provider": "minimax"})
     store.add_pdf(job["id"], "document.pdf", pdf_bytes)
     path = store.path(job["id"]) / "job.json"
     payload = json.loads(path.read_text(encoding="utf-8"))

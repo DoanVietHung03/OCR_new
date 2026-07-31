@@ -431,7 +431,7 @@ khi đóng.
   được điền từ Preview, read-only cho tới khi user xác nhận rồi mới lưu. Model
   chưa được allowlist giữ manual/unavailable, không đoán giá.
 - Provider Profile hiển thị `MiniMax` cho job mới dùng `MiniMax-M3`; runtime vẫn
-  đọc/lọc ID lịch sử `qwen`. Migration offline được user phê duyệt có thể sửa
+  đọc/lọc provider ID lịch sử. Migration offline được user phê duyệt có thể sửa
   identity MiniMax-M3 đã gắn nhầm sau dry-run và backup.
 - Ngay dưới form chỉ hiển thị Price Profile active mới nhất; profile cũ/archived
   nằm trong `<details>` lịch sử. Save refresh Overview/Jobs để estimate không giữ

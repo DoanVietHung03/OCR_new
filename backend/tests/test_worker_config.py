@@ -32,7 +32,7 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     pdf_bytes = document.tobytes()
     document.close()
     store = JobStore(tmp_path)
-    job = store.create({"file_count": 1, "provider": "qwen", "model": "snapshot-model"})
+    job = store.create({"file_count": 1, "provider": "minimax", "model": "snapshot-model"})
     store.add_pdf(job["id"], "document.pdf", pdf_bytes)
     store.begin_start(job["id"])
     calls = []
@@ -96,7 +96,7 @@ def test_worker_persists_typed_failure_without_provider_detail(tmp_path, monkeyp
     import app.workers.tasks as tasks
 
     store = JobStore(tmp_path)
-    job = store.create({"file_count": 1, "provider": "qwen", "model": "test"})
+    job = store.create({"file_count": 1, "provider": "minimax", "model": "test"})
     store.add_pdf(job["id"], "document.pdf", pdf_bytes); store.begin_start(job["id"])
 
     async def fail(*_args, **_kwargs):
@@ -113,16 +113,16 @@ def test_cancel_and_restart_never_call_provider(tmp_path, monkeypatch, pdf_bytes
     import app.workers.tasks as tasks
 
     store = JobStore(tmp_path)
-    cancelled = store.create({"file_count": 1, "provider": "qwen", "model": "test"})
+    cancelled = store.create({"file_count": 1, "provider": "minimax", "model": "test"})
     store.add_pdf(cancelled["id"], "cancelled.pdf", pdf_bytes)
     store.begin_start(cancelled["id"])
     store.cancel(cancelled["id"])
     assert store.read(cancelled["id"])["status"] == "cancelling"
-    interrupted = store.create({"file_count": 1, "provider": "qwen", "model": "test"})
+    interrupted = store.create({"file_count": 1, "provider": "minimax", "model": "test"})
     store.add_pdf(interrupted["id"], "interrupted.pdf", pdf_bytes)
     store.begin_start(interrupted["id"])
-    waiting = store.create({"file_count": 1, "provider": "qwen", "model": "test", "processing_mode": "combined_dossier"})
-    confirmed = store.create({"file_count": 1, "provider": "qwen", "model": "test", "processing_mode": "combined_dossier"})
+    waiting = store.create({"file_count": 1, "provider": "minimax", "model": "test", "processing_mode": "combined_dossier"})
+    confirmed = store.create({"file_count": 1, "provider": "minimax", "model": "test", "processing_mode": "combined_dossier"})
     store.update(waiting["id"], status="awaiting_segmentation_review")
     store.update(confirmed["id"], status="segmentation_confirmed")
 
@@ -298,7 +298,7 @@ def test_page_planner_and_metadata_scope(tmp_path, monkeypatch, pdf_bytes):
     assert tasks.plan_pages(3, "all", 2) == [0, 1]
 
     store = JobStore(tmp_path)
-    job = store.create({"file_count": 1, "provider": "qwen", "model": "test", "vlm_task": "metadata", "vlm_pages": "first,last", "vlm_max_pages": 1})
+    job = store.create({"file_count": 1, "provider": "minimax", "model": "test", "vlm_task": "metadata", "vlm_pages": "first,last", "vlm_max_pages": 1})
     store.add_pdf(job["id"], "document.pdf", pdf_bytes)
     store.begin_start(job["id"])
     calls = []
@@ -324,7 +324,7 @@ def test_auto_metadata_searches_backward_until_one_signature_page_is_complete(tm
     pdf.close()
     store = JobStore(tmp_path)
     job = store.create({
-        "file_count": 1, "provider": "qwen", "model": "test",
+        "file_count": 1, "provider": "minimax", "model": "test",
         "vlm_task": "metadata", "vlm_pages": "auto",
     })
     store.add_pdf(job["id"], "document.pdf", content)
@@ -403,7 +403,7 @@ def test_worker_records_blank_crop_without_overwriting_validation_reason(tmp_pat
     pdf.close()
     store = JobStore(tmp_path)
     job = store.create({
-        "file_count": 1, "provider": "qwen", "model": "test",
+        "file_count": 1, "provider": "minimax", "model": "test",
         "vlm_task": "metadata", "vlm_pages": "all",
     })
     store.add_pdf(job["id"], "document.pdf", content)
@@ -437,7 +437,7 @@ def test_worker_persists_all_safe_warning_codes(tmp_path, monkeypatch, pdf_bytes
     import app.workers.tasks as tasks
 
     store = JobStore(tmp_path)
-    job = store.create({"file_count": 1, "provider": "qwen", "model": "test", "vlm_task": "metadata"})
+    job = store.create({"file_count": 1, "provider": "minimax", "model": "test", "vlm_task": "metadata"})
     store.add_pdf(job["id"], "document.pdf", pdf_bytes); store.begin_start(job["id"])
 
     async def fake_request(_: bytes, **_options):
@@ -462,7 +462,7 @@ def test_combined_dossier_segments_every_page_and_waits_for_confirmation(tmp_pat
         pdf.new_page(width=100, height=100)
     content = pdf.tobytes(); pdf.close()
     store = JobStore(tmp_path)
-    job = store.create({"file_count": 1, "provider": "qwen", "model": "test", "processing_mode": "combined_dossier"})
+    job = store.create({"file_count": 1, "provider": "minimax", "model": "test", "processing_mode": "combined_dossier"})
     store.add_pdf(job["id"], "dossier.pdf", content); store.begin_start(job["id"])
     classifications = iter(["cover", "document_start", "continuation"])
     calls = []
@@ -484,7 +484,7 @@ def test_multi_pdf_dossier_uses_file_boundaries_without_provider_segmentation(tm
     import app.workers.tasks as tasks
 
     store = JobStore(tmp_path)
-    job = store.create({"file_count": 2, "provider": "qwen", "model": "test", "processing_mode": "combined_dossier"})
+    job = store.create({"file_count": 2, "provider": "minimax", "model": "test", "processing_mode": "combined_dossier"})
     store.add_pdf(job["id"], "Scan_0001.pdf", pdf_bytes)
     store.add_pdf(job["id"], "Scan_0000.pdf", pdf_bytes)
     store.begin_start(job["id"])
