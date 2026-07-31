@@ -26,6 +26,11 @@ payload, timeout mặc định 180 giây và tối đa hai attempt cho mỗi pag
 typecheck/build, OpenAPI check, compileall và diff check; chưa thay thế các
 provider/fixture/server gate còn mở.
 
+**Thinking control 2026-07-31:** cấu hình server-only `THINKING_MODE=false`
+thêm `reasoning_effort="none"` vào readiness probe và mọi page operation trên
+endpoint OpenAI-compatible. Mặc định `true` giữ nguyên minimal payload; không
+đổi public API hay gửi trường `think` riêng của Ollama.
+
 Semantic hardening cùng ngày chọn JSON object hoàn chỉnh cuối cùng trong model
 content, coi page zero của văn bản hành chính không có metadata header là
 `invalid_model_json` trong cùng budget hai attempt, và chuyển job còn
@@ -130,10 +135,12 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
 - FastAPI không render PDF hoặc gọi provider; Celery sở hữu toàn bộ OCR.
 - Server giữ URL/key/header/model thật. Job chỉ snapshot provider, model,
   prompt version và external status; external endpoint yêu cầu consent từng job.
-- Provider HTTP dùng subset OpenAI Chat Completions tối thiểu:
+- Provider HTTP mặc định dùng subset OpenAI Chat Completions tối thiểu:
   `POST /chat/completions`, Bearer auth, `model`, `temperature` và `messages` có
-  `image_url`. Prompt/parser hiện có chịu trách nhiệm ép JSON; không gửi
-  `thinking` riêng theo vendor và không bắt endpoint hỗ trợ `response_format`.
+  `image_url`. Khi `THINKING_MODE=false`, backend thêm duy nhất control tương
+  thích OpenAI `reasoning_effort="none"`. Prompt/parser hiện có chịu trách nhiệm
+  ép JSON; không gửi `think` riêng của Ollama và không bắt endpoint hỗ trợ
+  `response_format`.
 - Mặc định chỉ có một cấu hình OCR hiện tại. Chỉ mở multi-profile khi có provider
   thứ hai thật; profile luôn do server định nghĩa và readiness probe phải có
   timeout, safe status code, không trả raw response.

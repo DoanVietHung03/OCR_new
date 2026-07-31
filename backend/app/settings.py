@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     ocr_base_url: str = ""
     ocr_api_key: str = ""
     ocr_model: str = ""
+    thinking_mode: bool = True
     ocr_timeout_seconds: float = 180
     ocr_endpoint_external: bool = True
     celery_broker_url: str = "redis://localhost:6380/0"

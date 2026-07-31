@@ -264,6 +264,12 @@ def test_cover_prompt_and_parser_share_the_policy_allowlist():
     assert {issue["field"] for issue in cover["review_risks"] if issue["code"] == "invalid_optional_value"} == {"so_tai_lieu"}
 
 
+def test_thinking_mode_false_uses_openai_compatible_control():
+    body = request_body(b"image", "model", thinking_mode=False)
+    assert body["reasoning_effort"] == "none"
+    assert "think" not in body
+
+
 def test_administrative_prompt_requires_complete_signing_authority_line():
     prompt = request_body(b"image", "model", expected_fields=ADMIN_FIELDS)["messages"][0]["content"][0]["text"]
     assert all(prefix in prompt for prefix in ("TM.", "Q.", "KT.", "TL.", "TUQ."))

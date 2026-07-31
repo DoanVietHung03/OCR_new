@@ -9,6 +9,7 @@ from threading import Event, Thread
 from celery import Celery
 from celery.signals import worker_ready
 
+from ..settings import settings
 from ..services.field_policy import ADMIN_FIELDS, SIGNATURE_FIELDS, annotate
 from ..services.jobs import ACTIVE, MAX_PAGES, JobStore, failure, now
 from ..services.ocr_runner import PROMPT_VERSION, request_page
@@ -211,7 +212,7 @@ async def segment_job(store: JobStore, job: dict) -> dict:
                     result = await request_page(
                         image.read_bytes(), base_url=os.getenv("OCR_BASE_URL", ""), api_key=os.getenv("OCR_API_KEY", ""),
                         model=job.get("model", ""), timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "180")),
-                        page_index=page_index, task="segmentation",
+                        page_index=page_index, task="segmentation", thinking_mode=settings.thinking_mode,
                         measurement_store=measurements,
                         measurement_context={
                             "job_id": job["id"], "provider_profile_id": job.get("provider_profile_id"),
@@ -384,6 +385,7 @@ async def process_job_async(job_id: str) -> dict:
                         page_index=index,
                         task=pass_task,
                         expected_fields=expected_fields,
+                        thinking_mode=settings.thinking_mode,
                         required_any_fields=(
                             tuple(name for name in ADMIN_FIELDS if name not in SIGNATURE_FIELDS)
                             if adaptive and index == 0 and pass_task == "metadata" else ()

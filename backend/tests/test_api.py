@@ -8,9 +8,11 @@ from app.settings import Settings
 client = TestClient(app)
 
 
-def test_ocr_data_dir_is_a_path_at_runtime():
+def test_ocr_data_dir_is_a_path_at_runtime(monkeypatch):
     assert Settings(ocr_data_dir="data/jobs").ocr_data_dir == Path("data/jobs")
     assert Settings(_env_file=None).ocr_provider == "minimax"
+    monkeypatch.setenv("THINKING_MODE", "false")
+    assert Settings(_env_file=None).thinking_mode is False
 
 
 def test_price_suggestion_is_typed_and_keeps_confirmation_outside_fetch(monkeypatch):

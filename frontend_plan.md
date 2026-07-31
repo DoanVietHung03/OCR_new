@@ -35,6 +35,10 @@ typecheck/build/OpenAPI/compile/diff đều pass. Thay đổi retry là nội b�
 không đổi public API hay frontend contract; fixture/provider/server evidence
 vẫn còn mở.
 
+**Thinking control 2026-07-31:** `THINKING_MODE` là cấu hình server-only cho
+provider OpenAI-compatible; không thêm field, toggle hoặc contract mới ở
+frontend.
+
 Semantic hardening cùng ngày không đổi public schema: backend retry một header
 response rỗng trong budget hiện có, và UI nhận `completed_with_warnings` khi
 required-field blocker vẫn tồn tại thay vì hiển thị clean `completed`.

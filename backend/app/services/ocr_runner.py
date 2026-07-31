@@ -259,10 +259,10 @@ def message_text(response: object) -> str:
 
 def request_body(
     image: bytes, model: str, task: str = "metadata",
-    expected_fields: tuple[str, ...] | None = None,
+    expected_fields: tuple[str, ...] | None = None, *, thinking_mode: bool = True,
 ) -> dict:
     encoded = base64.b64encode(image).decode()
-    return {
+    body = {
         "model": model,
         "temperature": 0,
         "messages": [{"role": "user", "content": [
@@ -270,6 +270,9 @@ def request_body(
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},
         ]}],
     }
+    if not thinking_mode:
+        body["reasoning_effort"] = "none"
+    return body
 
 
 def retry_delay(response: httpx.Response) -> float:
@@ -284,8 +287,9 @@ async def request_page(
     page_index: int = 0, task: str = "metadata", expected_fields: tuple[str, ...] | None = None,
     ocr_text: str = "", measurement_store: MeasurementStore | None = None,
     measurement_context: dict | None = None, required_any_fields: tuple[str, ...] = (),
+    thinking_mode: bool = True,
 ) -> dict:
-    body = request_body(image, model, task, expected_fields)
+    body = request_body(image, model, task, expected_fields, thinking_mode=thinking_mode)
     serialized = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
     operation_id = f"op_{uuid.uuid4().hex}"
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -374,6 +378,7 @@ def configured(base_url: str, model: str) -> bool:
 async def probe_provider(
     *, base_url: str, api_key: str, model: str, timeout: float = 10,
     measurement_store: MeasurementStore | None = None, measurement_context: dict | None = None,
+    thinking_mode: bool = True,
 ) -> str:
     if not configured(base_url, model):
         return "not_configured"
@@ -381,7 +386,7 @@ async def probe_provider(
     started = time.monotonic()
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            body = request_body(PROBE_PNG, model, expected_fields=ADMIN_FIELDS)
+            body = request_body(PROBE_PNG, model, expected_fields=ADMIN_FIELDS, thinking_mode=thinking_mode)
             serialized = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
             operation_id = f"op_{uuid.uuid4().hex}"
             target = measurement_store.begin(

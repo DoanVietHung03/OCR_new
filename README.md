@@ -73,6 +73,9 @@ pnpm install
 
 Điền các giá trị provider thật vào `.env`. Đây là cấu hình chỉ dùng phía máy
 chủ; không đưa URL, khóa hoặc header của provider xuống frontend.
+Với endpoint OpenAI-compatible của Ollama, đặt `THINKING_MODE=false` để backend
+gửi `reasoning_effort: "none"` cho cả readiness và OCR. Mặc định `true` giữ
+nguyên payload tối thiểu; ứng dụng không gửi trường native `think`.
 
 Host Redis `redis` trong file mẫu dành cho Compose. Khi chạy Celery trực tiếp,
 hãy đổi cả hai URL Celery sang một Redis mà máy đang chạy worker có thể kết nối.
