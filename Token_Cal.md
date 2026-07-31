@@ -429,6 +429,10 @@ Lấy giá → chọn/nhập tỷ giá → xác nhận → lưu. Version mới t
 cùng exact provider/model; restore một version cũng archive version đang dùng
 cùng identity. Bảng tách input/output/cache, hiện quy đổi VND và sắp lịch sử mới
 nhất trước; số lượng lịch sử không tính dòng hiện dùng.
+Scenario dùng icon thông tin cho peak/reserve thay vì helper text cố định.
+Preview giá là card trung tính, nguồn nằm trên một dòng provenance; nút enabled
+dùng màu primary và disabled dùng xám rõ ràng. Ba giá quy đổi VND nằm ở ba cột
+riêng.
 
 Nguồn giá ban đầu là trang Pay-as-you-go chính thức của MiniMax cho exact
 `MiniMax-*`. `MiniMax-M3` dùng tier standard `input <= 512k`; Price Profile lưu

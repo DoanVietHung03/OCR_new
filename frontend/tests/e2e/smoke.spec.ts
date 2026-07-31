@@ -734,13 +734,14 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   expect(jobsQuery).toContain("page_size=10"); expect(jobsQuery).not.toContain("unit=");
   if (process.env.UPDATE_GUIDE_BASELINE === "1") { await cleanCapture(page); await page.screenshot({ path: path.resolve(process.cwd(), "public/guide/sizing.png"), fullPage: true }); }
   await page.getByRole("button", { name: /Khám phá tài liệu|Document Explorer/i }).click(); const attempts = page.getByRole("button", { name: /Xem lần gọi|View attempts/i }); await attempts.nth(0).click(); await attempts.nth(1).click(); await expect(page.locator(".attempts-table")).toHaveCount(2); await expect(page.locator(".attempts-table").first()).toContainText(/Đầy đủ|complete/i);
-  await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await expect(page.getByText(/Kịch bản · Bản xem trước|Scenario · Preview/i)).toBeVisible(); await expect(page.getByText(/Công việc\/tháng|Jobs\/month/i)).toBeVisible(); await expect(page.locator(".context-help")).toHaveCount(0); await page.getByRole("button", { name: /Tính bản xem trước|Calculate Preview/i }).click(); await expect(page.getByText(/Năng lực yêu cầu|Required capacity/i)).toBeVisible();
+  await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click(); await expect(page.getByText(/Kịch bản · Bản xem trước|Scenario · Preview/i)).toBeVisible(); await expect(page.getByText(/Công việc\/tháng|Jobs\/month/i)).toBeVisible(); await expect(page.locator(".page-header .eyebrow")).toHaveCount(0); await expect(page.locator(".scenario-info")).toHaveCount(2); await page.getByRole("button", { name: /Tính bản xem trước|Calculate Preview/i }).click(); await expect(page.getByText(/Năng lực yêu cầu|Required capacity/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /Lấy giá và tỷ giá|Fetch price and rate/i })).toBeDisabled();
   await expect(page.getByText(/Chọn hồ sơ provider, mô hình và nguồn tỷ giá|Select a Provider Profile, model, and exchange source/i)).toBeVisible();
   await expect(page.getByRole("spinbutton", { name: /Đầu vào|Input/i })).toHaveValue("");
   await page.getByLabel(/Hồ sơ provider|Provider Profile/i).selectOption("minimax"); await page.getByLabel(/Mô hình|Model/i).selectOption("MiniMax-M3"); await page.getByLabel(/Nguồn tỷ giá|Exchange source/i).selectOption("vietcombank");
-  await page.getByRole("button", { name: /Lấy giá và tỷ giá|Fetch price and rate/i }).click(); await expect(page.locator(".price-suggestion").filter({ hasText: /Gợi ý đã sẵn sàng|Suggestion ready/i })).toContainText(/26[.,]?520/);
+  await page.getByRole("button", { name: /Lấy giá và tỷ giá|Fetch price and rate/i }).click(); await expect(page.locator(".price-preview").filter({ hasText: /Gợi ý đã sẵn sàng|Suggestion ready/i })).toContainText(/26[.,]?520/);
   await page.getByLabel(/Dùng tỷ giá thực tế|Use actual/i).check();
+  await expect(page.getByRole("button", { name: /Lấy lại giá và tỷ giá|Fetch price and rate again/i })).toBeEnabled();
   await expect(page.getByRole("spinbutton", { name: /^(Tỷ giá|Exchange rate)$/i })).toHaveValue("");
   await expect(page.getByText(/Nhập tỷ giá thực tế.*lớn hơn 0|Enter an actual.*greater than 0/i)).toBeVisible();
   await page.getByRole("spinbutton", { name: /^(Tỷ giá|Exchange rate)$/i }).fill("26500");
@@ -757,7 +758,7 @@ test("sizing local workflow gates drilldown calculator catalog snapshot and rete
   await expect(page.locator(".saved-price-profiles summary")).toContainText(/\(1\)/);
   await expect(page.locator(".saved-price-profiles .price-profile-table").first().locator("tbody tr")).toHaveCount(1);
   await expect(page.locator(".saved-price-profiles")).toContainText(/Đang dùng|In use/i);
-  await expect(page.locator(".price-profile-table thead").first()).toContainText(/Đầu vào.*Đầu ra.*Cache.*Quy đổi VND|Input.*Output.*Cached.*Converted VND/i);
+  await expect(page.locator(".price-profile-table thead").first()).toContainText(/Đầu vào.*Đầu ra.*Cache.*Đầu vào VND.*Đầu ra VND.*Cache VND|Input.*Output.*Cached.*Input VND.*Output VND.*Cached VND/i);
   await page.getByRole("button", { name: /Tổng quan|Overview/i }).click(); await expect(page.locator(".metric-card").filter({ hasText: /Ước tính theo giá mới nhất|Latest-price estimate/i })).toContainText("0.000027 USD"); await expect(page.locator(".metric-card").filter({ hasText: /Ước tính theo giá mới nhất|Latest-price estimate/i })).toContainText(/VND/);
   await page.getByRole("button", { name: /Kịch bản|Scenario/i }).click();
   await page.locator(".saved-price-profiles").getByRole("button", { name: /Lưu trữ|Archive/i }).click(); await expect.poll(() => catalog.price_profiles[1].archived).toBe(true);

@@ -441,6 +441,10 @@ khi đóng.
   exact provider/model; restore cũng chỉ thay version cùng identity. Bảng tách
   ba loại giá, hiện quy đổi VND, lịch sử mới nhất trước và count không gồm dòng
   hiện dùng.
+- Peak/reserve dùng tooltip native có accessible label, không kéo cao grid bằng
+  helper text cố định. Price suggestion dùng card trung tính gọn; hai checkbox
+  cùng một hàng khi đủ chỗ; CTA enabled/disabled phân biệt xanh/xám. Bảng tách
+  cả ba cột USD và ba cột VND, làm tròn VND để dễ so sánh.
 - Form tự ghi thời điểm fetch/lưu, không yêu cầu user backdate. Sau Preview, user
   có thể bật tỷ giá thực tế/hợp đồng, nhập rate và xác nhận lại; provenance ghi
   `actual_or_contract`.

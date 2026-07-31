@@ -23,6 +23,8 @@
 .sizing-form-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 16px; }
 .sizing-form-grid input, .sizing-form-grid select { color: #182338; background: #fff; }
 .sizing-form-grid input::placeholder { color: #8997aa; }
+.field-label { display: flex; align-items: center; gap: 6px; }
+.scenario-info { display: inline-grid; width: 18px; height: 18px; place-items: center; border: 1px solid #9dafc5; border-radius: 50%; padding: 0; color: #526782; background: #fff; font-size: .7rem; font-weight: 800; line-height: 1; }
 .sizing-card .modal-actions { margin-top: 18px; flex-wrap: wrap; }
 .disabled-help { display: inline-flex; }
 .field-help { display: block; margin-top: 8px; color: #697b93; }
@@ -30,13 +32,20 @@
 .price-suggestion { display: grid; gap: 6px; margin-top: 16px; border: 1px solid #bad8c8; border-radius: 8px; padding: 12px 14px; color: #28533d; background: #eef9f3; }
 .price-suggestion span { font-variant-numeric: tabular-nums; }
 .price-suggestion small { color: #526b5d; }
+.price-preview { display: grid; gap: 5px; margin-top: 14px; border: 1px solid #d5dee9; border-radius: 8px; padding: 11px 13px; color: #42546d; background: #f3f6f9; }
+.price-preview > div { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.price-preview strong { color: #293b57; }
+.price-preview span { font-variant-numeric: tabular-nums; }
+.price-preview small { color: #65768e; }
+.price-preview a { color: #315f96; text-decoration: underline; text-underline-offset: 2px; }
 .price-steps { margin-top: 6px; }
 .price-workflow-check { min-height: auto; margin-top: 12px; }
+.price-workflow-controls { display: flex; flex-wrap: wrap; gap: 4px 24px; }
+.sizing-action:disabled { border-color: #d5dce5; color: #8995a5; background: #e9edf2; opacity: 1; }
 .saved-price-profiles { margin-top: 22px; border-top: 1px solid #d5dee9; padding-top: 18px; }
 .saved-price-profiles h3 { color: #14243c; font-size: 1rem; letter-spacing: 0; text-transform: none; }
 .saved-price-profiles .table-scroll { margin-top: 12px; }
-.price-profile-table { min-width: 1120px; }
-.converted-price span { display: block; }
+.price-profile-table { min-width: 1320px; }
 
 .sizing-jobs-table td:first-child { white-space: nowrap; }
 .numeric { text-align: right !important; font-variant-numeric: tabular-nums; }
