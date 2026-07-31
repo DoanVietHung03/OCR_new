@@ -467,6 +467,9 @@ Gate backend:
   trong lịch sử thu gọn. Save thành công refresh Overview. Thời điểm fetch/lưu
   được ghi tự động; user có thể xác nhận tỷ giá thực tế/hợp đồng bằng manual
   override. Archive/restore giữ nguyên provenance và refresh estimate.
+- Version mới tự archive version cũ cùng exact provider/model; restore một
+  version cũng archive version đang dùng cùng identity. Provider/model được chọn
+  từ danh sách hỗ trợ/đã lưu để tránh tạo identity do lỗi gõ.
 - Cost lịch sử vẫn khớp exact provider/model/operation time. Phép estimate mới
   áp profile active mới nhất cho operation exact provider/model bất kể ngày chạy,
   nên không cần backdate nhưng cũng không suy alias provider/model.

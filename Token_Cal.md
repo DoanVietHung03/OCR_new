@@ -423,6 +423,12 @@ cũ/archived nằm trong phần lịch sử thu gọn. Save thành công phải 
 để phép ước tính mới phản ánh catalog nếu operation khớp.
 User có thể archive/restore profile ngay trong danh sách; profile archived không
 tham gia tính cost nhưng vẫn giữ lịch sử và provenance.
+Provider Profile và model dùng dropdown từ các lựa chọn hỗ trợ/đã lưu. Form để
+trống giá và tỷ giá cho tới khi user nhập hoặc lấy gợi ý, nêu rõ thứ tự
+Lấy giá → chọn/nhập tỷ giá → xác nhận → lưu. Version mới tự archive version cũ
+cùng exact provider/model; restore một version cũng archive version đang dùng
+cùng identity. Bảng tách input/output/cache, hiện quy đổi VND và sắp lịch sử mới
+nhất trước; số lượng lịch sử không tính dòng hiện dùng.
 
 Nguồn giá ban đầu là trang Pay-as-you-go chính thức của MiniMax cho exact
 `MiniMax-*`. `MiniMax-M3` dùng tier standard `input <= 512k`; Price Profile lưu

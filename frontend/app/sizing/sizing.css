@@ -30,8 +30,13 @@
 .price-suggestion { display: grid; gap: 6px; margin-top: 16px; border: 1px solid #bad8c8; border-radius: 8px; padding: 12px 14px; color: #28533d; background: #eef9f3; }
 .price-suggestion span { font-variant-numeric: tabular-nums; }
 .price-suggestion small { color: #526b5d; }
+.price-steps { margin-top: 6px; }
+.price-workflow-check { min-height: auto; margin-top: 12px; }
 .saved-price-profiles { margin-top: 22px; border-top: 1px solid #d5dee9; padding-top: 18px; }
+.saved-price-profiles h3 { color: #14243c; font-size: 1rem; letter-spacing: 0; text-transform: none; }
 .saved-price-profiles .table-scroll { margin-top: 12px; }
+.price-profile-table { min-width: 1120px; }
+.converted-price span { display: block; }
 
 .sizing-jobs-table td:first-child { white-space: nowrap; }
 .numeric { text-align: right !important; font-variant-numeric: tabular-nums; }

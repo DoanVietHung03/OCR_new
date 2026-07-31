@@ -435,6 +435,12 @@ khi đóng.
 - Ngay dưới form chỉ hiển thị Price Profile active mới nhất; profile cũ/archived
   nằm trong `<details>` lịch sử. Save refresh Overview/Jobs để estimate không giữ
   snapshot cũ.
+- Provider/model dùng dropdown native từ lựa chọn hỗ trợ/đã lưu; giá và tỷ giá
+  mặc định để trống. UI nêu thứ tự lấy giá → chọn/nhập tỷ giá → xác nhận → lưu
+  và hiện lý do cho mọi action bị khóa. Version mới tự archive version cũ cùng
+  exact provider/model; restore cũng chỉ thay version cùng identity. Bảng tách
+  ba loại giá, hiện quy đổi VND, lịch sử mới nhất trước và count không gồm dòng
+  hiện dùng.
 - Form tự ghi thời điểm fetch/lưu, không yêu cầu user backdate. Sau Preview, user
   có thể bật tỷ giá thực tế/hợp đồng, nhập rate và xác nhận lại; provenance ghi
   `actual_or_contract`.

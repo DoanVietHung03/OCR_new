@@ -540,6 +540,9 @@ tra URL/thời điểm/đơn vị rồi xác nhận trước khi lưu. Nếu có
 UI hiện profile active mới nhất; profile cũ/archived nằm trong lịch sử thu gọn và
 có thể restore. Overview/Scenario phải phân biệt billing currency gốc với display
 currency ước tính, đồng thời hiện coverage và sensitivity ±1%.
+Provider/model được chọn từ dropdown; các ô giá/tỷ giá để trống trước khi nhập
+hoặc lấy gợi ý. Version mới thay version cũ cùng provider/model, và số lượng lịch
+sử không tính profile hiện dùng.
 Không suy model từ tên Provider Profile, không tự xác nhận và không biến lỗi
 nguồn thành giá `0`.
 
