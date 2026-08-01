@@ -3,6 +3,7 @@ import importlib
 
 import httpx
 import fitz
+import pytest
 
 from app.services.jobs import JobStore
 from app.services.sizing import MeasurementStore
@@ -231,6 +232,37 @@ def test_provider_retries_transient_page_failures_once(tmp_path, monkeypatch):
 
     import app.workers.tasks as tasks
     assert tasks.safe_error(RuntimeError("raw provider secret")) == "ocr_failed"
+
+
+def test_provider_does_not_retry_output_truncation(tmp_path, monkeypatch):
+    import app.services.ocr_runner as runner
+
+    attempts = 0
+    real_client = httpx.AsyncClient
+
+    def truncated(_: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(200, json={
+            "choices": [{"finish_reason": "length", "message": {"content": '{"fields":'}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 64, "total_tokens": 74},
+        })
+
+    monkeypatch.setattr(
+        runner.httpx, "AsyncClient",
+        lambda **options: real_client(transport=httpx.MockTransport(truncated), **options),
+    )
+    store = MeasurementStore(tmp_path)
+    with pytest.raises(ValueError, match="invalid_model_json:output_truncated"):
+        asyncio.run(runner.request_page(
+            b"image", base_url="http://provider", api_key="x", model="m", max_tokens=64,
+            measurement_store=store, measurement_context={"job_id": "job", "task": "metadata"},
+        ))
+
+    assert attempts == 1
+    assert [(item["status"], item["retryable"], item["usage_status"]) for item in store.operations(job_id="job")] == [
+        ("output_truncated", False, "complete"),
+    ]
 
 
 def test_metadata_uses_transcription_only_for_local_validation(monkeypatch):

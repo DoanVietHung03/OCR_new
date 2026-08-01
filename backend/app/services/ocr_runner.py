@@ -132,6 +132,39 @@ SEGMENTATION_PROMPT = (
 RETRYABLE_STATUSES = {429, 502, 503, 504}
 
 
+def response_schema(task: str) -> dict:
+    if task == "full_ocr":
+        properties = {"text": {"type": "string"}}
+        required = ["text"]
+    elif task == "segmentation":
+        properties = {"classification": {
+            "type": "string",
+            "enum": ["cover", "document_start", "continuation", "blank", "separator"],
+        }}
+        required = ["classification"]
+    else:
+        properties = {"fields": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "value": {"type": ["string", "number"]},
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "bbox": {
+                        "type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1},
+                        "minItems": 0, "maxItems": 4,
+                    },
+                    "source_text": {"type": "string"},
+                    "page_index": {"type": "integer", "minimum": 0},
+                },
+                "required": ["value", "confidence", "bbox", "source_text", "page_index"],
+                "additionalProperties": False,
+            },
+        }}
+        required = ["fields"]
+    return {"type": "object", "properties": properties, "required": required, "additionalProperties": False}
+
+
 def parse_json_object(content: str) -> object:
     decoder = json.JSONDecoder()
     result = None
@@ -260,6 +293,7 @@ def message_text(response: object) -> str:
 def request_body(
     image: bytes, model: str, task: str = "metadata",
     expected_fields: tuple[str, ...] | None = None, *, thinking_mode: bool = True,
+    max_tokens: int | None = None, structured_output: bool = False,
 ) -> dict:
     encoded = base64.b64encode(image).decode()
     body = {
@@ -272,6 +306,13 @@ def request_body(
     }
     if not thinking_mode:
         body["reasoning_effort"] = "none"
+    if max_tokens is not None:
+        body["max_tokens"] = max_tokens
+    if structured_output:
+        body["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {"name": f"ocr_{task}", "strict": True, "schema": response_schema(task)},
+        }
     return body
 
 
@@ -287,9 +328,12 @@ async def request_page(
     page_index: int = 0, task: str = "metadata", expected_fields: tuple[str, ...] | None = None,
     ocr_text: str = "", measurement_store: MeasurementStore | None = None,
     measurement_context: dict | None = None, required_any_fields: tuple[str, ...] = (),
-    thinking_mode: bool = True,
+    thinking_mode: bool = True, max_tokens: int | None = None, structured_output: bool = False,
 ) -> dict:
-    body = request_body(image, model, task, expected_fields, thinking_mode=thinking_mode)
+    body = request_body(
+        image, model, task, expected_fields, thinking_mode=thinking_mode,
+        max_tokens=max_tokens, structured_output=structured_output,
+    )
     serialized = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
     operation_id = f"op_{uuid.uuid4().hex}"
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -350,6 +394,11 @@ async def request_page(
                 response.raise_for_status()
             except httpx.HTTPStatusError as exc:
                 raise RuntimeError("provider_unavailable") from exc
+            choices = response_payload.get("choices") if isinstance(response_payload, dict) else None
+            if isinstance(choices, list) and choices and isinstance(choices[0], dict) and choices[0].get("finish_reason") == "length":
+                if target:
+                    measurement_store.finish(target, status="output_truncated", retryable=False)
+                raise ValueError("invalid_model_json:output_truncated")
             try:
                 content = message_text(response_payload)
                 if not content:
@@ -378,7 +427,7 @@ def configured(base_url: str, model: str) -> bool:
 async def probe_provider(
     *, base_url: str, api_key: str, model: str, timeout: float = 10,
     measurement_store: MeasurementStore | None = None, measurement_context: dict | None = None,
-    thinking_mode: bool = True,
+    thinking_mode: bool = True, max_tokens: int | None = None, structured_output: bool = False,
 ) -> str:
     if not configured(base_url, model):
         return "not_configured"
@@ -386,7 +435,10 @@ async def probe_provider(
     started = time.monotonic()
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            body = request_body(PROBE_PNG, model, expected_fields=ADMIN_FIELDS, thinking_mode=thinking_mode)
+            body = request_body(
+                PROBE_PNG, model, expected_fields=ADMIN_FIELDS, thinking_mode=thinking_mode,
+                max_tokens=max_tokens, structured_output=structured_output,
+            )
             serialized = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
             operation_id = f"op_{uuid.uuid4().hex}"
             target = measurement_store.begin(

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,7 +11,11 @@ class Settings(BaseSettings):
     ocr_base_url: str = ""
     ocr_api_key: str = ""
     ocr_model: str = ""
-    thinking_mode: bool = True
+    thinking_mode: bool = False
+    ocr_structured_output: bool = False
+    ocr_max_tokens_metadata: int = Field(default=2048, ge=1)
+    ocr_max_tokens_full_ocr: int = Field(default=8192, ge=1)
+    ocr_max_tokens_segmentation: int = Field(default=64, ge=1)
     ocr_timeout_seconds: float = 180
     ocr_endpoint_external: bool = True
     celery_broker_url: str = "redis://localhost:6380/0"
@@ -21,6 +25,17 @@ class Settings(BaseSettings):
     ocr_auth_username: str = ""
     ocr_auth_password_hash: str = ""
     ocr_auth_session_secret: str = ""
+
+    def generation_options(self, task: str) -> dict[str, bool | int]:
+        return {
+            "thinking_mode": self.thinking_mode,
+            "structured_output": self.ocr_structured_output,
+            "max_tokens": {
+                "metadata": self.ocr_max_tokens_metadata,
+                "full_ocr": self.ocr_max_tokens_full_ocr,
+                "segmentation": self.ocr_max_tokens_segmentation,
+            }[task],
+        }
 
     @model_validator(mode="after")
     def validate_auth(self):

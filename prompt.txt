@@ -1,0 +1,23 @@
+================================================================================
+1. METADATA — VĂN BẢN HÀNH CHÍNH
+================================================================================
+
+Return one JSON object only, with no Markdown or explanation. Its only top-level key is fields. Each fields entry uses an existing archival field name and has value, confidence (number 0..1), bbox ([left, top, right, bottom] normalized to 0..1 relative to the input image), source_text (the exact visible label and value), and page_index (integer). The bbox must tightly enclose the printed label and its visible value, not a nearby section or the whole page; use bbox [] when localization is uncertain. Extract every visible field from this schema: co_quan_ban_hanh, so_van_ban, quoc_hieu_tieu_ngu, dia_diem_ban_hanh, ngay_ban_hanh, loai_van_ban, trich_yeu, quyen_han_ky_thay, chuc_vu_nguoi_ky, nguoi_ky, ma_luu_tru. so_van_ban is the document identifier printed after Số: or Văn bản số; never use an archive/file code. ma_luu_tru is the archival notation, commonly like A.30.15.03.05.001; on a dossier cover or document page, it may be printed or handwritten anywhere on the page. Never use the document number or a recipient/distribution line such as 'Lưu: VT, KH-TC (PTT)'. quyen_han_ky_thay is the complete visible signing-authority line above the signer title: TM. (thay mặt), Q. (quyền), KT. (ký thay), TL. (thừa lệnh), or TUQ. (thừa ủy quyền). Keep the authority named on that same line, for example KT. BỘ TRƯỞNG; do not reduce it to KT. alone. Use an empty string when the signer has direct authority and no signing-authority line is printed. Keep the signer's own title, such as THỨ TRƯỞNG, in chuc_vu_nguoi_ky. Inspect the entire page for the signing block. Read printed or typed text even when a red circular seal, handwriting, or signature ink overlaps it. Do not use text inside the seal as the signer name. Keep the signing-authority line, signer title, and signer name separate; use bbox [] when their location is uncertain. Do not invent fields. Use {"fields": {}} when nothing is found.
+
+================================================================================
+2. METADATA — BÌA HỒ SƠ
+================================================================================
+
+Return one JSON object only, with no Markdown or explanation. Its only top-level key is fields. Each fields entry uses an existing archival field name and has value, confidence (number 0..1), bbox ([left, top, right, bottom] normalized to 0..1 relative to the input image), source_text (the exact visible label and value), and page_index (integer). The bbox must tightly enclose the printed label and its visible value, not a nearby section or the whole page; use bbox [] when localization is uncertain. Extract every visible field from this schema: co_quan_luu_tru, khoa, nhiem_ky, tieu_de_ho_so, phong_so, muc_luc_so, ma_luu_tru, bat_dau, ket_thuc, ho_so_dvbq, so_tai_lieu, thoi_han_bao_quan, so_trang. ma_luu_tru is the archival notation, commonly like A.30.15.03.05.001; on a dossier cover or document page, it may be printed or handwritten anywhere on the page. Never use the document number or a recipient/distribution line such as 'Lưu: VT, KH-TC (PTT)'. For a dossier cover, co_quan_luu_tru is all consecutive bold organization or archive-authority lines beneath the party or national header; exclude the header itself and preserve line breaks. khoa is the value after Khóa, such as V, and is separate from nhiem_ky. phong_so is only the value after the printed label Phông số; never take Hồ sơ (ĐVBQ), Mục lục số, or ma_luu_tru. Read muc_luc_so, ho_so_dvbq, so_tai_lieu, so_trang, bat_dau, ket_thuc, and thoi_han_bao_quan only from their matching printed labels. Return so_tai_lieu and so_trang as integers. Do not invent fields. Use {"fields": {}} when nothing is found.
+
+================================================================================
+3. FULL OCR
+================================================================================
+
+Return one JSON object only: {"text": "..."}. Transcribe all visible text in reading order without summarizing or inventing content.
+
+================================================================================
+4. PHÂN ĐOẠN HỒ SƠ
+================================================================================
+
+Classify this page for dossier segmentation. Return one JSON object only: {"classification":"cover|document_start|continuation|blank|separator"}. Use cover for the dossier cover, document_start for the first page of an administrative document, continuation for its later pages, blank for empty pages, and separator for divider sheets.

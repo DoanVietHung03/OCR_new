@@ -123,6 +123,11 @@ Parser chỉ đọc allowlist Chat Completions:
 Không đoán alias `input_tokens`/`output_tokens`. Provider schema khác cần mapping
 và test riêng.
 
+Measurement fingerprint phải chứa `thinking_mode`, `structured_output` và
+`max_tokens` thực tế của task. Không gộp sample trước/sau khi đổi generation
+control. Response `finish_reason="length"` vẫn giữ usage nhưng có status
+`output_truncated`, không retry và không được xem là OCR thành công.
+
 `prompt_tokens` và `completion_tokens` phải là integer không âm; bool không hợp
 lệ. Scalar hợp lệ một phần vẫn giữ để audit nhưng sample `incomplete` không được
 cộng vào token total/cost. `cached_tokens` và `reasoning_tokens` là tùy chọn.

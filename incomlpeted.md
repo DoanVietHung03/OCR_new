@@ -30,9 +30,10 @@ eager-task/fake-provider; không thay thế lần chạy `63-btc.pdf` qua provid
   `so_tai_lieu=33`; với `full_ocr`, xác nhận metadata provider chỉ nhận prompt
   image-only nhưng labeled-value conflict vẫn bị validation cục bộ xóa
   confidence/bbox, và mọi crop còn available phải chứa đúng nhãn + giá trị;
-- chạy cùng payload OpenAI-compatible tối thiểu với cấu hình hiện tại và một VLM
+- chạy cùng payload OpenAI-compatible hiện tại với cấu hình hiện tại và một VLM
   độc lập thứ hai; xác nhận readiness, metadata, full OCR và segmentation đều trả
-  JSON hợp lệ;
+  JSON hợp lệ; với Ollama, A/B `OCR_STRUCTURED_OUTPUT`, cap theo task, context
+  `32768` và KV cache `q8_0`, không có truncation hoặc giảm chất lượng field/bbox;
 - ghi bằng chứng đã khử nhạy cảm vào `implementation_plan.md#be-c-evidence`.
 
 ## 2. X16 — Segmentation hồ sơ gộp thật
@@ -93,6 +94,9 @@ Các điều kiện dưới đây cần provider/dữ liệu/runtime bên ngoài
 - chạy một PDF thật và đối soát aggregate với toàn bộ attempt sidecar;
 - chạy bốn fixture cùng compatible fingerprint cho `full_ocr`, `metadata`,
   `segmentation` và `readiness_probe`, gồm trường hợp provider không trả usage;
+- xác nhận fingerprint tách `thinking_mode`, `structured_output`, `max_tokens`;
+  `finish_reason="length"` chỉ tạo một attempt `output_truncated` và không bị xem
+  là sample OCR thành công;
 - backup/restore, restart/interrupted và delete/rollup không mất hoặc cộng trùng
   measurement;
 - thu ít nhất 20 compatible jobs với coverage/reliability đạt gate trước khi mở

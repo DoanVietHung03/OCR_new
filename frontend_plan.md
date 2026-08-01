@@ -39,6 +39,10 @@ vẫn còn mở.
 provider OpenAI-compatible; không thêm field, toggle hoặc contract mới ở
 frontend.
 
+**Generation control 2026-08-01:** task cap, optional structured output và xử lý
+`finish_reason="length"` đều là cấu hình/behavior nội bộ backend. Không thêm
+frontend toggle, public DTO hoặc thay đổi cách `/sizing` đọc usage đã persist.
+
 Semantic hardening cùng ngày không đổi public schema: backend retry một header
 response rỗng trong budget hiện có, và UI nhận `completed_with_warnings` khi
 required-field blocker vẫn tồn tại thay vì hiển thị clean `completed`.

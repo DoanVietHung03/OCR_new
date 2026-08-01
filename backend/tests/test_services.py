@@ -270,6 +270,24 @@ def test_thinking_mode_false_uses_openai_compatible_control():
     assert "think" not in body
 
 
+def test_generation_controls_use_openai_compatible_fields_and_task_schemas():
+    for task, limit, required in (
+        ("metadata", 2048, "fields"),
+        ("full_ocr", 8192, "text"),
+        ("segmentation", 64, "classification"),
+    ):
+        body = request_body(
+            b"image", "model", task=task, thinking_mode=False,
+            max_tokens=limit, structured_output=True,
+        )
+        assert body["max_tokens"] == limit
+        assert body["reasoning_effort"] == "none"
+        schema = body["response_format"]["json_schema"]
+        assert schema["strict"] is True
+        assert schema["schema"]["required"] == [required]
+        assert not {"num_predict", "num_ctx", "think", "format", "options"} & body.keys()
+
+
 def test_administrative_prompt_requires_complete_signing_authority_line():
     prompt = request_body(b"image", "model", expected_fields=ADMIN_FIELDS)["messages"][0]["content"][0]["text"]
     assert all(prefix in prompt for prefix in ("TM.", "Q.", "KT.", "TL.", "TUQ."))

@@ -212,7 +212,7 @@ async def segment_job(store: JobStore, job: dict) -> dict:
                     result = await request_page(
                         image.read_bytes(), base_url=os.getenv("OCR_BASE_URL", ""), api_key=os.getenv("OCR_API_KEY", ""),
                         model=job.get("model", ""), timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "180")),
-                        page_index=page_index, task="segmentation", thinking_mode=settings.thinking_mode,
+                        page_index=page_index, task="segmentation", **settings.generation_options("segmentation"),
                         measurement_store=measurements,
                         measurement_context={
                             "job_id": job["id"], "provider_profile_id": job.get("provider_profile_id"),
@@ -225,6 +225,7 @@ async def segment_job(store: JobStore, job: dict) -> dict:
                                 "provider_profile_id": job.get("provider_profile_id"), "model": job.get("model", ""),
                                 "task": "segmentation", "processing_mode": job.get("processing_mode"),
                                 "dpi": 200, "prompt_version": PROMPT_VERSION,
+                                "generation_options": settings.generation_options("segmentation"),
                                 "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
                             }),
                         },
@@ -385,7 +386,7 @@ async def process_job_async(job_id: str) -> dict:
                         page_index=index,
                         task=pass_task,
                         expected_fields=expected_fields,
-                        thinking_mode=settings.thinking_mode,
+                        **settings.generation_options(pass_task),
                         required_any_fields=(
                             tuple(name for name in ADMIN_FIELDS if name not in SIGNATURE_FIELDS)
                             if adaptive and index == 0 and pass_task == "metadata" else ()
@@ -408,6 +409,7 @@ async def process_job_async(job_id: str) -> dict:
                                 "task": pass_task, "processing_mode": job.get("processing_mode"),
                                 "page_scope": page_mode, "vlm_max_pages": max_pages, "dpi": 200,
                                 "prompt_version": PROMPT_VERSION,
+                                "generation_options": settings.generation_options(pass_task),
                                 "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
                             }),
                         },

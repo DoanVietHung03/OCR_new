@@ -11,8 +11,19 @@ client = TestClient(app)
 def test_ocr_data_dir_is_a_path_at_runtime(monkeypatch):
     assert Settings(ocr_data_dir="data/jobs").ocr_data_dir == Path("data/jobs")
     assert Settings(_env_file=None).ocr_provider == "minimax"
+    assert Settings(_env_file=None).thinking_mode is False
     monkeypatch.setenv("THINKING_MODE", "false")
     assert Settings(_env_file=None).thinking_mode is False
+    configured = Settings(
+        _env_file=None, thinking_mode=False, ocr_structured_output=True,
+        ocr_max_tokens_metadata=2000, ocr_max_tokens_full_ocr=8000,
+        ocr_max_tokens_segmentation=60,
+    )
+    assert configured.generation_options("metadata") == {
+        "thinking_mode": False, "structured_output": True, "max_tokens": 2000,
+    }
+    assert configured.generation_options("full_ocr")["max_tokens"] == 8000
+    assert configured.generation_options("segmentation")["max_tokens"] == 60
 
 
 def test_price_suggestion_is_typed_and_keeps_confirmation_outside_fetch(monkeypatch):

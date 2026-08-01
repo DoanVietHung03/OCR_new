@@ -52,6 +52,13 @@ gate passed 61 backend tests, 21 browser checks, frontend typecheck/build,
 OpenAPI generation/check, Python compileall, and diff checks; real
 provider/fixture/server evidence remains open.
 
+The 2026-08-01 generation-control update keeps application controls in dotenv,
+sends OpenAI-compatible task caps (`2048` metadata, `8192` full OCR, `64`
+segmentation), optionally enables JSON Schema only when
+`OCR_STRUCTURED_OUTPUT=true`, and treats `finish_reason="length"` as a
+non-retryable truncated response while preserving usage. Ollama host context,
+Flash Attention and KV-cache settings remain external-service configuration.
+
 The same-day semantic hardening selects the last complete JSON object in model
 content, treats an administrative page-zero response with no header metadata as
 invalid model JSON within the same two-attempt budget, and reports required-field
@@ -132,11 +139,14 @@ revision conflict, and Continue in the browser gate.
   again after terminal. Cancel creates a marker; do not add distributed locks.
 - Snapshot provider/model/prompt/external status without URL, key, or headers.
   `OCR_ENDPOINT_EXTERNAL` defaults to `true` and requires per-job consent.
-- Provider HTTP normally uses the minimal OpenAI Chat Completions subset:
-  `model`, `temperature`, and `messages` with `image_url`. Server-only
-  `THINKING_MODE=false` may additionally send the OpenAI-compatible
-  `reasoning_effort="none"` control. Keep JSON enforcement in the prompt/parser;
-  do not send Ollama-native `think` or require optional `response_format`.
+- Provider HTTP uses the OpenAI Chat Completions subset: `model`, `temperature`,
+  `messages` with `image_url`, and task-specific `max_tokens` from dotenv.
+  Server-only `THINKING_MODE=false` adds `reasoning_effort="none"`.
+  `OCR_STRUCTURED_OUTPUT=true` may add JSON Schema through `response_format`,
+  but readiness must verify support and the prompt/parser remain authoritative.
+  Never send Ollama-native `think`, `num_predict`, `num_ctx`, `format` or
+  `options`. A provider `finish_reason="length"` is non-retryable
+  `invalid_model_json`; preserve its usage and do not spend the second attempt.
 - The frontend may expose server-defined Provider Profile IDs, labels, exact safe
   configured model, capabilities, and safe readiness. The browser must never
   receive or submit arbitrary provider URLs, keys, headers, or models.

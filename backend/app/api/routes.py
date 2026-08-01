@@ -282,7 +282,7 @@ async def provider_readiness_detail() -> tuple[str, str, bool]:
             base_url=settings.ocr_base_url,
             api_key=settings.ocr_api_key,
             model=settings.ocr_model,
-            thinking_mode=settings.thinking_mode,
+            **settings.generation_options("metadata"),
             timeout=min(settings.ocr_timeout_seconds, 10),
             measurement_store=sizing_measurements,
             measurement_context={
@@ -292,6 +292,7 @@ async def provider_readiness_detail() -> tuple[str, str, bool]:
                 "measurement_fingerprint": checksum({
                     "provider_profile_id": settings.ocr_provider, "model": settings.ocr_model,
                     "task": "readiness_probe", "dpi": 200, "prompt_version": PROMPT_VERSION,
+                    "generation_options": settings.generation_options("metadata"),
                     "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
                 }),
             },

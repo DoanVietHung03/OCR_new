@@ -28,8 +28,16 @@ provider/fixture/server gate còn mở.
 
 **Thinking control 2026-07-31:** cấu hình server-only `THINKING_MODE=false`
 thêm `reasoning_effort="none"` vào readiness probe và mọi page operation trên
-endpoint OpenAI-compatible. Mặc định `true` giữ nguyên minimal payload; không
-đổi public API hay gửi trường `think` riêng của Ollama.
+endpoint OpenAI-compatible. Đây là mặc định hiện tại; `true` bỏ control này để
+giữ payload tối thiểu. Không đổi public API hay gửi trường `think` riêng của
+Ollama.
+
+**Generation control 2026-08-01:** dotenv sở hữu cap OpenAI-compatible theo task:
+metadata `2048`, full OCR `8192`, segmentation `64`; `OCR_STRUCTURED_OUTPUT`
+opt-in JSON Schema qua `response_format`. `finish_reason="length"` được persist
+usage với trạng thái `output_truncated`, không retry và trả safe
+`invalid_model_json`. Cấu hình host Ollama vẫn là deployment concern; local gate
+không thay thế fixture/GPU evidence.
 
 Semantic hardening cùng ngày chọn JSON object hoàn chỉnh cuối cùng trong model
 content, coi page zero của văn bản hành chính không có metadata header là
@@ -135,12 +143,13 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
 - FastAPI không render PDF hoặc gọi provider; Celery sở hữu toàn bộ OCR.
 - Server giữ URL/key/header/model thật. Job chỉ snapshot provider, model,
   prompt version và external status; external endpoint yêu cầu consent từng job.
-- Provider HTTP mặc định dùng subset OpenAI Chat Completions tối thiểu:
-  `POST /chat/completions`, Bearer auth, `model`, `temperature` và `messages` có
-  `image_url`. Khi `THINKING_MODE=false`, backend thêm duy nhất control tương
-  thích OpenAI `reasoning_effort="none"`. Prompt/parser hiện có chịu trách nhiệm
-  ép JSON; không gửi `think` riêng của Ollama và không bắt endpoint hỗ trợ
-  `response_format`.
+- Provider HTTP dùng subset OpenAI Chat Completions: `POST /chat/completions`,
+  Bearer auth, `model`, `temperature`, `messages` có `image_url` và `max_tokens`
+  theo task lấy từ dotenv. Khi `THINKING_MODE=false`, backend thêm
+  `reasoning_effort="none"`. `OCR_STRUCTURED_OUTPUT=true` mới thêm JSON Schema
+  qua `response_format`; readiness phải xác nhận endpoint hỗ trợ và prompt/parser
+  vẫn là lớp kiểm tra bắt buộc. Không gửi `think`, `num_predict`, `num_ctx`,
+  `format` hoặc `options` riêng của Ollama.
 - Mặc định chỉ có một cấu hình OCR hiện tại. Chỉ mở multi-profile khi có provider
   thứ hai thật; profile luôn do server định nghĩa và readiness probe phải có
   timeout, safe status code, không trả raw response.
@@ -168,6 +177,9 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
   có ít nhất một field metadata không thuộc nhóm chữ ký; response rỗng là
   `invalid_model_json` và dùng chung budget hai attempt. Required-field blocker
   làm document/job `completed_with_warnings`, không được ghi clean `completed`.
+- `finish_reason="length"` là output bị cap: finalize usage/bytes/latency thành
+  `output_truncated`, không retry attempt thứ hai và chỉ persist safe
+  `invalid_model_json` ở job/document.
 - Chỉ persist stable safe error. Cấm secret, URL, header, raw provider response,
   unredacted request/response và document text trong log.
 - Backend ghi trước dispatch, worker ghi khi active, backend ghi lại sau terminal.

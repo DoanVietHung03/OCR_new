@@ -73,9 +73,19 @@ pnpm install
 
 Điền các giá trị provider thật vào `.env`. Đây là cấu hình chỉ dùng phía máy
 chủ; không đưa URL, khóa hoặc header của provider xuống frontend.
-Với endpoint OpenAI-compatible của Ollama, đặt `THINKING_MODE=false` để backend
-gửi `reasoning_effort: "none"` cho cả readiness và OCR. Mặc định `true` giữ
-nguyên payload tối thiểu; ứng dụng không gửi trường native `think`.
+Các control sinh kết quả nằm cùng `.env`: `THINKING_MODE=false`, cap OpenAI
+`max_tokens` lần lượt `2048` cho metadata, `8192` cho full OCR và `64` cho
+segmentation. `OCR_STRUCTURED_OUTPUT=true` bật JSON Schema qua
+`response_format`; chỉ bật sau khi readiness của endpoint OpenAI-compatible đã
+chứng minh hỗ trợ. Ứng dụng không gửi các trường native Ollama như `think`,
+`num_predict`, `num_ctx`, `format` hoặc `options`.
+
+Ba biến `OLLAMA_CONTEXT_LENGTH=32768`, `OLLAMA_FLASH_ATTENTION=1` và
+`OLLAMA_KV_CACHE_TYPE=q8_0` cũng được ghi trong `.env.example` để tránh drift,
+nhưng Ollama chạy ngoài Compose nên phải tự nạp ba giá trị này. Không đưa toàn
+bộ `.env` chứa API key/auth secret vào environment của service Ollama. Xác nhận
+model nằm trên GPU và còn VRAM trước khi giữ context/KV cache này; bốn fixture
+thật vẫn là gate chất lượng.
 
 Host Redis `redis` trong file mẫu dành cho Compose. Khi chạy Celery trực tiếp,
 hãy đổi cả hai URL Celery sang một Redis mà máy đang chạy worker có thể kết nối.
