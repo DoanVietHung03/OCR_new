@@ -389,7 +389,8 @@ async def process_job_async(job_id: str) -> dict:
                         **settings.generation_options(pass_task),
                         required_any_fields=(
                             tuple(name for name in ADMIN_FIELDS if name not in SIGNATURE_FIELDS)
-                            if adaptive and index == 0 and pass_task == "metadata" else ()
+                            if document.get("logical_document_type") == "administrative_document"
+                            and index == 0 and pass_task == "metadata" else ()
                         ),
                         ocr_text=state.get("text", "") if pass_task == "metadata" else "",
                         measurement_store=measurements,

@@ -16,7 +16,7 @@ from .field_policy import ADMIN_FIELDS
 from .jobs import FIELDS
 from .sizing import MeasurementStore, parse_usage
 
-PROMPT_VERSION = "9"
+PROMPT_VERSION = "10"
 PROBE_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAACuklEQVR4nO3TMQEA"
     "AAiAMPuX1hgebAl4mIWw+Q6ATwYgzQCkGYA0A5BmANIMQJoBSDMAaQYgzQCkGYA0"
@@ -296,12 +296,14 @@ def request_body(
     max_tokens: int | None = None, structured_output: bool = False,
 ) -> dict:
     encoded = base64.b64encode(image).decode()
+    prompt = OCR_PROMPT if task == "full_ocr" else SEGMENTATION_PROMPT if task == "segmentation" else metadata_prompt(expected_fields or ADMIN_FIELDS)
     body = {
         "model": model,
         "temperature": 0,
         "messages": [{"role": "user", "content": [
-            {"type": "text", "text": OCR_PROMPT if task == "full_ocr" else SEGMENTATION_PROMPT if task == "segmentation" else metadata_prompt(expected_fields or ADMIN_FIELDS)},
+            {"type": "text", "text": "Analyze this image."},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},
+            {"type": "text", "text": prompt},
         ]}],
     }
     if not thinking_mode:

@@ -336,13 +336,16 @@ def test_page_planner_and_metadata_scope(tmp_path, monkeypatch, pdf_bytes):
     calls = []
 
     async def fake_request(_: bytes, **options):
-        calls.append((options["task"], options["page_index"]))
+        calls.append((options["task"], options["page_index"], options.get("required_any_fields", ())))
         return {"fields": {}, "warnings": []}
 
     monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(tasks, "request_page", fake_request)
     result = asyncio.run(tasks.process_job_async(job["id"]))
-    assert calls == [("metadata", 0)]
+    assert calls == [(
+        "metadata", 0,
+        tuple(name for name in tasks.ADMIN_FIELDS if name not in tasks.SIGNATURE_FIELDS),
+    )]
     assert result["documents"][0]["pages"][0]["ocr_scope"] == "metadata"
 
 

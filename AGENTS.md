@@ -130,7 +130,7 @@ revision conflict, and Continue in the browser gate.
   field warnings, or a whole job. The default provider read timeout is 180 seconds
   and remains configurable with `OCR_TIMEOUT_SECONDS`.
 - JSON enforcement remains provider-neutral: parse the last complete JSON object
-  from model content. For administrative `metadata + auto`, page zero must return
+  from model content. For every administrative metadata pass, page zero must return
   at least one non-signature metadata field; an empty semantic result is invalid
   model JSON and uses the same retry budget. Required-field blockers make the
   document/job `completed_with_warnings`, never a clean `completed`.
@@ -140,7 +140,8 @@ revision conflict, and Continue in the browser gate.
 - Snapshot provider/model/prompt/external status without URL, key, or headers.
   `OCR_ENDPOINT_EXTERNAL` defaults to `true` and requires per-job consent.
 - Provider HTTP uses the OpenAI Chat Completions subset: `model`, `temperature`,
-  `messages` with `image_url`, and task-specific `max_tokens` from dotenv.
+  `messages` ordered as a short image instruction, `image_url`, then the task
+  prompt, and task-specific `max_tokens` from dotenv.
   Server-only `THINKING_MODE=false` adds `reasoning_effort="none"`.
   `OCR_STRUCTURED_OUTPUT=true` may add JSON Schema through `response_format`,
   but readiness must verify support and the prompt/parser remain authoritative.

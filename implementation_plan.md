@@ -43,6 +43,12 @@ Semantic hardening cùng ngày chọn JSON object hoàn chỉnh cuối cùng tro
 content, coi page zero của văn bản hành chính không có metadata header là
 `invalid_model_json` trong cùng budget hai attempt, và chuyển job còn
 required-field blocker thành `completed_with_warnings`.
+
+**Qwen vision alignment 2026-08-02:** payload đa phương thức giữ API
+OpenAI-compatible nhưng đặt chỉ dẫn ảnh ngắn, `image_url`, rồi mới đến prompt tác
+vụ để khớp thứ tự đã cho kết quả ở CLI. Mọi metadata pass của văn bản hành chính
+đều coi page zero rỗng là `invalid_model_json`, không chỉ riêng `pages=auto`.
+`PROMPT_VERSION=10`; JSON Schema vẫn opt-in và mặc định tắt.
 Milestone C là
 **internal production-like pilot**, không phải customer-production-ready; chỉ ký
 sau local contract gate và evidence strong-server. Runtime được vận hành duy nhất
@@ -144,7 +150,8 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
 - Server giữ URL/key/header/model thật. Job chỉ snapshot provider, model,
   prompt version và external status; external endpoint yêu cầu consent từng job.
 - Provider HTTP dùng subset OpenAI Chat Completions: `POST /chat/completions`,
-  Bearer auth, `model`, `temperature`, `messages` có `image_url` và `max_tokens`
+  Bearer auth, `model`, `temperature`, `messages` lần lượt có chỉ dẫn ảnh ngắn,
+  `image_url`, prompt tác vụ, và `max_tokens`
   theo task lấy từ dotenv. Khi `THINKING_MODE=false`, backend thêm
   `reasoning_effort="none"`. `OCR_STRUCTURED_OUTPUT=true` mới thêm JSON Schema
   qua `response_format`; readiness phải xác nhận endpoint hỗ trợ và prompt/parser
@@ -173,7 +180,7 @@ thật. Không xem fixture tham khảo hoặc browser mock là bằng chứng đ
   cục bộ hoặc cả job. Read timeout mặc định là 180 giây và vẫn cấu hình qua
   `OCR_TIMEOUT_SECONDS`.
 - Parser chọn JSON object hoàn chỉnh kết thúc cuối cùng thay vì object đầu tiên
-  trong model content. Với văn bản hành chính `metadata + auto`, page zero phải
+  trong model content. Với mọi metadata pass của văn bản hành chính, page zero phải
   có ít nhất một field metadata không thuộc nhóm chữ ký; response rỗng là
   `invalid_model_json` và dùng chung budget hai attempt. Required-field blocker
   làm document/job `completed_with_warnings`, không được ghi clean `completed`.

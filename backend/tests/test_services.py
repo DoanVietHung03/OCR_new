@@ -243,7 +243,10 @@ def test_dossier_approval_requires_confirmed_segmentation(tmp_path, pdf_bytes):
 def test_cover_prompt_and_parser_share_the_policy_allowlist():
     body = request_body(b"image", "model", expected_fields=COVER_FIELDS)
     assert set(body) == {"model", "temperature", "messages"}
-    prompt = body["messages"][0]["content"][0]["text"]
+    content = body["messages"][0]["content"]
+    assert [part["type"] for part in content] == ["text", "image_url", "text"]
+    assert content[0]["text"] == "Analyze this image."
+    prompt = content[2]["text"]
     assert all(name in prompt for name in COVER_FIELDS)
     assert "khoa" in COVER_FIELDS
     assert "hop_so" not in COVER_FIELDS
@@ -289,7 +292,7 @@ def test_generation_controls_use_openai_compatible_fields_and_task_schemas():
 
 
 def test_administrative_prompt_requires_complete_signing_authority_line():
-    prompt = request_body(b"image", "model", expected_fields=ADMIN_FIELDS)["messages"][0]["content"][0]["text"]
+    prompt = request_body(b"image", "model", expected_fields=ADMIN_FIELDS)["messages"][0]["content"][2]["text"]
     assert all(prefix in prompt for prefix in ("TM.", "Q.", "KT.", "TL.", "TUQ."))
     assert "KT. BỘ TRƯỞNG" in prompt
     assert "do not reduce it to KT. alone" in prompt
@@ -305,7 +308,7 @@ def test_administrative_prompt_requires_complete_signing_authority_line():
     assert "red circular seal" in prompt
     assert "handwriting, or signature ink overlaps it" in prompt
 
-    cover_prompt = request_body(b"image", "model", expected_fields=COVER_FIELDS)["messages"][0]["content"][0]["text"]
+    cover_prompt = request_body(b"image", "model", expected_fields=COVER_FIELDS)["messages"][0]["content"][2]["text"]
     assert "dossier cover" in cover_prompt
     assert "so_van_ban is" not in cover_prompt
 
