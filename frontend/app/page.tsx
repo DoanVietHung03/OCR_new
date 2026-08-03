@@ -81,7 +81,7 @@ export default function Home() {
     document.addEventListener("visibilitychange", tick); return () => { clearInterval(timer); document.removeEventListener("visibilitychange", tick); };
   }, [refresh, urlReady]);
   useEffect(() => { if (action) actionDialog.current?.showModal(); else actionDialog.current?.close(); }, [action]);
-  useEffect(() => { getProviderProfiles().then(({ profiles }) => { setProfiles(profiles); setProfileId((value) => value || profiles[0]?.id || ""); }).catch(() => { /* old backend: state.ocr_methods remains the compatibility fallback */ }); }, []);
+  useEffect(() => { getProviderProfiles().then(({ profiles }) => { setProfiles(profiles); if (profiles[0]) applyProfile(profiles[0]); }).catch(() => { /* old backend: state.ocr_methods remains the compatibility fallback */ }); }, []);
   useEffect(() => { if (!uploadOnly) getReports().then(setReports).catch(() => setReports(null)); }, [uploadOnly]);
   useEffect(() => { if (!uploadOnly) getDocuments({ page_size: 1 }).then((value) => setReviewCount(value.triage_counts?.needs_review ?? 0)).catch(() => setReviewCount(null)); }, [uploadOnly]);
 
@@ -92,6 +92,13 @@ export default function Home() {
     if (new Set(names).size !== names.length) return setError(text("duplicateFile"));
     if (next.length > state.limits.max_files_per_job || next.reduce((total, file) => total + file.size, 0) > state.limits.max_job_upload_bytes) return setError(text("fileLimit"));
     setFiles(next); setError("");
+  }
+  function applyProfile(profile: ProviderProfile) {
+    const nextTask = profile.tasks.includes(task) ? task : profile.tasks[0] || task;
+    const nextPages = nextTask === "full_ocr" ? "all" : profile.page_modes.includes(pages) ? pages : profile.page_modes[0] || pages;
+    setProfileId(profile.id); setTask(nextTask); setPages(nextPages);
+    setProcessingMode(profile.processing_modes.includes(processingMode) ? processingMode : profile.processing_modes[0] || processingMode);
+    setMaxPages((value) => Math.min(value, profile.max_pages)); setConsent(false); setEngineMessage("");
   }
   function drop(event: DragEvent<HTMLDivElement>) { event.preventDefault(); if (!busy) choose(Array.from(event.dataTransfer.files)); }
   async function upload() {
@@ -142,7 +149,7 @@ export default function Home() {
       <div className="upload-options">
         <label className="upload-option-card job-name-card"><span>{text("jobName")}</span><input value={jobName} maxLength={120} disabled={busy} placeholder={automaticJobName || text("jobNamePlaceholder")} onChange={(event) => setJobName(event.target.value)} /><small>{text("jobNameHint")}</small></label>
         <label className="upload-option-card"><span>{language() === "vi" ? "Chế độ xử lý" : "Processing mode"}</span><select value={processingMode} disabled={busy} onChange={(event) => setProcessingMode(event.target.value as typeof processingMode)}>{(engine?.processing_modes || ["administrative_document"]).map((mode) => <option value={mode} key={mode}>{{ administrative_document: language() === "vi" ? "Văn bản hành chính" : "Administrative document", dossier_cover: language() === "vi" ? "Bìa hồ sơ" : "Dossier cover", combined_dossier: language() === "vi" ? "Hồ sơ gộp" : "Combined dossier" }[mode]}</option>)}</select></label>
-        {availableProfiles.length > 1 ? <label className="upload-option-card"><span>{text("engine")}</span><select value={engine?.id || ""} disabled={busy} onChange={(event) => { setProfileId(event.target.value); setConsent(false); }}>{availableProfiles.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label> : <div className="upload-option-card option-value locked-value"><span aria-hidden="true">🔒</span><strong>{engine?.label || "—"}</strong><small>{text("systemManaged")}</small></div>}
+        {availableProfiles.length > 1 ? <label className="upload-option-card"><span>{text("engine")}</span><select value={engine?.id || ""} disabled={busy} onChange={(event) => applyProfile(availableProfiles.find((item) => item.id === event.target.value)!)}>{availableProfiles.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label> : <div className="upload-option-card option-value locked-value"><span aria-hidden="true">🔒</span><strong>{engine?.label || "—"}</strong><small>{text("systemManaged")}</small></div>}
         <label className="upload-option-card"><span>{text("task")}</span><select value={task} disabled={busy} onChange={(event) => { const value = event.target.value as Task; setTask(value); if (value === "full_ocr") { setPages("all"); setMaxPages(0); } }}>{(engine?.tasks || ["full_ocr", "metadata"]).map((value) => <option value={value} key={value}>{text(value === "full_ocr" ? "fullOcr" : "metadata")}</option>)}</select></label>
         <div className="upload-option-card page-scope-card">
           <label><span>{text("pageScope")}</span><select value={pages} disabled={busy || task === "full_ocr"} onChange={(event) => setPages(event.target.value as typeof pages)}>{(engine?.page_modes || ["all", "auto", "first,last"]).map((value) => <option value={value} key={value}>{text(value === "all" ? "allPages" : value === "auto" ? "autoPages" : "edgePages")}</option>)}</select></label>

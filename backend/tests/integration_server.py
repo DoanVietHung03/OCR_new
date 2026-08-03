@@ -33,10 +33,11 @@ if __name__ == "__main__":
     data_dir = tempfile.mkdtemp(prefix="ocr-playwright-")
     os.environ.update({
         "OCR_DATA_DIR": data_dir,
-        "OCR_BASE_URL": "http://127.0.0.1:50180/v1",
-        "OCR_API_KEY": "test-only",
-        "OCR_MODEL": "fake-model",
-        "OCR_ENDPOINT_EXTERNAL": "false",
+        "OCR_ENABLED_PROFILES": "minimax",
+        "OCR_DEFAULT_PROFILE": "minimax",
+        "MINIMAX_BASE_URL": "http://127.0.0.1:50180/v1",
+        "MINIMAX_API_KEY": "test-only",
+        "MINIMAX_ENDPOINT_EXTERNAL": "false",
         "CELERY_TASK_ALWAYS_EAGER": "true",
     })
     provider = ThreadingHTTPServer(("127.0.0.1", 50180), Provider)

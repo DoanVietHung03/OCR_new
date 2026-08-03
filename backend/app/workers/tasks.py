@@ -11,7 +11,8 @@ from celery.signals import worker_ready
 
 from ..services.field_policy import ADMIN_FIELDS, SIGNATURE_FIELDS, annotate
 from ..services.jobs import ACTIVE, MAX_PAGES, JobStore, failure, now
-from ..services.ocr_runner import PROMPT_VERSION, request_page
+from ..services.ocr_runner import request_page
+from ..services.providers import ProfileSpec, default_profile, get_profile
 from ..services.sizing import MeasurementStore, aggregate, atomic_json, checksum, utc_now
 
 celery_app = Celery(
@@ -23,6 +24,7 @@ celery_app.conf.task_always_eager = os.getenv("CELERY_TASK_ALWAYS_EAGER", "").lo
 SAFE_ERRORS = {
     "encrypted_pdf", "invalid_model_json", "invalid_pdf", "ocr_failed",
     "pdf_page_limit_exceeded", "provider_timeout", "provider_unavailable",
+    "provider_profile_changed", "provider_profile_unavailable",
     "unsupported_file", "worker_interrupted",
 }
 
@@ -79,6 +81,31 @@ class ResourceSampler:
 def safe_error(error: Exception) -> str:
     code = str(error).split(":", 1)[0]
     return code if code in SAFE_ERRORS else "ocr_failed"
+
+
+def job_profile(job: dict) -> ProfileSpec:
+    return get_profile(
+        job.get("provider_profile_id") or default_profile().id,
+        expected_fingerprint=job.get("provider_policy_fingerprint", ""),
+        require_configured=True,
+    )
+
+
+def measurement_context(profile: ProfileSpec, job: dict, task: str, **details: object) -> dict:
+    fingerprint = {
+        "provider_profile_id": profile.id, "model": profile.model, "task": task,
+        "processing_mode": job.get("processing_mode"), "page_scope": job.get("vlm_pages"),
+        "vlm_max_pages": int(job.get("vlm_max_pages", 0) or 0), "dpi": 200,
+        "provider_policy_fingerprint": profile.fingerprint,
+        "segmentation_revision": details.get("segmentation_revision"),
+    }
+    return {
+        "job_id": job["id"], "provider_profile_id": profile.id,
+        "provider_config_version": profile.provider_config_version,
+        "model": profile.model, "task": task,
+        "processing_mode": job.get("processing_mode"), **details,
+        "measurement_fingerprint": checksum(fingerprint),
+    }
 
 
 def render_pdf(pdf: Path, output: Path) -> list[Path]:
@@ -179,7 +206,7 @@ def reused_classification(segment: dict, page_index: int) -> str:
     return "document_start" if page_index == segment["start_page"] else "continuation"
 
 
-async def segment_job(store: JobStore, job: dict) -> dict:
+async def segment_job(store: JobStore, job: dict, profile: ProfileSpec) -> dict:
     measurements = MeasurementStore(store.root)
     job = store.update(job["id"], status="segmenting", error=None, failure=None, progress_stage="segmenting")
     sources = job.get("source_pdfs", [])
@@ -209,24 +236,14 @@ async def segment_job(store: JobStore, job: dict) -> dict:
             else:
                 try:
                     result = await request_page(
-                        image.read_bytes(), base_url=os.getenv("OCR_BASE_URL", ""), api_key=os.getenv("OCR_API_KEY", ""),
-                        model=job.get("model", ""), timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "180")),
+                        image.read_bytes(), profile=profile,
                         page_index=page_index, task="segmentation",
                         measurement_store=measurements,
-                        measurement_context={
-                            "job_id": job["id"], "provider_profile_id": job.get("provider_profile_id"),
-                            "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
-                            "model": job.get("model", ""), "task": "segmentation",
-                            "processing_mode": job.get("processing_mode"), "source_pdf_id": source["id"],
-                            "document_id": None, "page_index": page_index,
-                            "segmentation_revision": source.get("revision"),
-                            "measurement_fingerprint": checksum({
-                                "provider_profile_id": job.get("provider_profile_id"), "model": job.get("model", ""),
-                                "task": "segmentation", "processing_mode": job.get("processing_mode"),
-                                "dpi": 200, "prompt_version": PROMPT_VERSION,
-                                "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
-                            }),
-                        },
+                        measurement_context=measurement_context(
+                            profile, job, "segmentation", source_pdf_id=source["id"],
+                            document_id=None, page_index=page_index,
+                            segmentation_revision=source.get("revision"),
+                        ),
                     )
                     classification = result["classification"]
                 except Exception as exc:
@@ -254,8 +271,12 @@ async def process_job_async(job_id: str) -> dict:
         return store.read(job_id)
     if job.get("status") not in {"starting", "extraction_starting"}:
         return job
+    try:
+        profile = job_profile(job)
+    except ValueError as exc:
+        return store.interrupt(job_id, safe_error(exc))
     if job.get("processing_mode") == "combined_dossier" and job.get("status") == "starting":
-        return await segment_job(store, job)
+        return await segment_job(store, job, profile)
     extracting = job.get("status") == "extraction_starting"
     store.update(job_id, status="queued")
     if cancelled(store, job_id):
@@ -377,10 +398,7 @@ async def process_job_async(job_id: str) -> dict:
                 try:
                     result = await request_page(
                         pages[index].read_bytes(),
-                        base_url=os.getenv("OCR_BASE_URL", ""),
-                        api_key=os.getenv("OCR_API_KEY", ""),
-                        model=job.get("model", ""),
-                        timeout=float(os.getenv("OCR_TIMEOUT_SECONDS", "180")),
+                        profile=profile,
                         page_index=index,
                         task=pass_task,
                         expected_fields=expected_fields,
@@ -390,25 +408,15 @@ async def process_job_async(job_id: str) -> dict:
                         ),
                         ocr_text=state.get("text", "") if pass_task == "metadata" else "",
                         measurement_store=measurements,
-                        measurement_context={
-                            "job_id": job_id, "provider_profile_id": job.get("provider_profile_id"),
-                            "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
-                            "model": job.get("model", ""), "task": pass_task,
-                            "processing_mode": job.get("processing_mode"),
-                            "source_pdf_id": document.get("source_pdf_id"),
-                            "document_id": document["id"], "page_index": index,
-                            "segmentation_revision": next((
+                        measurement_context=measurement_context(
+                            profile, job, pass_task,
+                            source_pdf_id=document.get("source_pdf_id"),
+                            document_id=document["id"], page_index=index,
+                            segmentation_revision=next((
                                 source.get("revision") for source in job.get("source_pdfs", [])
                                 if source.get("id") == document.get("source_pdf_id")
                             ), None),
-                            "measurement_fingerprint": checksum({
-                                "provider_profile_id": job.get("provider_profile_id"), "model": job.get("model", ""),
-                                "task": pass_task, "processing_mode": job.get("processing_mode"),
-                                "page_scope": page_mode, "vlm_max_pages": max_pages, "dpi": 200,
-                                "prompt_version": PROMPT_VERSION,
-                                "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
-                            }),
-                        },
+                        ),
                     )
                     if pass_task == "full_ocr":
                         state["text"] = result["text"]

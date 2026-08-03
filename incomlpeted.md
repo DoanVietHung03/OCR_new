@@ -100,3 +100,20 @@ Các điều kiện dưới đây cần provider/dữ liệu/runtime bên ngoài
 - chỉ gắn nhãn scale-out validated sau cluster benchmark thật;
 - nếu cần tỷ giá gợi ý, kiểm tra nguồn allowlist qua mạng thật và user xác nhận;
   lỗi nguồn không được ảnh hưởng OCR.
+
+## 6. X20 — Live provider isolation và cutover
+
+Registry, request isolation, persisted fingerprint, readiness cache và frontend
+multi-profile đã hoàn thành local. Chưa thể đóng live gate vì máy hiện tại không
+có đủ bốn fixture ngoài Git, hai provider thật và môi trường deployment riêng:
+
+- khóa baseline cùng fixture/SHA-256 cho MiniMax và Qwen; chạy metadata, full OCR,
+  Bìa và hai hồ sơ gộp, rồi đối soát field/blocker/evidence/usage/duration;
+- chứng minh MiniMax không regression và Qwen đạt threshold do user chốt từ
+  baseline, không dùng readiness thay cho quality evidence;
+- chạy với `OCR_DATA_DIR` riêng, xác nhận không trộn endpoint, model, policy,
+  measurement hoặc readiness giữa hai profile;
+- kiểm tra restart/interrupted, terminal/legacy read không rewrite, backup và
+  rollback image trên bản sao dữ liệu;
+- chỉ cutover về một trunk và archive/xóa nhánh `ollama` sau live gate cùng phê
+  duyệt riêng của user; không tự commit, merge hoặc xóa branch trong scope local.

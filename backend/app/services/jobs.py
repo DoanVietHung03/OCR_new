@@ -196,6 +196,8 @@ class JobStore:
             "provider": options.get("provider", options.get("ocr_method", "minimax")),
             "model": options.get("model", ""),
             "prompt_version": str(options.get("prompt_version", "3")),
+            "provider_policy_fingerprint": options.get("provider_policy_fingerprint", ""),
+            "provider_config_version": options.get("provider_config_version", ""),
             "endpoint_external": bool(options.get("endpoint_external", True)),
             "expected_files": count,
             "uploaded_files": 0,
@@ -313,13 +315,13 @@ class JobStore:
             job["updated_at"] = now()
             return self.write(job_id, job)
 
-    def interrupt(self, job_id: str) -> dict[str, Any]:
+    def interrupt(self, job_id: str, code: str = "worker_interrupted") -> dict[str, Any]:
         with self.locked(job_id):
             job = self.read(job_id)
             if job.get("status") in ACTIVE:
                 stamp = now()
                 job.update(
-                    status="interrupted", error="worker_interrupted", failure=failure("worker_interrupted"),
+                    status="interrupted", error=code, failure=failure(code),
                     progress_stage="failed", updated_at=stamp, completed_at=stamp,
                 )
                 self.write(job_id, job)

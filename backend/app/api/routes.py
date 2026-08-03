@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import re
 import time
 import uuid
@@ -59,7 +58,8 @@ from ..schemas.jobs import (
 )
 from ..services.codes import CodeCatalog
 from ..services.jobs import ACTIVE, ApprovalBlocked, DELETABLE, MAX_BYTES, MAX_FILES, TERMINAL, JobStore, now
-from ..services.ocr_runner import PROMPT_VERSION, configured, probe_provider
+from ..services.ocr_runner import probe_provider
+from ..services.providers import ProfileSpec, default_profile, enabled_profiles, get_profile
 from ..services.pricing import EXCHANGE_SOURCES, SuggestionError, exchange_quote, price_suggestion
 from ..services.system_metrics import system_metrics as read_system_metrics
 from ..services.sizing import (
@@ -74,7 +74,7 @@ codes = CodeCatalog(settings.ocr_data_dir)
 sizing_measurements = MeasurementStore(settings.ocr_data_dir, recover=False)
 sizing_catalog = SizingCatalog(settings.ocr_data_dir)
 sizing_snapshots = SnapshotStore(settings.ocr_data_dir)
-_readiness_cache: tuple[float, str, str] | None = None
+_readiness_cache: dict[tuple[str, str], tuple[float, str, str]] | None = {}
 _readiness_lock = asyncio.Lock()
 
 
@@ -95,7 +95,8 @@ def public_job(job: dict) -> dict:
     review_status = None
     if documents:
         review_status = "approved" if approved == len(documents) else "partially_approved" if approved else "unreviewed"
-    return {**job, "review_status": review_status, "logs": safe_events([job])[:200]}
+    public = {key: value for key, value in job.items() if key not in {"provider_policy_fingerprint", "provider_config_version"}}
+    return {**public, "review_status": review_status, "logs": safe_events([job])[:200]}
 
 
 def confidence_average(documents: list[dict]) -> float | None:
@@ -249,63 +250,71 @@ def document_triage(document: dict) -> dict:
 
 
 def provider_profiles() -> list[dict]:
-    return [{
-        "id": settings.ocr_provider,
-        "label": "MiniMax" if settings.ocr_provider == "minimax" else settings.ocr_provider.replace("_", " ").title(),
-        "model": settings.ocr_model,
-        "external": settings.ocr_endpoint_external,
-        "status": "configured" if configured(settings.ocr_base_url, settings.ocr_model) else "not_configured",
-        "tasks": ["full_ocr", "metadata"],
-        "page_modes": ["all", "auto", "first,last"],
-        "max_pages": 100,
-        "processing_modes": ["administrative_document", "dossier_cover", "combined_dossier"],
-    }]
+    default = default_profile().id
+    return [profile.public() for profile in sorted(enabled_profiles(), key=lambda item: item.id != default)]
 
 
-def profile_supports(profile: dict, options: dict) -> bool:
+def profile_supports(profile: ProfileSpec, options: dict) -> bool:
     return (
-        options.get("vlm_task", "full_ocr") in profile["tasks"]
-        and options.get("vlm_pages", "all") in profile["page_modes"]
-        and int(options.get("vlm_max_pages", 0) or 0) <= profile["max_pages"]
-        and options.get("processing_mode", "administrative_document") in profile["processing_modes"]
+        options.get("vlm_task", "full_ocr") in profile.tasks
+        and options.get("vlm_pages", "all") in profile.page_modes
+        and int(options.get("vlm_max_pages", 0) or 0) <= profile.max_pages
+        and options.get("processing_mode", "administrative_document") in profile.processing_modes
     )
 
 
-async def provider_readiness_detail() -> tuple[str, str, bool]:
+def job_profile(job: dict) -> ProfileSpec:
+    return get_profile(
+        job.get("provider_profile_id") or default_profile().id,
+        expected_fingerprint=job.get("provider_policy_fingerprint", ""),
+    )
+
+
+async def provider_readiness_detail(profile_id: str) -> tuple[str, str, bool]:
     global _readiness_cache
-    if _readiness_cache and time.monotonic() - _readiness_cache[0] < 30:
-        return _readiness_cache[1], _readiness_cache[2], True
+    profile = get_profile(profile_id)
+    key = (profile.id, profile.fingerprint)
+    cached_value = (_readiness_cache or {}).get(key)
+    if cached_value and time.monotonic() - cached_value[0] < 30:
+        return cached_value[1], cached_value[2], True
     async with _readiness_lock:
-        if _readiness_cache and time.monotonic() - _readiness_cache[0] < 30:
-            return _readiness_cache[1], _readiness_cache[2], True
+        if _readiness_cache is None:
+            _readiness_cache = {}
+        cached_value = _readiness_cache.get(key)
+        if cached_value and time.monotonic() - cached_value[0] < 30:
+            return cached_value[1], cached_value[2], True
         result = await probe_provider(
-            base_url=settings.ocr_base_url,
-            api_key=settings.ocr_api_key,
-            model=settings.ocr_model,
-            timeout=min(settings.ocr_timeout_seconds, 10),
+            profile=profile, timeout=min(profile.timeout_seconds, 10),
             measurement_store=sizing_measurements,
             measurement_context={
-                "job_id": None, "provider_profile_id": settings.ocr_provider,
-                "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
-                "model": settings.ocr_model, "task": "readiness_probe",
+                "job_id": None, "provider_profile_id": profile.id,
+                "provider_config_version": profile.provider_config_version,
+                "model": profile.model, "task": "readiness_probe",
                 "measurement_fingerprint": checksum({
-                    "provider_profile_id": settings.ocr_provider, "model": settings.ocr_model,
-                    "task": "readiness_probe", "dpi": 200, "prompt_version": PROMPT_VERSION,
-                    "provider_config_version": os.getenv("OCR_PROVIDER_CONFIG_VERSION", "default"),
+                    "provider_profile_id": profile.id, "model": profile.model,
+                    "task": "readiness_probe", "dpi": 200,
+                    "provider_policy_fingerprint": profile.fingerprint,
                 }),
             },
         )
         checked_at = now()
-        _readiness_cache = (time.monotonic(), result, checked_at)
+        _readiness_cache[key] = (time.monotonic(), result, checked_at)
         return result, checked_at, False
 
 
-async def provider_readiness() -> str:
-    return (await provider_readiness_detail())[0]
+async def provider_readiness(job: dict) -> str:
+    try:
+        return (await provider_readiness_detail(job_profile(job).id))[0]
+    except ValueError:
+        return "not_configured"
 
 
-async def require_provider_ready() -> None:
-    readiness = await provider_readiness()
+async def require_provider_ready(job: dict) -> None:
+    try:
+        profile = job_profile(job)
+    except ValueError:
+        fail(409, "provider_profile_unavailable")
+    readiness = (await provider_readiness_detail(profile.id))[0]
     if readiness != "ready":
         fail(503, {
             "not_configured": "ocr_not_configured",
@@ -377,23 +386,26 @@ async def state(
 @router.post("/jobs", response_model=JobResponse)
 async def create_job(payload: CreateJobRequest):
     options = payload.model_dump()
-    profile_id = payload.provider_profile_id or settings.ocr_provider
-    profile = next((item for item in provider_profiles() if item["id"] == profile_id), None)
-    if profile is None:
+    profile_id = payload.provider_profile_id or default_profile().id
+    try:
+        profile = get_profile(profile_id)
+    except ValueError:
         fail(400, "invalid_provider_profile")
-    if profile["status"] != "configured":
+    if not profile.configured:
         fail(503, "ocr_not_configured")
     if not profile_supports(profile, options):
         fail(400, "unsupported_provider_capability")
     options.update(
         provider_profile_id=profile_id,
-        provider=settings.ocr_provider,
-        model=settings.ocr_model,
-        prompt_version=PROMPT_VERSION,
-        endpoint_external=settings.ocr_endpoint_external,
+        provider=profile.id,
+        model=profile.model,
+        prompt_version=profile.prompt_version,
+        endpoint_external=profile.endpoint_external,
+        provider_policy_fingerprint=profile.fingerprint,
+        provider_config_version=profile.provider_config_version,
     )
     try:
-        return store.create(options)
+        return public_job(store.create(options))
     except ValueError as exc:
         fail(400, str(exc))
 
@@ -416,7 +428,7 @@ async def start(job_id: str):
         fail(409, "upload_incomplete")
     if job.get("endpoint_external", True) and not job.get("cloud_data_confirmed"):
         fail(400, "cloud_data_confirmation_required")
-    await require_provider_ready()
+    await require_provider_ready(job)
     try:
         job, should_dispatch = store.begin_start(job_id)
     except ValueError as exc:
@@ -440,7 +452,7 @@ async def get_job(job_id: str):
 
 
 def dispatch_extraction(job_id: str) -> dict:
-    if not configured(settings.ocr_base_url, settings.ocr_model):
+    if not job_profile(store.read(job_id)).configured:
         return store.read(job_id)
     job, should_dispatch = store.begin_extraction(job_id)
     if not should_dispatch:
@@ -465,7 +477,7 @@ async def confirm_segmentation(job_id: str, source_pdf_id: str, payload: Confirm
         fail(404, "not_found")
     except ValueError as exc:
         fail(409, str(exc))
-    if job.get("status") == "segmentation_confirmed" and await provider_readiness() == "ready":
+    if job.get("status") == "segmentation_confirmed" and await provider_readiness(job) == "ready":
         job = dispatch_extraction(job_id)
     return public_job(job)
 
@@ -475,7 +487,7 @@ async def continue_job(job_id: str):
     job = job_or_404(job_id)
     if job.get("status") != "segmentation_confirmed":
         fail(409, "segmentation_not_confirmed")
-    await require_provider_ready()
+    await require_provider_ready(job)
     return public_job(dispatch_extraction(job_id))
 
 
@@ -495,8 +507,11 @@ async def rerun(job_id: str, payload: RerunRequest):
     pdfs = sorted((store.path(job_id) / "uploads").glob("*.pdf"))
     if len(pdfs) != source.get("expected_files"):
         fail(409, "source_files_incomplete")
-    profile = next((item for item in provider_profiles() if item["id"] == source.get("provider_profile_id")), None)
-    if profile is None or profile["status"] != "configured" or not profile_supports(profile, source):
+    try:
+        profile = get_profile(source.get("provider_profile_id", ""))
+    except ValueError:
+        profile = None
+    if profile is None or not profile.configured or not profile_supports(profile, source):
         fail(409, "provider_profile_unavailable")
     reuse = source.get("processing_mode") == "combined_dossier" and payload.rerun_mode == "reuse_segmentation" and all(
         item.get("confirmed_segments") for item in source.get("source_pdfs", [])
@@ -506,10 +521,12 @@ async def rerun(job_id: str, payload: RerunRequest):
         "upload_name": source.get("upload_name", ""),
         "cloud_data_confirmed": payload.cloud_data_confirmed,
         "provider_profile_id": source.get("provider_profile_id"),
-        "provider": source.get("provider", settings.ocr_provider),
-        "model": settings.ocr_model,
-        "prompt_version": PROMPT_VERSION,
-        "endpoint_external": settings.ocr_endpoint_external,
+        "provider": profile.id,
+        "model": profile.model,
+        "prompt_version": profile.prompt_version,
+        "endpoint_external": profile.endpoint_external,
+        "provider_policy_fingerprint": profile.fingerprint,
+        "provider_config_version": profile.provider_config_version,
         "processing_mode": source.get("processing_mode", "administrative_document"),
         "vlm_task": source.get("vlm_task", "full_ocr"),
         "vlm_pages": source.get("vlm_pages", "all"),
@@ -687,7 +704,7 @@ async def get_reports():
 async def check_engine(engine_id: str):
     if engine_id not in {engine["id"] for engine in engines()}:
         fail(404, "invalid_ocr_method")
-    readiness, checked_at, cached = await provider_readiness_detail()
+    readiness, checked_at, cached = await provider_readiness_detail(engine_id)
     return {
         "id": engine_id,
         "status": readiness,

@@ -1,10 +1,20 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from .auth import require_authenticated, require_safe_browser_request, router as auth_router
 from .api.routes import router
+from .services.providers import validate_profiles
 
-app = FastAPI(title="OCR API", version="0.2.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    validate_profiles()
+    yield
+
+
+app = FastAPI(title="OCR API", version="0.2.0", lifespan=lifespan)
 app.include_router(auth_router, prefix="/api")
 app.include_router(router, prefix="/api")
 

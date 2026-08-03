@@ -14,6 +14,7 @@ import httpx
 
 from .field_policy import ADMIN_FIELDS
 from .jobs import FIELDS
+from .providers import ProfileSpec
 from .sizing import MeasurementStore, parse_usage
 
 PROMPT_VERSION = "9"
@@ -130,6 +131,30 @@ SEGMENTATION_PROMPT = (
     "continuation for its later pages, blank for empty pages, and separator for divider sheets."
 )
 RETRYABLE_STATUSES = {429, 502, 503, 504}
+
+
+def response_schema(task: str) -> dict:
+    if task == "full_ocr":
+        properties, required = {"text": {"type": "string"}}, ["text"]
+    elif task == "segmentation":
+        properties, required = {"classification": {
+            "type": "string", "enum": ["cover", "document_start", "continuation", "blank", "separator"],
+        }}, ["classification"]
+    else:
+        properties, required = {"fields": {
+            "type": "object", "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "value": {"type": ["string", "number"]},
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "bbox": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 0, "maxItems": 4},
+                    "source_text": {"type": "string"}, "page_index": {"type": "integer", "minimum": 0},
+                },
+                "required": ["value", "confidence", "bbox", "source_text", "page_index"],
+                "additionalProperties": False,
+            },
+        }}, ["fields"]
+    return {"type": "object", "properties": properties, "required": required, "additionalProperties": False}
 
 
 def parse_json_object(content: str) -> object:
@@ -258,18 +283,31 @@ def message_text(response: object) -> str:
 
 
 def request_body(
-    image: bytes, model: str, task: str = "metadata",
+    image: bytes, profile: ProfileSpec, task: str = "metadata",
     expected_fields: tuple[str, ...] | None = None,
 ) -> dict:
     encoded = base64.b64encode(image).decode()
-    return {
-        "model": model,
-        "temperature": 0,
-        "messages": [{"role": "user", "content": [
-            {"type": "text", "text": OCR_PROMPT if task == "full_ocr" else SEGMENTATION_PROMPT if task == "segmentation" else metadata_prompt(expected_fields or ADMIN_FIELDS)},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},
-        ]}],
+    prompt = OCR_PROMPT if task == "full_ocr" else SEGMENTATION_PROMPT if task == "segmentation" else metadata_prompt(expected_fields or ADMIN_FIELDS)
+    parts = {
+        "instruction": {"type": "text", "text": profile.image_instruction},
+        "image": {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},
+        "prompt": {"type": "text", "text": prompt},
     }
+    body = {
+        "model": profile.model,
+        "temperature": 0,
+        "messages": [{"role": "user", "content": [parts[name] for name in profile.message_order]}],
+    }
+    if profile.thinking_mode is False:
+        body["reasoning_effort"] = "none"
+    if (max_tokens := profile.max_tokens(task)) is not None:
+        body["max_tokens"] = max_tokens
+    if profile.structured_output:
+        body["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {"name": f"ocr_{task}", "strict": True, "schema": response_schema(task)},
+        }
+    return body
 
 
 def retry_delay(response: httpx.Response) -> float:
@@ -280,15 +318,15 @@ def retry_delay(response: httpx.Response) -> float:
 
 
 async def request_page(
-    image: bytes, *, base_url: str, api_key: str, model: str, timeout: float = 180,
+    image: bytes, *, profile: ProfileSpec,
     page_index: int = 0, task: str = "metadata", expected_fields: tuple[str, ...] | None = None,
     ocr_text: str = "", measurement_store: MeasurementStore | None = None,
     measurement_context: dict | None = None, required_any_fields: tuple[str, ...] = (),
 ) -> dict:
-    body = request_body(image, model, task, expected_fields)
+    body = request_body(image, profile, task, expected_fields)
     serialized = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
     operation_id = f"op_{uuid.uuid4().hex}"
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with httpx.AsyncClient(timeout=profile.timeout_seconds) as client:
         for attempt in range(2):
             target = measurement_store.begin(
                 measurement_context or {}, operation_id=operation_id,
@@ -297,9 +335,9 @@ async def request_page(
             started = time.monotonic()
             try:
                 response = await client.post(
-                    base_url.rstrip("/") + "/chat/completions",
+                    profile.base_url.rstrip("/") + "/chat/completions",
                     content=serialized,
-                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    headers={"Authorization": f"Bearer {profile.api_key}", "Content-Type": "application/json"},
                 )
             except httpx.ReadTimeout as exc:
                 if target:
@@ -346,6 +384,11 @@ async def request_page(
                 response.raise_for_status()
             except httpx.HTTPStatusError as exc:
                 raise RuntimeError("provider_unavailable") from exc
+            choices = response_payload.get("choices") if isinstance(response_payload, dict) else None
+            if isinstance(choices, list) and choices and isinstance(choices[0], dict) and choices[0].get("finish_reason") == "length":
+                if target:
+                    measurement_store.finish(target, status="output_truncated", retryable=False)
+                raise ValueError("invalid_model_json:output_truncated")
             try:
                 content = message_text(response_payload)
                 if not content:
@@ -367,21 +410,17 @@ async def request_page(
     raise RuntimeError("provider_unavailable")
 
 
-def configured(base_url: str, model: str) -> bool:
-    return bool(base_url and model)
-
-
 async def probe_provider(
-    *, base_url: str, api_key: str, model: str, timeout: float = 10,
+    *, profile: ProfileSpec, timeout: float = 10,
     measurement_store: MeasurementStore | None = None, measurement_context: dict | None = None,
 ) -> str:
-    if not configured(base_url, model):
+    if not profile.configured:
         return "not_configured"
     target = None
     started = time.monotonic()
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            body = request_body(PROBE_PNG, model, expected_fields=ADMIN_FIELDS)
+            body = request_body(PROBE_PNG, profile, expected_fields=ADMIN_FIELDS)
             serialized = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
             operation_id = f"op_{uuid.uuid4().hex}"
             target = measurement_store.begin(
@@ -390,9 +429,9 @@ async def probe_provider(
             ) if measurement_store else None
             started = time.monotonic()
             response = await client.post(
-                base_url.rstrip("/") + "/chat/completions",
+                profile.base_url.rstrip("/") + "/chat/completions",
                 content=serialized,
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                headers={"Authorization": f"Bearer {profile.api_key}", "Content-Type": "application/json"},
             )
             try:
                 response_payload = response.json()

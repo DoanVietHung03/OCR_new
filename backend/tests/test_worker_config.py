@@ -1,11 +1,18 @@
 import asyncio
 import importlib
+from dataclasses import replace
 
 import httpx
 import fitz
+import pytest
 
 from app.services.jobs import JobStore
+from app.services.providers import MINIMAX
 from app.services.sizing import MeasurementStore
+
+
+def profile(model: str = "m"):
+    return replace(MINIMAX, model=model, base_url="http://provider", api_key="x")
 
 
 def test_worker_uses_environment_redis_urls(monkeypatch):
@@ -38,7 +45,7 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     calls = []
 
     async def fake_request(_: bytes, **options):
-        calls.append((options["model"], options["task"], options["page_index"], options.get("ocr_text", "")))
+        calls.append((options["profile"].model, options["task"], options["page_index"], options.get("ocr_text", "")))
         if options["task"] == "full_ocr":
             return {"text": "Số văn bản: 1\nTrích yếu: Tóm tắt", "fields": {}, "warnings": []}
         return {"fields": {
@@ -61,8 +68,8 @@ def test_worker_renders_calls_provider_and_persists_artifact(tmp_path, monkeypat
     assert result["started_at"]
     assert result["completed_at"]
     assert calls == [
-        ("snapshot-model", "full_ocr", 0, ""),
-        ("snapshot-model", "metadata", 0, "Số văn bản: 1\nTrích yếu: Tóm tắt"),
+        ("MiniMax-M3", "full_ocr", 0, ""),
+        ("MiniMax-M3", "metadata", 0, "Số văn bản: 1\nTrích yếu: Tóm tắt"),
     ]
     assert result["documents"][0]["pages"][0] == {
         "page_index": 0, "image_url": f"/api/jobs/{job['id']}/artifacts/document/page-1.png",
@@ -157,7 +164,7 @@ def test_provider_retries_transient_page_failures_once(tmp_path, monkeypatch):
         "AsyncClient",
         lambda **options: real_client(transport=httpx.MockTransport(handler), **options),
     )
-    assert asyncio.run(runner.request_page(b"image", base_url="http://provider", api_key="x", model="m")) == {"fields": {}, "warnings": []}
+    assert asyncio.run(runner.request_page(b"image", profile=profile())) == {"fields": {}, "warnings": []}
     assert attempts == 2
 
     for failure in ("timeout", "invalid_json"):
@@ -179,7 +186,7 @@ def test_provider_retries_transient_page_failures_once(tmp_path, monkeypatch):
         )
         store = MeasurementStore(tmp_path / failure)
         assert asyncio.run(runner.request_page(
-            b"image", base_url="http://provider", api_key="x", model="m",
+            b"image", profile=profile(),
             measurement_store=store, measurement_context={"job_id": "job", "task": "metadata"},
         )) == {"fields": {}, "warnings": []}
         assert attempts == 2
@@ -197,7 +204,7 @@ def test_provider_retries_transient_page_failures_once(tmp_path, monkeypatch):
 
     monkeypatch.setattr(runner.httpx, "AsyncClient", lambda **options: real_client(transport=httpx.MockTransport(timeout), **options))
     try:
-        asyncio.run(runner.request_page(b"image", base_url="http://provider", api_key="x", model="m"))
+        asyncio.run(runner.request_page(b"image", profile=profile()))
     except RuntimeError as exc:
         assert str(exc) == "provider_timeout"
     else:
@@ -219,7 +226,7 @@ def test_provider_retries_transient_page_failures_once(tmp_path, monkeypatch):
     )
     store = MeasurementStore(tmp_path / "empty_header")
     assert "so_van_ban" in asyncio.run(runner.request_page(
-        b"image", base_url="http://provider", api_key="x", model="m",
+        b"image", profile=profile(),
         required_any_fields=("so_van_ban",), measurement_store=store,
         measurement_context={"job_id": "job", "task": "metadata"},
     ))["fields"]
@@ -250,7 +257,7 @@ def test_metadata_uses_transcription_only_for_local_validation(monkeypatch):
         lambda **options: real_client(transport=httpx.MockTransport(handler), **options),
     )
     result = asyncio.run(runner.request_page(
-        b"image", base_url="http://provider", api_key="x", model="m",
+        b"image", profile=profile(),
         expected_fields=("so_tai_lieu",), ocr_text="Số tài liệu: ...33...",
     ))
 
@@ -277,7 +284,7 @@ def test_provider_probe_distinguishes_reachability_from_readiness(monkeypatch):
             "AsyncClient",
             lambda **options: real_client(transport=httpx.MockTransport(handler), **options),
         )
-        return asyncio.run(runner.probe_provider(base_url="http://provider", api_key="secret", model="model"))
+        return asyncio.run(runner.probe_provider(profile=profile("model")))
 
     assert use(lambda _: httpx.Response(401)) == "reachable"
     assert use(lambda _: httpx.Response(200, json={"choices": [{"message": {"content": '{"fields": {}}'}}]})) == "ready"
@@ -286,6 +293,47 @@ def test_provider_probe_distinguishes_reachability_from_readiness(monkeypatch):
         raise httpx.ConnectError("secret endpoint", request=request)
 
     assert use(unavailable) == "unreachable"
+
+
+def test_provider_does_not_retry_output_truncation(tmp_path, monkeypatch):
+    import app.services.ocr_runner as runner
+
+    attempts = 0
+    real_client = httpx.AsyncClient
+
+    def truncated(_: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(200, json={
+            "choices": [{"finish_reason": "length", "message": {"content": '{"fields":'}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 64, "total_tokens": 74},
+        })
+
+    monkeypatch.setattr(runner.httpx, "AsyncClient", lambda **options: real_client(transport=httpx.MockTransport(truncated), **options))
+    store = MeasurementStore(tmp_path)
+    with pytest.raises(ValueError, match="invalid_model_json:output_truncated"):
+        asyncio.run(runner.request_page(
+            b"image", profile=profile(), measurement_store=store,
+            measurement_context={"job_id": "job", "task": "metadata"},
+        ))
+    assert attempts == 1
+    assert [(item["status"], item["retryable"], item["usage_status"]) for item in store.operations(job_id="job")] == [
+        ("output_truncated", False, "complete"),
+    ]
+
+
+def test_worker_interrupts_on_profile_policy_drift(tmp_path, monkeypatch):
+    import app.workers.tasks as tasks
+
+    store = JobStore(tmp_path)
+    job = store.create({
+        "file_count": 1, "provider_profile_id": "minimax", "provider": "minimax",
+        "model": "MiniMax-M3", "provider_policy_fingerprint": "stale",
+    })
+    store.update(job["id"], status="starting")
+    monkeypatch.setenv("OCR_DATA_DIR", str(tmp_path))
+    result = asyncio.run(tasks.process_job_async(job["id"]))
+    assert (result["status"], result["error"]) == ("interrupted", "provider_profile_changed")
 
 
 def test_page_planner_and_metadata_scope(tmp_path, monkeypatch, pdf_bytes):

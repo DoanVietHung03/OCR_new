@@ -1,6 +1,6 @@
 # Kế hoạch tái cấu trúc codebase theo Provider Profile
 
-Trạng thái: **APPROVED DESIGN — chờ triển khai trên `restructure-codebase`**  
+Trạng thái: **LOCAL IMPLEMENTED trên `restructure_pj` — live gate pending**
 Ngày lập: **2026-08-03**  
 Phạm vi: hợp nhất MiniMax-M3 và Ollama/Qwen 3.5 9B vào một codebase, cho phép hai
 profile hoạt động đồng thời và cô lập policy của từng module mà không sao chép OCR
@@ -16,7 +16,7 @@ backlink `BE-X20`/`FE-X20`; điều kiện fixture/server/live còn mở thuộc
 Chỉ giữ một trunk chuẩn là `master`. Không tiếp tục dùng nhánh dài hạn theo model
 như `ollama`, `qwen`, `gpt` hoặc `paddle`.
 
-Thực hiện kế hoạch trên branch `restructure-codebase` tách từ đúng `master`; không
+Thực hiện kế hoạch trên branch `restructure_pj` tách từ đúng `master`; không
 merge hoặc cherry-pick nguyên commit từ `ollama`. Nhánh `ollama` chỉ là nguồn diff
 read-only cho đến khi live gate, rollback rehearsal và phê duyệt xóa riêng hoàn tất.
 
@@ -528,7 +528,7 @@ Mục tiêu: khóa hành vi cần giữ trước khi sửa seam.
 
 Việc cần làm:
 
-- tạo `restructure-codebase` từ exact `master`; `ReStructure.md` chưa commit đi
+- tạo `restructure_pj` từ exact `master`; `ReStructure.md` chưa commit đi
   theo branch nhưng không tạo commit tự động;
 - giữ `ollama` read-only để đối chiếu;
 - ghi exact commit/hash và diff bốn commit;
@@ -885,7 +885,7 @@ Done hiện tại. Khi có model/endpoint thật:
 
 ### 16.1 Local complete
 
-- Branch `restructure-codebase` chứa MiniMax và Qwen bằng runtime configuration.
+- Branch `restructure_pj` chứa MiniMax và Qwen bằng runtime configuration.
 - Hai profile có module policy data-only độc lập và một shared OpenAI-compatible
   runner; không cần checkout model branch để đổi profile.
 - Job chạy đúng persisted profile/fingerprint qua create/start/continue/worker và
@@ -923,7 +923,7 @@ compatibility.
 
 ## 18. Quyết định tối giản được khóa
 
-- Triển khai trên `restructure-codebase` từ `master`; không cherry-pick/merge nguyên
+- Triển khai trên `restructure_pj` từ `master`; không cherry-pick/merge nguyên
   `ollama`, không tự commit.
 - Một `master` sau cutover, không branch dài hạn theo model.
 - Hai profile đồng thời: `minimax` và `ollama_qwen35_9b`; không auto-failover.

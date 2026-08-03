@@ -50,7 +50,7 @@ Các ảnh ẩn danh khác nằm trong [`docs/ui-parity/`](docs/ui-parity/) và
 - Node.js 22 và pnpm 10.
 - Một Redis có thể kết nối khi chạy Celery trực tiếp.
 - Docker Compose chỉ cần cho môi trường internal-pilot và Milestone C.
-- Một endpoint OCR tương thích OpenAI do phía máy chủ cấu hình.
+- Một hoặc nhiều endpoint OCR tương thích OpenAI do phía máy chủ cấu hình.
 
 ### Thành phần chính
 
@@ -73,6 +73,13 @@ pnpm install
 
 Điền các giá trị provider thật vào `.env`. Đây là cấu hình chỉ dùng phía máy
 chủ; không đưa URL, khóa hoặc header của provider xuống frontend.
+
+`OCR_ENABLED_PROFILES` bật các profile theo đúng thứ tự hiển thị;
+`OCR_DEFAULT_PROFILE` chọn profile mặc định cho flow mới. Hiện có `minimax`
+(`MiniMax-M3`) và `ollama_qwen35_9b` (`qwen3.5:9b`). Mỗi profile dùng prefix
+`MINIMAX_*` hoặc `QWEN_*`; job đã tạo luôn chạy bằng profile/fingerprint đã
+snapshot và không tự failover. Cấu hình `OCR_PROVIDER`/`OCR_BASE_URL`/
+`OCR_API_KEY`/`OCR_MODEL` cũ chỉ còn là fallback chuyển tiếp cho MiniMax.
 
 Host Redis `redis` trong file mẫu dành cho Compose. Khi chạy Celery trực tiếp,
 hãy đổi cả hai URL Celery sang một Redis mà máy đang chạy worker có thể kết nối.
@@ -204,13 +211,14 @@ có IP đó; không mở thêm cổng backend/frontend trực tiếp trong deplo
 Đây là hành vi có chủ ý khi provider chưa trả đủ usage hoặc chưa đạt sample và
 coverage gate. Hệ thống không thay dữ liệu thiếu bằng số `0` hay dự báo giả.
 
-Trong tab Scenario, chọn Provider Profile và model từ dropdown do backend đọc từ
-`OCR_PROVIDER`/`OCR_MODEL`, chọn nguồn tỷ giá rồi chọn
+Trong tab Scenario, chọn Provider Profile và exact model do backend công bố từ
+registry server, chọn nguồn tỷ giá rồi chọn
 `Lấy giá và tỷ giá`. Hệ thống chỉ đọc các nguồn chính thức đã cho phép, hiển thị
 nguồn/thời điểm để người dùng kiểm tra và chỉ lưu Price Profile sau khi xác nhận.
 Model chưa có bộ đọc giá chính thức tiếp tục hiển thị `Unavailable`.
-Với cấu hình hiện tại, job mới dùng Provider Profile `minimax` và model
-`MiniMax-M3`; các provider ID lịch sử vẫn đọc được và không bị tự động rewrite.
+Mặc định file mẫu dùng Provider Profile `minimax`; có thể bật đồng thời Qwen bằng
+`OCR_ENABLED_PROFILES`. Các provider ID lịch sử vẫn đọc được và không bị tự động
+rewrite; ID legacy `qwen` không được dùng để tạo hoặc rerun job mới.
 
 ### Có thể tải ảnh hoặc ZIP không?
 

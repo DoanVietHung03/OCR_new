@@ -1,4 +1,5 @@
 from pathlib import Path
+from dataclasses import replace
 
 from fastapi.testclient import TestClient
 
@@ -55,8 +56,13 @@ def use_store(tmp_path, monkeypatch):
     monkeypatch.setattr(routes, "_readiness_cache", None)
     monkeypatch.setattr(routes.settings, "ocr_data_dir", tmp_path)
     monkeypatch.setattr(routes.settings, "ocr_base_url", "http://provider.test/v1")
-    monkeypatch.setattr(routes.settings, "ocr_model", "test-model")
+    monkeypatch.setattr(routes.settings, "ocr_model", "MiniMax-M3")
     monkeypatch.setattr(routes.settings, "ocr_endpoint_external", False)
+    monkeypatch.setattr(routes.settings, "ocr_enabled_profiles", "minimax")
+    monkeypatch.setattr(routes.settings, "ocr_default_profile", "minimax")
+    monkeypatch.setattr(routes.settings, "minimax_base_url", "http://provider.test/v1")
+    monkeypatch.setattr(routes.settings, "minimax_api_key", "test-key")
+    monkeypatch.setattr(routes.settings, "minimax_endpoint_external", False)
     async def ready(**_):
         return "ready"
     monkeypatch.setattr(routes, "probe_provider", ready)
@@ -571,7 +577,7 @@ def test_provider_profiles_are_allowlisted_and_safe(tmp_path, monkeypatch):
     assert profiles.status_code == 200
     profile = profiles.json()["profiles"][0]
     assert profile == {
-        "id": "minimax", "label": "MiniMax", "model": "test-model", "external": False,
+        "id": "minimax", "label": "MiniMax", "model": "MiniMax-M3", "external": False,
         "status": "configured", "tasks": ["full_ocr", "metadata"],
         "page_modes": ["all", "auto", "first,last"], "max_pages": 100,
         "processing_modes": ["administrative_document", "dossier_cover", "combined_dossier"],
@@ -591,16 +597,46 @@ def test_provider_profiles_are_allowlisted_and_safe(tmp_path, monkeypatch):
     assert invalid.json()["detail"]["code"] == "invalid_provider_profile"
 
 
+def test_multi_profile_readiness_and_job_snapshot_are_isolated(tmp_path, monkeypatch):
+    store = use_store(tmp_path, monkeypatch)
+    import app.api.routes as routes
+
+    monkeypatch.setattr(routes.settings, "ocr_enabled_profiles", "minimax,ollama_qwen35_9b")
+    monkeypatch.setattr(routes.settings, "qwen_base_url", "http://ollama.test/v1")
+    monkeypatch.setattr(routes.settings, "qwen_api_key", "ollama")
+    calls = []
+
+    async def ready(*, profile, **_):
+        calls.append((profile.id, profile.base_url, profile.model))
+        return "ready"
+
+    monkeypatch.setattr(routes, "probe_provider", ready)
+    assert client.post("/api/engines/minimax/check").status_code == 200
+    assert client.post("/api/engines/minimax/check").json()["cached"] is True
+    assert client.post("/api/engines/ollama_qwen35_9b/check").status_code == 200
+    assert calls == [
+        ("minimax", "http://provider.test/v1", "MiniMax-M3"),
+        ("ollama_qwen35_9b", "http://ollama.test/v1", "qwen3.5:9b"),
+    ]
+
+    response = client.post("/api/jobs", json={"file_count": 1, "provider_profile_id": "ollama_qwen35_9b"})
+    assert response.status_code == 200
+    assert response.json()["model"] == "qwen3.5:9b"
+    assert "provider_policy_fingerprint" not in response.json()
+    persisted = store.read(response.json()["id"])
+    assert persisted["provider_policy_fingerprint"]
+    assert persisted["provider_config_version"] == routes.settings.qwen_config_version
+
+
 def test_create_rejects_unconfigured_or_unsupported_profile_capabilities(tmp_path, monkeypatch):
     use_store(tmp_path, monkeypatch)
     import app.api.routes as routes
 
-    profile = {
-        "id": "minimax", "label": "MiniMax", "external": False, "status": "configured",
-        "tasks": ["metadata"], "page_modes": ["all"], "max_pages": 2,
-        "processing_modes": ["administrative_document"],
-    }
-    monkeypatch.setattr(routes, "provider_profiles", lambda: [profile])
+    profile = replace(
+        routes.get_profile("minimax"), tasks=("metadata",), page_modes=("all",), max_pages=2,
+        processing_modes=("administrative_document",),
+    )
+    monkeypatch.setattr(routes, "get_profile", lambda _profile_id: profile)
     for payload in (
         {"file_count": 1, "vlm_task": "full_ocr"},
         {"file_count": 1, "vlm_task": "metadata", "vlm_pages": "first,last"},
@@ -610,7 +646,7 @@ def test_create_rejects_unconfigured_or_unsupported_profile_capabilities(tmp_pat
         response = client.post("/api/jobs", json=payload)
         assert (response.status_code, response.json()["detail"]["code"]) == (400, "unsupported_provider_capability")
 
-    profile["status"] = "not_configured"
+    profile = replace(profile, base_url="")
     unavailable = client.post("/api/jobs", json={"file_count": 1, "vlm_task": "metadata"})
     assert (unavailable.status_code, unavailable.json()["detail"]["code"]) == (503, "ocr_not_configured")
 

@@ -1,10 +1,14 @@
 import json
+from dataclasses import replace
 
 import pytest
 
 from app.services.field_policy import ADMIN_FIELDS, COVER_FIELDS, annotate
 from app.services.jobs import ApprovalBlocked, JobStore, materialize_documents, validate_segments
 from app.services.ocr_runner import message_text, parse_json_object, request_body, validate_result
+from app.services.providers import MINIMAX, QWEN
+from app.services.providers import enabled_profiles, validate_profiles
+from app.settings import Settings
 
 
 def completed_job(store: JobStore, pdf_bytes: bytes) -> dict:
@@ -241,7 +245,7 @@ def test_dossier_approval_requires_confirmed_segmentation(tmp_path, pdf_bytes):
 
 
 def test_cover_prompt_and_parser_share_the_policy_allowlist():
-    body = request_body(b"image", "model", expected_fields=COVER_FIELDS)
+    body = request_body(b"image", MINIMAX, expected_fields=COVER_FIELDS)
     assert set(body) == {"model", "temperature", "messages"}
     prompt = body["messages"][0]["content"][0]["text"]
     assert all(name in prompt for name in COVER_FIELDS)
@@ -265,7 +269,7 @@ def test_cover_prompt_and_parser_share_the_policy_allowlist():
 
 
 def test_administrative_prompt_requires_complete_signing_authority_line():
-    prompt = request_body(b"image", "model", expected_fields=ADMIN_FIELDS)["messages"][0]["content"][0]["text"]
+    prompt = request_body(b"image", MINIMAX, expected_fields=ADMIN_FIELDS)["messages"][0]["content"][0]["text"]
     assert all(prefix in prompt for prefix in ("TM.", "Q.", "KT.", "TL.", "TUQ."))
     assert "KT. BỘ TRƯỞNG" in prompt
     assert "do not reduce it to KT. alone" in prompt
@@ -281,9 +285,63 @@ def test_administrative_prompt_requires_complete_signing_authority_line():
     assert "red circular seal" in prompt
     assert "handwriting, or signature ink overlaps it" in prompt
 
-    cover_prompt = request_body(b"image", "model", expected_fields=COVER_FIELDS)["messages"][0]["content"][0]["text"]
+    cover_prompt = request_body(b"image", MINIMAX, expected_fields=COVER_FIELDS)["messages"][0]["content"][0]["text"]
     assert "dossier cover" in cover_prompt
     assert "so_van_ban is" not in cover_prompt
+
+
+def test_provider_request_policies_are_isolated():
+    minimax = request_body(b"image", MINIMAX)
+    qwen = request_body(b"image", QWEN)
+    assert [part["type"] for part in minimax["messages"][0]["content"]] == ["text", "image_url"]
+    assert [part["type"] for part in qwen["messages"][0]["content"]] == ["text", "image_url", "text"]
+    assert qwen["messages"][0]["content"][0]["text"] == "Analyze this image."
+    assert set(minimax) == {"model", "temperature", "messages"}
+    assert not {"reasoning_effort", "max_tokens", "response_format", "think", "options"} & qwen.keys()
+
+    controlled = request_body(
+        b"image",
+        replace(QWEN, thinking_mode=False, structured_output=True, max_tokens_by_task=(("metadata", 2048),)),
+    )
+    assert controlled["reasoning_effort"] == "none"
+    assert controlled["max_tokens"] == 2048
+    assert controlled["response_format"]["json_schema"]["schema"]["required"] == ["fields"]
+
+
+def test_profile_registry_validates_allowlist_and_hides_private_config():
+    config = Settings(
+        _env_file=None, ocr_auth_mode="disabled",
+        ocr_enabled_profiles="minimax,ollama_qwen35_9b", ocr_default_profile="minimax",
+        minimax_base_url="https://minimax.test/v1", minimax_api_key="secret-a",
+        qwen_base_url="http://ollama.test/v1", qwen_api_key="secret-b",
+    )
+    profiles = enabled_profiles(config)
+    assert [profile.id for profile in profiles] == ["minimax", "ollama_qwen35_9b"]
+    assert profiles[1].model == "qwen3.5:9b"
+    assert "secret" not in json.dumps([profile.public() for profile in profiles])
+    assert "test/v1" not in json.dumps([profile.public() for profile in profiles])
+
+    for enabled, default in ((",", "minimax"), ("minimax,minimax", "minimax"), ("unknown", "unknown"), ("minimax", "ollama_qwen35_9b")):
+        invalid = Settings(
+            _env_file=None, ocr_auth_mode="disabled",
+            ocr_enabled_profiles=enabled, ocr_default_profile=default,
+        )
+        with pytest.raises(ValueError):
+            enabled_profiles(invalid)
+
+    optional = Settings(
+        _env_file=None, ocr_auth_mode="disabled", ocr_enabled_profiles="minimax,ollama_qwen35_9b",
+        minimax_base_url="https://minimax.test/v1", minimax_api_key="secret",
+    )
+    assert enabled_profiles(optional)[1].public()["status"] == "not_configured"
+
+    missing_default = Settings(
+        _env_file=None, ocr_auth_mode="disabled", ocr_enabled_profiles="minimax,ollama_qwen35_9b",
+        ocr_default_profile="ollama_qwen35_9b", minimax_base_url="https://minimax.test/v1",
+        minimax_api_key="secret",
+    )
+    with pytest.raises(ValueError, match="OCR_DEFAULT_PROFILE is not configured"):
+        validate_profiles(missing_default)
 
 
 def test_review_policy_includes_validation_warning_and_segmentation_blocker():

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +13,24 @@ class Settings(BaseSettings):
     ocr_model: str = ""
     ocr_timeout_seconds: float = 180
     ocr_endpoint_external: bool = True
+    ocr_provider_config_version: str = "default"
+    ocr_default_profile: str = ""
+    ocr_enabled_profiles: str = ""
+    minimax_base_url: str = ""
+    minimax_api_key: str = ""
+    minimax_endpoint_external: bool = True
+    minimax_timeout_seconds: float = Field(default=180, gt=0)
+    minimax_config_version: str = "minimax-m3-v1"
+    qwen_base_url: str = ""
+    qwen_api_key: str = ""
+    qwen_endpoint_external: bool = False
+    qwen_timeout_seconds: float = Field(default=180, gt=0)
+    qwen_config_version: str = "qwen35-9b-v1"
+    qwen_thinking_mode: bool = True
+    qwen_structured_output: bool = False
+    qwen_max_tokens_metadata: int | None = Field(default=None, ge=1)
+    qwen_max_tokens_full_ocr: int | None = Field(default=None, ge=1)
+    qwen_max_tokens_segmentation: int | None = Field(default=None, ge=1)
     celery_broker_url: str = "redis://localhost:6380/0"
     celery_result_backend: str = "redis://localhost:6380/1"
     ocr_auth_mode: str = "disabled"

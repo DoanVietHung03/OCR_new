@@ -78,6 +78,7 @@ sign-off Milestone C. Đặc tả chi tiết nằm tại
 | `X17` | Provider measurement, sizing contract và durable analytics | [`FE-X17`](frontend_plan.md#fe-x17) | Measurement Preview dùng dữ liệu thật; calculator/capacity chỉ mở sau sample gate |
 | `X18` | `N/A` — guide tĩnh, không backend/schema | [`FE-X18`](frontend_plan.md#fe-x18) | Hai route guide/reference khớp contract hiện có và full regression không drift |
 | `X19` | Shared credential, signed session, auth/CSRF seam và deployment port closure | [`FE-X19`](frontend_plan.md#fe-x19) | Login/logout/expiry giữ draft; không còn đường host bypass |
+| `X20` | Registry profile, runtime resolution, request-policy isolation và fingerprint | [`FE-X20`](frontend_plan.md#fe-x20) | Readiness/create/worker dùng đúng profile; không lộ config hoặc failover |
 
 ## Domain contract
 
@@ -545,6 +546,39 @@ trước timeout, nên không suy diễn đây là live/provider evidence.
   Docker/Nginx syntax, exact host bind/direct-port closure và full live OCR smoke
   vẫn cần server có Docker và IP `10.6.18.76`.
 
+### BE-X20
+
+**P1 — Profile-resolved OCR modules — LOCAL COMPLETE; LIVE GATE PENDING.**
+Counterpart: [`FE-X20`](frontend_plan.md#fe-x20). Thiết kế đã chốt:
+[`ReStructure.md`](ReStructure.md).
+
+- Registry tĩnh dùng frozen `ProfileSpec`; `minimax` gắn `MiniMax-M3`, còn
+  `ollama_qwen35_9b` gắn `qwen3.5:9b`. Public mapping là allowlist tường minh,
+  không chứa URL, API key, generation policy hoặc fingerprint.
+- `OCR_ENABLED_PROFILES` bật profile runtime; `OCR_DEFAULT_PROFILE` chọn default
+  cho flow mới. Prefix `MINIMAX_*`/`QWEN_*` sở hữu private config; legacy
+  `OCR_*` chỉ fallback MiniMax và model legacy phải khớp exact model.
+- Một shared OpenAI-compatible runner giữ HTTP/retry/parser/usage/validation.
+  MiniMax giữ body `prompt → image`; Qwen dùng `instruction → image → prompt`,
+  thinking bật, structured output tắt và token cap unset theo mặc định.
+- Create/rerun snapshot exact model, prompt version, config version và safe
+  policy fingerprint. Start/Continue/worker resolve profile đã persist; policy
+  drift hoặc profile unavailable thành safe failure, không fallback. Terminal
+  job và ID legacy `qwen` vẫn đọc được mà không rewrite; legacy ID không rerun.
+- Readiness probe/cache tách 30 giây theo `(profile ID, fingerprint)`; check,
+  start và Continue luôn dùng profile tương ứng. Measurement fingerprint chứa
+  profile policy/config cùng task/page/processing/segmentation scope.
+- Shared reliability port giữ parser JSON hoàn chỉnh cuối cùng và two-attempt
+  budget; `finish_reason=length` persist usage rồi fail non-retryable. Response
+  schema chỉ được gửi khi profile opt-in.
+- Local gate ngày 2026-08-03: `77 passed` backend, frontend typecheck và
+  production build pass, OpenAPI check không drift. Focused Playwright
+  multi-profile pass `1/1` trong 1.6 giây; Windows runner chỉ timeout ở teardown
+  sau khi báo test pass. Full runner thực thi đủ `29/29` test không báo test
+  failure nhưng không thoát trước timeout teardown, nên chưa gọi là clean pass.
+  Live MiniMax/Qwen fixture, restart, rollback và cutover vẫn thuộc
+  [`incomlpeted.md`](incomlpeted.md).
+
 <a id="sidebar-re-decoration-backend"></a>
 ## Sidebar re-decoration — backend counterpart
 
@@ -616,6 +650,9 @@ Python compileall và `git diff --check`.
 8. **Giai đoạn 8 — shared demo auth:** `BE-X19 → FE-X19`; backend/session seam
    trước, login/draft UX sau, cuối cùng chuyển host port ownership sang Nginx và
    đóng direct-port bypass.
+9. **Giai đoạn 9 — provider profile modules:** `BE-X20 → FE-X20`; registry và
+   runtime resolution trước, Qwen policy isolation sau, rồi mới live fixture và
+   cutover. Không merge/cherry-pick nguyên nhánh `ollama`.
 
 ## Milestone C: runbook và deployment rollback
 

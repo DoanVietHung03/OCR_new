@@ -1,10 +1,12 @@
 import asyncio
 import json
+from dataclasses import replace
 
 import httpx
 import pytest
 
 from app.services.ocr_runner import request_page
+from app.services.providers import MINIMAX
 from app.services.pricing import (
     parse_agribank_quote, parse_bidv_quote, parse_ecb_quote, parse_minimax_price,
     parse_techcombank_quote, parse_vietcombank_quote,
@@ -199,8 +201,8 @@ def test_provider_retry_and_invalid_ocr_keep_attempt_usage(tmp_path, monkeypatch
     )
     store = MeasurementStore(tmp_path)
     with pytest.raises(ValueError, match="invalid_model_json"):
-        asyncio.run(request_page(
-            b"png", base_url="http://provider.test/v1", api_key="secret", model="model",
+            asyncio.run(request_page(
+                b"png", profile=replace(MINIMAX, model="model", base_url="http://provider.test/v1", api_key="secret"),
             measurement_store=store, measurement_context={"job_id": "job", "task": "metadata"},
         ))
     operations = sorted(store.operations(job_id="job"), key=lambda item: item["attempt"])

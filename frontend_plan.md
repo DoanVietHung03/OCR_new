@@ -73,6 +73,7 @@ ghi duy nhất trong `BE-C-EVIDENCE`.
 | `FE-X17` | [`BE-X17`](implementation_plan.md#be-x17) | Measurement Preview dùng dữ liệu thật; chart/calculator tuân sample gate |
 | `FE-X18` | [`BE-X18`](implementation_plan.md#be-x18) | Workflow guide và parameter reference VI/EN khớp UI, không thêm backend |
 | `FE-X19` | [`BE-X19`](implementation_plan.md#be-x19) | Login/logout/returnTo/expiry giữ draft; toàn protected surface qua auth seam |
+| `FE-X20` | [`BE-X20`](implementation_plan.md#be-x20) | Dropdown/default/readiness/create dùng đúng profile và capability |
 
 ## Phạm vi và nguồn chuẩn
 
@@ -565,6 +566,29 @@ Known cost với ước tính theo giá mới nhất, Price Profile/Scenario hi�
   returnTo an toàn và giữ draft không replay mutation. Live port-closure/full OCR
   smoke vẫn mở.
 
+### FE-X20
+
+**P1 — Multi-profile selection and readiness — LOCAL COMPLETE; LIVE GATE
+PENDING.** Counterpart: [`BE-X20`](implementation_plan.md#be-x20). Thiết kế:
+[`ReStructure.md`](ReStructure.md).
+
+- Frontend giữ nguyên generated `ProviderProfileResponse`; không thêm DTO,
+  public fingerprint/policy field, provider settings screen hoặc dependency.
+- Một profile vẫn là locked server-managed value; nhiều profile dùng dropdown
+  native. Backend trả default trước, flow mới chọn giá trị đó và không ghi
+  provider/profile vào `localStorage`.
+- Đổi profile reset consent/readiness message và normalize task, page scope,
+  max pages, Processing Mode về capability hợp lệ. Consent chỉ theo
+  `external` của profile đang chọn.
+- Readiness gọi exact selected ID; create payload gửi cùng ID và không gửi URL,
+  key, header, arbitrary model hoặc generation option. Lỗi không xóa selection.
+- Local gate ngày 2026-08-03: typecheck và production build pass; focused
+  Playwright chứng minh server default, capability normalization,
+  `/engines/minimax/check`, create payload và không có provider browser storage
+  (`1/1` pass trong 1.6 giây). Full runner thực thi đủ `29/29` test không báo
+  test failure nhưng Windows process timeout ở teardown, nên chưa gọi là clean
+  full-run evidence.
+
 ## Thứ tự triển khai parity
 
 0. **Fixture-first:** khóa composition manifest/page ranges trước khi xây UI.
@@ -580,6 +604,8 @@ Known cost với ước tính theo giá mới nhất, Price Profile/Scenario hi�
    workflow guide, parameter reference, VI/EN, sidebar guide và evidence ảnh.
 7. **Shared demo auth:** backend `BE-X19` trước; sau đó `/login`, AppShell logout,
    session-expired draft safety và cuối cùng Nginx/direct-port live smoke.
+8. **Multi-profile:** backend `BE-X20` resolve/snapshot trước; frontend chỉ dùng
+   public capability hiện có, sau đó chạy browser isolation và live fixture.
 
 ## Public-data mapping cần bảo vệ
 
@@ -623,6 +649,7 @@ Known cost với ước tính theo giá mới nhất, Price Profile/Scenario hi�
 | Token/cost/sizing | `X17A`–`X17E` LOCAL COMPLETE; `X17F` LIVE PENDING | One-PDF/provider Preview → bốn fixture → 20-job capacity gate |
 | User guide/reference | `X18` IMPLEMENTED; browser teardown pending | Hai route tĩnh, inventory đủ, VI/EN, một sidebar guide, 5 ảnh và accessibility; xác nhận runner thoát sạch sau 25 test |
 | Shared demo auth | `X19` LOCAL COMPLETE; LIVE GATE PENDING | Exact host-port closure và full authenticated OCR smoke |
+| Provider profile modules | `X20` LOCAL COMPLETE; LIVE GATE PENDING | Hai profile dùng đúng readiness/request/fingerprint; đủ fixture MiniMax/Qwen |
 | Dashboard hierarchy refinement | LOCAL COMPLETE 2026-07-28 | Hai nhóm metric có một scope note; terminal không có progress; delete ở menu phụ; sidebar VI/EN dùng selected blue |
 | Repair Gate baseline | PASS `X1`–`X4` | Các regression contract tiếp tục pass |
 | Milestone C internal pilot | BLOCKED `X5` | P0 pass và strong-server evidence ledger được ký |
