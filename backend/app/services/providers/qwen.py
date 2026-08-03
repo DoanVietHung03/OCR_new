@@ -1,9 +1,9 @@
 from . import ProfileSpec
 
 PROFILE = ProfileSpec(
-    id="ollama_qwen35_9b",
-    label="Qwen 3.5 9B (Ollama)",
-    model="qwen3.5:9b",
+    id="ollama_qwen3_vl_8b",
+    label="Qwen3-VL 8B (Ollama)",
+    model="qwen3-vl:8b",
     env_prefix="QWEN",
     prompt_version="9",
     message_order=("instruction", "image", "prompt"),

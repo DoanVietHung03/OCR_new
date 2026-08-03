@@ -1,5 +1,6 @@
 .env
 data/jobs/
+data_2/jobs/
 __pycache__/
 *.py[cod]
 .venv/
