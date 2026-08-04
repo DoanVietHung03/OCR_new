@@ -553,7 +553,7 @@ Counterpart: [`FE-X20`](frontend_plan.md#fe-x20). Thiết kế đã chốt:
 [`ReStructure.md`](ReStructure.md).
 
 - Registry tĩnh dùng frozen `ProfileSpec`; `minimax` gắn `MiniMax-M3`, còn
-  `ollama_qwen35_9b` gắn `qwen3.5:9b`. Public mapping là allowlist tường minh,
+  `ollama_qwen3_vl_8b` gắn `qwen3-vl:8b`. Public mapping là allowlist tường minh,
   không chứa URL, API key, generation policy hoặc fingerprint.
 - `OCR_ENABLED_PROFILES` bật profile runtime; `OCR_DEFAULT_PROFILE` chọn default
   cho flow mới. Prefix `MINIMAX_*`/`QWEN_*` sở hữu private config; legacy
@@ -564,20 +564,32 @@ Counterpart: [`FE-X20`](frontend_plan.md#fe-x20). Thiết kế đã chốt:
 - Create/rerun snapshot exact model, prompt version, config version và safe
   policy fingerprint. Start/Continue/worker resolve profile đã persist; policy
   drift hoặc profile unavailable thành safe failure, không fallback. Terminal
-  job và ID legacy `qwen` vẫn đọc được mà không rewrite; legacy ID không rerun.
+  job và ID legacy `qwen`/`ollama_qwen35_9b` vẫn đọc được mà không rewrite;
+  legacy ID không Continue/rerun.
 - Readiness probe/cache tách 30 giây theo `(profile ID, fingerprint)`; check,
   start và Continue luôn dùng profile tương ứng. Measurement fingerprint chứa
-  profile policy/config cùng task/page/processing/segmentation scope.
+  profile policy/config cùng task/page/processing/segmentation scope. Probe dùng
+  request policy của chính profile; Qwen3-VL giữ thinking bật và token cap unset
+  giống cấu hình server đã được user kiểm tra.
 - Shared reliability port giữ parser JSON hoàn chỉnh cuối cùng và two-attempt
   budget; `finish_reason=length` persist usage rồi fail non-retryable. Response
   schema chỉ được gửi khi profile opt-in.
-- Local gate ngày 2026-08-03: `77 passed` backend, frontend typecheck và
+- Local gate đồng bộ Qwen3-VL ngày 2026-08-04: `77 passed` backend, frontend typecheck và
   production build pass, OpenAPI check không drift. Focused Playwright
-  multi-profile pass `1/1` trong 1.6 giây; Windows runner chỉ timeout ở teardown
+  multi-profile pass `1/1` trong 1.7 giây; Windows runner chỉ timeout ở teardown
   sau khi báo test pass. Full runner thực thi đủ `29/29` test không báo test
-  failure nhưng không thoát trước timeout teardown, nên chưa gọi là clean pass.
+  failure nhưng không thoát trước timeout 300 giây ở teardown, nên chưa gọi là
+  clean pass. Python compileall và `git diff --check` pass.
   Live MiniMax/Qwen fixture, restart, rollback và cutover vẫn thuộc
   [`incomlpeted.md`](incomlpeted.md).
+
+Partial server sample ngày 2026-08-04 từ ignored `data_2/`: ba job
+`ollama_qwen3_vl_8b`/`qwen3-vl:8b`, `metadata + auto`, config
+`qwen3-vl-8b-q4km`; hai `completed`, một `completed_with_warnings`, tổng 8 trang,
+`failed_pages=0`, 6 provider attempts đều có usage. Năm attempt thành công ngay;
+một `invalid_json` được retry thành công. Sample có 32 field giá trị và 15 field
+có evidence, nhưng chưa có ground truth, MiniMax đối chứng, full OCR, combined
+dossier, restart hoặc rollback nên không đóng live gate.
 
 <a id="sidebar-re-decoration-backend"></a>
 ## Sidebar re-decoration — backend counterpart

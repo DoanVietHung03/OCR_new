@@ -107,7 +107,13 @@ Registry, request isolation, persisted fingerprint, readiness cache và frontend
 multi-profile đã hoàn thành local. Chưa thể đóng live gate vì máy hiện tại không
 có đủ bốn fixture ngoài Git, hai provider thật và môi trường deployment riêng:
 
-- khóa baseline cùng fixture/SHA-256 cho MiniMax và Qwen; chạy metadata, full OCR,
+Partial evidence đã có trong ignored `data_2/`: ba job metadata Qwen3-VL 8B dùng
+profile `ollama_qwen3_vl_8b`, tổng 8 trang, không failed page; 6 provider attempts
+đều có usage và một `invalid_json` đã retry thành công. Evidence này chưa có
+ground truth hoặc MiniMax đối chứng và không bao phủ full OCR/combined dossier,
+restart hay rollback, nên các điều kiện dưới đây vẫn mở.
+
+- khóa baseline cùng fixture/SHA-256 cho MiniMax và Qwen3-VL; chạy metadata, full OCR,
   Bìa và hai hồ sơ gộp, rồi đối soát field/blocker/evidence/usage/duration;
 - chứng minh MiniMax không regression và Qwen đạt threshold do user chốt từ
   baseline, không dùng readiness thay cho quality evidence;

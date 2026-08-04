@@ -2,7 +2,8 @@
 
 Trạng thái: **LOCAL IMPLEMENTED trên `restructure_pj` — live gate pending**
 Ngày lập: **2026-08-03**  
-Phạm vi: hợp nhất MiniMax-M3 và Ollama/Qwen 3.5 9B vào một codebase, cho phép hai
+Cập nhật Qwen3-VL: **2026-08-04**
+Phạm vi: hợp nhất MiniMax-M3 và Ollama/Qwen3-VL 8B vào một codebase, cho phép hai
 profile hoạt động đồng thời và cô lập policy của từng module mà không sao chép OCR
 pipeline dùng chung.
 
@@ -21,11 +22,11 @@ merge hoặc cherry-pick nguyên commit từ `ollama`. Nhánh `ollama` chỉ là
 read-only cho đến khi live gate, rollback rehearsal và phê duyệt xóa riêng hoàn tất.
 
 Việc chọn model/provider xảy ra tại runtime qua `provider_profile_id`. Một
-deployment có thể bật đồng thời `minimax` và `ollama_qwen35_9b`; profile đã persist
+deployment có thể bật đồng thời `minimax` và `ollama_qwen3_vl_8b`; profile đã persist
 không tự failover sang profile khác khi unavailable.
 
 Profile ID gắn với exact model và một họ request policy. `minimax` tiếp tục gắn
-MiniMax-M3 để giữ compatibility; `ollama_qwen35_9b` gắn `qwen3.5:9b`. Prompt/policy
+MiniMax-M3 để giữ compatibility; `ollama_qwen3_vl_8b` gắn `qwen3-vl:8b`. Prompt/policy
 có thể tăng version dưới cùng ID, nhưng model khác hoặc hai policy cần chạy song
 song phải có ID mới.
 
@@ -58,10 +59,11 @@ Anthropic/Paddle/native transport chỉ được thiết kế khi có endpoint/r
 
 ### 2.1 Git topology
 
-- `master`: `e448b961caa45f1fb4065fc6c511f94d0343171b`.
+- `master`: `69bdb0d32ff845555aa88a47a51c48ec40401f4a`.
 - `ollama`: `339a546ec2bfa7205b26691ec7b0e1101226d91d`.
-- Merge-base của hai nhánh chính là commit hiện tại của `master`.
-- `ollama` đi trước `master` bốn commit:
+- `restructure_pj`: `7431f6de28a988d8497d273c83137d73fb9b715f`, gồm implementation
+  profile tại `2190c70` và thay Qwen3-VL tại `7431f6d`.
+- Merge-base của `master`/`ollama` là `e448b961`; `ollama` có bốn commit nguồn:
   - `d72d82b`: thêm kết nối Docker tới Ollama trên host;
   - `74e6b30`: thêm thinking control;
   - `57e64c4`: thêm token cap và structured-output control;
@@ -150,7 +152,7 @@ contract nhiều profile hoạt động đúng như frontend đã kỳ vọng.
 - Không đổi PDF-only limits, job lifecycle hoặc filesystem layout.
 - Không đổi `ocr.process_job` thành nhiều Celery task theo provider.
 - Không viết transport Paddle/native trước khi có Paddle runner thật.
-- Không triển khai GPT, Gemma, Qwen-VL, Paddle-VL hoặc Anthropic-compatible trong
+- Không triển khai GPT, Gemma, các Qwen model khác, Paddle-VL hoặc Anthropic-compatible trong
   scope này.
 - Không tạo hot-reload/dynamic discovery cho module.
 - Không tự động migrate hoặc relabel job lịch sử.
@@ -213,7 +215,7 @@ Trách nhiệm:
   - không nhận Qwen workaround nếu chưa có live evidence riêng.
 - `providers/qwen.py`
   - sở hữu Qwen/Ollama request policy;
-  - canonical ID `ollama_qwen35_9b`, exact model `qwen3.5:9b`;
+  - canonical ID `ollama_qwen3_vl_8b`, exact model `qwen3-vl:8b`;
   - mặc định thinking bật, structured output tắt, content order riêng;
   - token cap là knob nhưng mặc định không gửi trước khi Phase 0 có usage thật;
   - không chứa retry, HTTP client, field validation hoặc job logic.
@@ -295,8 +297,8 @@ quantization hoặc runtime có thể làm đổi kết quả.
   nhỏ phía sau `request_page`; scope hiện tại vẫn chỉ OpenAI-compatible.
 
 Ví dụ: hai Qwen model dùng cùng OpenAI-compatible request policy không cần hai
-copy của module. `qwen3.5:9b` và một Qwen-VL chỉ tách implementation khi bằng
-chứng cho thấy prompt/request/response contract khác nhau.
+copy runner. Mỗi exact model vẫn cần profile ID riêng để job snapshot và
+measurement không trộn identity.
 
 ## 5. Phân loại thay đổi trên nhánh `ollama`
 
@@ -315,8 +317,9 @@ Không cherry-pick nguyên commit. Mỗi thay đổi phải được chuyển v�
 | Page-zero thiếu metadata | Shared domain validation | Áp theo logical document/task, không theo provider |
 | Ollama context/Flash Attention/KV cache | External Ollama runtime | Không gửi trong request body ứng dụng |
 
-Lịch sử đã cho thấy `reasoning_effort="none"` có thể làm Qwen nhanh hơn nhưng trả
-0 field trên workload cụ thể. Vì vậy `ollama_qwen35_9b` mặc định bật thinking;
+Lịch sử Qwen 3.5 cho thấy `reasoning_effort="none"` có thể nhanh hơn nhưng trả
+0 field trên workload cụ thể. Qwen3-VL trên server cũng đang dùng thinking bật;
+vì vậy `ollama_qwen3_vl_8b` mặc định bật thinking;
 thay đổi knob này tạo fingerprint mới. MiniMax giữ body `master` nguyên trạng:
 `prompt -> image`, không `reasoning_effort`, `max_tokens` hoặc `response_format`.
 
@@ -328,7 +331,7 @@ thay đổi knob này tạo fingerprint mới. MiniMax giữ body `master` nguy�
 
 ```dotenv
 OCR_DEFAULT_PROFILE=minimax
-OCR_ENABLED_PROFILES=minimax,ollama_qwen35_9b
+OCR_ENABLED_PROFILES=minimax,ollama_qwen3_vl_8b
 
 MINIMAX_BASE_URL=https://provider.example/v1
 MINIMAX_API_KEY=replace-me
@@ -340,7 +343,7 @@ QWEN_BASE_URL=http://host.docker.internal:11434/v1
 QWEN_API_KEY=ollama
 QWEN_ENDPOINT_EXTERNAL=false
 QWEN_TIMEOUT_SECONDS=replace-with-measured-seconds
-QWEN_CONFIG_VERSION=qwen35-9b-q4km-v1
+QWEN_CONFIG_VERSION=qwen3-vl-8b-q4km
 QWEN_THINKING_MODE=true
 QWEN_STRUCTURED_OUTPUT=false
 # QWEN_MAX_TOKENS_* chỉ đặt sau khi Phase 0 xác định headroom an toàn.
@@ -416,9 +419,10 @@ Nếu profile của job không còn enabled/configured:
 - không fallback sang profile khác;
 - không rewrite job.
 
-Các job lịch sử trong `data/jobs/` hiện dùng cả `qwen` và
-`ollama_qwen35_9b`. `qwen` là legacy read-only: vẫn xem/report/tải artifact được
-nhưng không xuất hiện cho job mới, không tự relabel và không hỗ trợ rerun/ánh xạ.
+Các job lịch sử mang `qwen` hoặc `ollama_qwen35_9b` là legacy read-only: vẫn
+xem/report/tải artifact được nhưng không xuất hiện cho job mới, không tự relabel
+và không hỗ trợ Continue/rerun. Profile canonical mới là
+`ollama_qwen3_vl_8b`; không rewrite job cũ khi đọc.
 
 ### 7.3 Rerun
 
@@ -473,8 +477,9 @@ Một lock dùng chung là đủ với quy mô hiện tại; chỉ cần lock th
 `POST /api/engines/{engine_id}/check` phải:
 
 1. resolve đúng `engine_id`;
-2. dùng lightweight synthetic probe riêng để kiểm tra endpoint, credential, exact
-   model và response OpenAI-compatible; không chạy full OCR/thinking benchmark;
+2. dùng synthetic metadata probe để kiểm tra endpoint, credential, exact model
+   và response OpenAI-compatible bằng request policy của chính profile; không
+   dùng readiness thay cho fixture/quality benchmark;
 3. persist measurement với đúng profile/fingerprint;
 4. trả status sanitized hiện có;
 5. không lộ raw response hoặc private config.
@@ -534,7 +539,8 @@ Việc cần làm:
 - ghi exact commit/hash và diff bốn commit;
 - chạy local gate/focused baseline trên `master` và `ollama`;
 - capture sanitized request-body shape của MiniMax trên `master`;
-- capture sanitized request-body shape của Qwen trên `ollama`;
+- capture sanitized request-body shape Qwen 3.5 lịch sử trên `ollama` để port
+  policy, rồi dùng Qwen3-VL server sample làm baseline model mới;
 - dùng đúng một external `63-btc.pdf` ngoài Git và `OCR_DATA_DIR`, xác minh SHA-256
   với fixture đã chọn; không tự chọn job mới nhất và không sửa/xóa bản đang được
   track tại `Benchmark_files/63-btc.pdf` trong scope này;
@@ -576,7 +582,7 @@ Mục tiêu: persisted profile thực sự quyết định runtime.
 
 Việc cần làm:
 
-- `request_page` nhận profile đã resolve; `probe_provider` dùng lightweight probe;
+- `request_page` nhận profile đã resolve; `probe_provider` dùng request policy của profile;
 - routes không đọc trực tiếp endpoint/key/model;
 - worker resolve profile từ job;
 - readiness cache TTL 30 giây theo `(profile ID, fingerprint)` và một lock chung;
@@ -616,7 +622,7 @@ Mục tiêu: Qwen chạy trên cùng `master` mà không sửa MiniMax module.
 Việc cần làm:
 
 - thêm `qwen.py`;
-- canonical ID `ollama_qwen35_9b`, exact model `qwen3.5:9b` và env prefix Qwen;
+- canonical ID `ollama_qwen3_vl_8b`, exact model `qwen3-vl:8b` và env prefix Qwen;
 - port content order `instruction -> image -> prompt`, thinking mặc định bật và
   structured output mặc định tắt;
 - giữ token-cap knob unset cho tới khi Phase 0 usage xác định cap có headroom;
@@ -666,6 +672,12 @@ Mục tiêu: chứng minh chất lượng và isolation trên provider thật.
 Chạy branch test với `OCR_DATA_DIR` riêng, không dùng durable data directory của
 deployment hiện hành. Qwen được bật cho developer A/B mà không thêm nhãn thử
 nghiệm; việc enable không tự tạo quality claim.
+
+Partial server sample ngày 2026-08-04 đã có ba job `metadata + auto` Qwen3-VL
+trong ignored `data_2/`: tổng 8 trang, không failed page và 6 attempt đều có
+usage; một `invalid_json` đã retry thành công. Sample này chưa có ground truth,
+MiniMax đối chứng, full OCR, combined dossier, restart hoặc rollback nên chỉ là
+evidence tiến độ, không phải exit gate.
 
 Chạy cùng approved fixture composition cho MiniMax và Qwen:
 
@@ -871,7 +883,7 @@ vào cùng một commit.
 
 ## 15. Ranh giới mở rộng sau này
 
-GPT, Gemma, Qwen-VL, Paddle-VL và Anthropic-compatible không thuộc Definition of
+GPT, Gemma, các Qwen model khác, Paddle-VL và Anthropic-compatible không thuộc Definition of
 Done hiện tại. Khi có model/endpoint thật:
 
 1. Nếu vẫn OpenAI-compatible và policy biểu diễn được bằng `ProfileSpec`, thêm
@@ -892,7 +904,8 @@ Done hiện tại. Khi có model/endpoint thật:
   rerun canonical snapshot policy hiện tại.
 - Readiness/cache tách theo profile/fingerprint; không failover.
 - MiniMax request parity và Qwen request isolation assertions pass.
-- Job legacy đọc được, không rewrite; `qwen` legacy không rerun/relabel.
+- Job legacy đọc được, không rewrite; `qwen` và `ollama_qwen35_9b` legacy không
+  Continue/rerun/relabel.
 - Không lộ provider secret/raw response; full local gate pass.
 - `BE-X20`/`FE-X20`, README, AGENTS và incomplete ledger khớp implementation.
 
@@ -926,7 +939,7 @@ compatibility.
 - Triển khai trên `restructure_pj` từ `master`; không cherry-pick/merge nguyên
   `ollama`, không tự commit.
 - Một `master` sau cutover, không branch dài hạn theo model.
-- Hai profile đồng thời: `minimax` và `ollama_qwen35_9b`; không auto-failover.
+- Hai profile đồng thời: `minimax` và `ollama_qwen3_vl_8b`; không auto-failover.
 - Exact model thuộc profile; policy/config version tạo safe fingerprint và chặn
   execution khi drift.
 - Một shared OpenAI-compatible runner.

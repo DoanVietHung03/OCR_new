@@ -76,10 +76,12 @@ chủ; không đưa URL, khóa hoặc header của provider xuống frontend.
 
 `OCR_ENABLED_PROFILES` bật các profile theo đúng thứ tự hiển thị;
 `OCR_DEFAULT_PROFILE` chọn profile mặc định cho flow mới. Hiện có `minimax`
-(`MiniMax-M3`) và `ollama_qwen35_9b` (`qwen3.5:9b`). Mỗi profile dùng prefix
+(`MiniMax-M3`) và `ollama_qwen3_vl_8b` (`qwen3-vl:8b`). Mỗi profile dùng prefix
 `MINIMAX_*` hoặc `QWEN_*`; job đã tạo luôn chạy bằng profile/fingerprint đã
 snapshot và không tự failover. Cấu hình `OCR_PROVIDER`/`OCR_BASE_URL`/
 `OCR_API_KEY`/`OCR_MODEL` cũ chỉ còn là fallback chuyển tiếp cho MiniMax.
+Job lịch sử mang `qwen` hoặc `ollama_qwen35_9b` vẫn đọc/tải artifact được nhưng
+không Continue/rerun và không tự relabel sang Qwen3-VL.
 
 Host Redis `redis` trong file mẫu dành cho Compose. Khi chạy Celery trực tiếp,
 hãy đổi cả hai URL Celery sang một Redis mà máy đang chạy worker có thể kết nối.
@@ -285,6 +287,9 @@ provider thật, restart, Redis/Celery/Nginx, rollback và tải trên server m�
   nhận teardown sạch trên Windows nên chưa được gọi là `LOCAL COMPLETE`.
 - `X19` shared demo login/logout đã hoàn tất local nhưng còn thiếu bằng chứng
   Nginx, đóng direct port, rate limit và full OCR smoke trên deployment thật.
+- `X20` đã chuyển profile Ollama sang Qwen3-VL 8B. Ba metadata job trong
+  `data_2/` là partial server evidence; vẫn thiếu đối chứng MiniMax, full OCR,
+  combined dossier, restart và rollback để đóng live gate.
 - Milestone C chưa có đủ bằng chứng bốn fixture, restart, persistence, Nginx,
   Redis, Celery, provider và rollback.
 

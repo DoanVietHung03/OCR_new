@@ -311,17 +311,17 @@ def test_provider_request_policies_are_isolated():
 def test_profile_registry_validates_allowlist_and_hides_private_config():
     config = Settings(
         _env_file=None, ocr_auth_mode="disabled",
-        ocr_enabled_profiles="minimax,ollama_qwen35_9b", ocr_default_profile="minimax",
+        ocr_enabled_profiles="minimax,ollama_qwen3_vl_8b", ocr_default_profile="minimax",
         minimax_base_url="https://minimax.test/v1", minimax_api_key="secret-a",
         qwen_base_url="http://ollama.test/v1", qwen_api_key="secret-b",
     )
     profiles = enabled_profiles(config)
-    assert [profile.id for profile in profiles] == ["minimax", "ollama_qwen35_9b"]
-    assert profiles[1].model == "qwen3.5:9b"
+    assert [profile.id for profile in profiles] == ["minimax", "ollama_qwen3_vl_8b"]
+    assert profiles[1].model == "qwen3-vl:8b"
     assert "secret" not in json.dumps([profile.public() for profile in profiles])
     assert "test/v1" not in json.dumps([profile.public() for profile in profiles])
 
-    for enabled, default in ((",", "minimax"), ("minimax,minimax", "minimax"), ("unknown", "unknown"), ("minimax", "ollama_qwen35_9b")):
+    for enabled, default in ((",", "minimax"), ("minimax,minimax", "minimax"), ("unknown", "unknown"), ("minimax", "ollama_qwen3_vl_8b")):
         invalid = Settings(
             _env_file=None, ocr_auth_mode="disabled",
             ocr_enabled_profiles=enabled, ocr_default_profile=default,
@@ -330,14 +330,14 @@ def test_profile_registry_validates_allowlist_and_hides_private_config():
             enabled_profiles(invalid)
 
     optional = Settings(
-        _env_file=None, ocr_auth_mode="disabled", ocr_enabled_profiles="minimax,ollama_qwen35_9b",
+        _env_file=None, ocr_auth_mode="disabled", ocr_enabled_profiles="minimax,ollama_qwen3_vl_8b",
         minimax_base_url="https://minimax.test/v1", minimax_api_key="secret",
     )
     assert enabled_profiles(optional)[1].public()["status"] == "not_configured"
 
     missing_default = Settings(
-        _env_file=None, ocr_auth_mode="disabled", ocr_enabled_profiles="minimax,ollama_qwen35_9b",
-        ocr_default_profile="ollama_qwen35_9b", minimax_base_url="https://minimax.test/v1",
+        _env_file=None, ocr_auth_mode="disabled", ocr_enabled_profiles="minimax,ollama_qwen3_vl_8b",
+        ocr_default_profile="ollama_qwen3_vl_8b", minimax_base_url="https://minimax.test/v1",
         minimax_api_key="secret",
     )
     with pytest.raises(ValueError, match="OCR_DEFAULT_PROFILE is not configured"):

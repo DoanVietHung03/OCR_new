@@ -54,9 +54,12 @@ provider/fixture/server evidence remains open.
 
 The `BE-X20`/`FE-X20` provider-profile restructuring is implemented on
 `restructure_pj`: one static registry exposes `minimax`/`MiniMax-M3` and
-`ollama_qwen35_9b`/`qwen3.5:9b`, while one shared OpenAI-compatible runner owns
+`ollama_qwen3_vl_8b`/`qwen3-vl:8b`, while one shared OpenAI-compatible runner owns
 HTTP/retry/parser/usage behavior. Local gate evidence is recorded in the paired
-plans; real two-provider fixture, restart and cutover evidence remains open.
+plans. Three Qwen3-VL metadata jobs copied under ignored `data_2/` are partial
+server evidence only; real two-provider fixture, restart and cutover evidence
+remains open. Persisted `qwen` and `ollama_qwen35_9b` jobs remain readable but
+their retired IDs are not valid for new/Continue/rerun flows.
 
 The same-day semantic hardening selects the last complete JSON object in model
 content, treats an administrative page-zero response with no header metadata as
@@ -149,7 +152,7 @@ revision conflict, and Continue in the browser gate.
   used only for new/identity-less legacy jobs. New jobs snapshot the exact
   profile policy fingerprint; start/continue/worker must reject drift or an
   unavailable profile and never fail over. `qwen` remains legacy read-only.
-- MiniMax keeps `prompt → image` without Qwen generation fields. Qwen owns
+- MiniMax keeps `prompt → image` without Qwen generation fields. Qwen3-VL owns
   `instruction → image → prompt`, thinking enabled by default, optional
   structured output and unset token caps. Profile modules stay frozen/data-only;
   do not add provider SDKs, dynamic discovery, factories or duplicated runners.

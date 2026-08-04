@@ -102,7 +102,7 @@ test("artifact image opens immediately in the modal top layer", async ({ page })
 test("multi-profile upload uses server default and normalizes capabilities", async ({ page }) => {
   let readiness = "", createBody: any;
   const profiles = [
-    { id: "ollama_qwen35_9b", label: "Qwen 3.5 9B (Ollama)", model: "qwen3.5:9b", external: false, status: "configured", tasks: ["metadata"], page_modes: ["auto"], max_pages: 50, processing_modes: ["dossier_cover"] },
+    { id: "ollama_qwen3_vl_8b", label: "Qwen3-VL 8B (Ollama)", model: "qwen3-vl:8b", external: false, status: "configured", tasks: ["metadata"], page_modes: ["auto"], max_pages: 50, processing_modes: ["dossier_cover"] },
     { id: "minimax", label: "MiniMax", model: "MiniMax-M3", external: false, status: "configured", tasks: ["full_ocr"], page_modes: ["all"], max_pages: 100, processing_modes: ["administrative_document"] },
   ];
   await page.route("**/api/**", async (route) => {
@@ -120,7 +120,7 @@ test("multi-profile upload uses server default and normalizes capabilities", asy
 
   await page.goto("/upload");
   const profile = page.locator(".upload-option-card").filter({ hasText: "Qwen" }).locator("select");
-  await expect(profile).toHaveValue("ollama_qwen35_9b");
+  await expect(profile).toHaveValue("ollama_qwen3_vl_8b");
   await expect(page.getByLabel(/Tác vụ VLM|VLM task/)).toHaveValue("metadata");
   await expect(page.getByLabel(/Phạm vi trang|Page scope/)).toHaveValue("auto");
   await profile.selectOption("minimax");

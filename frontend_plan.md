@@ -574,6 +574,8 @@ PENDING.** Counterpart: [`BE-X20`](implementation_plan.md#be-x20). Thiết kế:
 
 - Frontend giữ nguyên generated `ProviderProfileResponse`; không thêm DTO,
   public fingerprint/policy field, provider settings screen hoặc dependency.
+- Profile Ollama canonical là `ollama_qwen3_vl_8b` với exact safe model
+  `qwen3-vl:8b`; frontend không giữ alias Qwen 3.5 hoặc tự migrate job cũ.
 - Một profile vẫn là locked server-managed value; nhiều profile dùng dropdown
   native. Backend trả default trước, flow mới chọn giá trị đó và không ghi
   provider/profile vào `localStorage`.
@@ -582,12 +584,14 @@ PENDING.** Counterpart: [`BE-X20`](implementation_plan.md#be-x20). Thiết kế:
   `external` của profile đang chọn.
 - Readiness gọi exact selected ID; create payload gửi cùng ID và không gửi URL,
   key, header, arbitrary model hoặc generation option. Lỗi không xóa selection.
-- Local gate ngày 2026-08-03: typecheck và production build pass; focused
+- Local gate đồng bộ Qwen3-VL ngày 2026-08-04: typecheck và production build pass; focused
   Playwright chứng minh server default, capability normalization,
   `/engines/minimax/check`, create payload và không có provider browser storage
-  (`1/1` pass trong 1.6 giây). Full runner thực thi đủ `29/29` test không báo
-  test failure nhưng Windows process timeout ở teardown, nên chưa gọi là clean
-  full-run evidence.
+  (`1/1` pass trong 1.7 giây). Full runner thực thi đủ `29/29` test không báo
+  test failure nhưng Windows process không thoát trước timeout 300 giây ở
+  teardown, nên chưa gọi là clean full-run evidence.
+  Ba job `data_2/` chỉ là partial backend/server evidence và không thay browser
+  gate hoặc live two-provider acceptance.
 
 ## Thứ tự triển khai parity
 

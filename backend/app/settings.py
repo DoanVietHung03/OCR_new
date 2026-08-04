@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     qwen_api_key: str = ""
     qwen_endpoint_external: bool = False
     qwen_timeout_seconds: float = Field(default=180, gt=0)
-    qwen_config_version: str = "qwen35-9b-v1"
+    qwen_config_version: str = "qwen3-vl-8b-v1"
     qwen_thinking_mode: bool = True
     qwen_structured_output: bool = False
     qwen_max_tokens_metadata: int | None = Field(default=None, ge=1)

@@ -601,7 +601,7 @@ def test_multi_profile_readiness_and_job_snapshot_are_isolated(tmp_path, monkeyp
     store = use_store(tmp_path, monkeypatch)
     import app.api.routes as routes
 
-    monkeypatch.setattr(routes.settings, "ocr_enabled_profiles", "minimax,ollama_qwen35_9b")
+    monkeypatch.setattr(routes.settings, "ocr_enabled_profiles", "minimax,ollama_qwen3_vl_8b")
     monkeypatch.setattr(routes.settings, "qwen_base_url", "http://ollama.test/v1")
     monkeypatch.setattr(routes.settings, "qwen_api_key", "ollama")
     calls = []
@@ -613,15 +613,15 @@ def test_multi_profile_readiness_and_job_snapshot_are_isolated(tmp_path, monkeyp
     monkeypatch.setattr(routes, "probe_provider", ready)
     assert client.post("/api/engines/minimax/check").status_code == 200
     assert client.post("/api/engines/minimax/check").json()["cached"] is True
-    assert client.post("/api/engines/ollama_qwen35_9b/check").status_code == 200
+    assert client.post("/api/engines/ollama_qwen3_vl_8b/check").status_code == 200
     assert calls == [
         ("minimax", "http://provider.test/v1", "MiniMax-M3"),
-        ("ollama_qwen35_9b", "http://ollama.test/v1", "qwen3.5:9b"),
+        ("ollama_qwen3_vl_8b", "http://ollama.test/v1", "qwen3-vl:8b"),
     ]
 
-    response = client.post("/api/jobs", json={"file_count": 1, "provider_profile_id": "ollama_qwen35_9b"})
+    response = client.post("/api/jobs", json={"file_count": 1, "provider_profile_id": "ollama_qwen3_vl_8b"})
     assert response.status_code == 200
-    assert response.json()["model"] == "qwen3.5:9b"
+    assert response.json()["model"] == "qwen3-vl:8b"
     assert "provider_policy_fingerprint" not in response.json()
     persisted = store.read(response.json()["id"])
     assert persisted["provider_policy_fingerprint"]
@@ -653,7 +653,12 @@ def test_create_rejects_unconfigured_or_unsupported_profile_capabilities(tmp_pat
 
 def test_typed_evidence_projection_keeps_legacy_job_readable_without_rewrite(tmp_path, monkeypatch):
     store = use_store(tmp_path, monkeypatch)
-    job = store.create({"file_count": 1})
+    job = store.create({
+        "file_count": 1,
+        "provider": "ollama_qwen35_9b",
+        "provider_profile_id": "ollama_qwen35_9b",
+        "model": "qwen3.5:9b",
+    })
     store.update(job["id"], status="completed", documents=[{
         "id": "legacy", "fields": {"so_van_ban": {
             "value": {"legacy": True}, "confidence": 42, "review_reason": "old_reason",
@@ -666,6 +671,9 @@ def test_typed_evidence_projection_keeps_legacy_job_readable_without_rewrite(tmp
 
     response = client.get(f"/api/jobs/{job['id']}")
     assert response.status_code == 200
+    assert (response.json()["provider_profile_id"], response.json()["model"]) == (
+        "ollama_qwen35_9b", "qwen3.5:9b",
+    )
     field = response.json()["documents"][0]["fields"]["so_van_ban"]
     assert field["value"] == {"legacy": True}
     assert (field["review_reason"], field["suggested_value"], field["suggestion_source"]) == ("", "", "")
