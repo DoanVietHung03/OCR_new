@@ -5,5 +5,5 @@ PROFILE = ProfileSpec(
     label="MiniMax",
     model="MiniMax-M3",
     env_prefix="MINIMAX",
-    prompt_version="9",
+    prompt_version="10",
 )

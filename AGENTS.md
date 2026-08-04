@@ -66,6 +66,11 @@ content, treats an administrative page-zero response with no header metadata as
 invalid model JSON within the same two-attempt budget, and reports required-field
 blockers as `completed_with_warnings` instead of a clean completion.
 
+Prompt version 10 defines `trich_yeu` as the exact header subject/title rather
+than a summary or opening body paragraph. Its local gate passed 78 backend tests,
+29 browser checks, frontend typecheck/build, OpenAPI check, compileall, and diff
+checks; live rerun quality remains separate evidence.
+
 The X7/X16 local contract now also preserves typed suggestion confidence/reason
 with provider-owned provenance, validates create/rerun against configured
 Provider Profile capabilities, keeps both segmentation waiting states across

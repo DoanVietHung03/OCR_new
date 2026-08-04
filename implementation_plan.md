@@ -583,12 +583,12 @@ Counterpart: [`FE-X20`](frontend_plan.md#fe-x20). Thiết kế đã chốt:
 - Shared reliability port giữ parser JSON hoàn chỉnh cuối cùng và two-attempt
   budget; `finish_reason=length` persist usage rồi fail non-retryable. Response
   schema chỉ được gửi khi profile opt-in.
-- Local gate đồng bộ Qwen3-VL ngày 2026-08-04: `77 passed` backend, frontend typecheck và
-  production build pass, OpenAPI check không drift. Focused Playwright
-  multi-profile pass `1/1` trong 1.7 giây; Windows runner chỉ timeout ở teardown
-  sau khi báo test pass. Full runner thực thi đủ `29/29` test không báo test
-  failure nhưng không thoát trước timeout 300 giây ở teardown, nên chưa gọi là
-  clean pass. Python compileall và `git diff --check` pass.
+- Prompt version `10` định nghĩa `trich_yeu` là dòng chủ đề/tiêu đề nguyên văn
+  trong phần đầu văn bản, thường ngay dưới `loai_van_ban`; không tóm tắt hoặc
+  lấy đoạn mở đầu thân bài. Quy tắc dùng chung cho mọi provider.
+- Local gate prompt version `10` ngày 2026-08-04: `78 passed` backend, frontend
+  typecheck và production build pass, OpenAPI check không drift, Playwright
+  smoke clean pass `29/29`. Python compileall và `git diff --check` pass.
   Live MiniMax/Qwen fixture, restart, rollback và cutover vẫn thuộc
   [`incomlpeted.md`](incomlpeted.md).
 

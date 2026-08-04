@@ -17,7 +17,7 @@ from .jobs import FIELDS
 from .providers import ProfileSpec
 from .sizing import MeasurementStore, parse_usage
 
-PROMPT_VERSION = "9"
+PROMPT_VERSION = "10"
 PROBE_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAACuklEQVR4nO3TMQEA"
     "AAiAMPuX1hgebAl4mIWw+Q6ATwYgzQCkGYA0A5BmANIMQJoBSDMAaQYgzQCkGYA0"
@@ -78,6 +78,11 @@ def supporting_line(name: str, ocr_text: str) -> str:
 
 
 def metadata_prompt(fields: tuple[str, ...]) -> str:
+    subject = (
+        " trich_yeu is the exact subject/title line or lines in the document header, usually immediately below loai_van_ban. "
+        "Transcribe it verbatim; never summarize it or use the opening paragraph or body text."
+        if "trich_yeu" in fields else ""
+    )
     document_number = (
         " so_van_ban is the document identifier printed after Số: or Văn bản số; never use an archive/file code."
         if "so_van_ban" in fields else ""
@@ -114,7 +119,7 @@ def metadata_prompt(fields: tuple[str, ...]) -> str:
         "Each fields entry uses an existing archival field name and has value, confidence "
         "(number 0..1), bbox ([left, top, right, bottom] normalized to 0..1 relative to the input image), "
         "source_text (the exact visible label and value), and page_index (integer). The bbox must tightly enclose the printed label and its visible value, not a nearby section or the whole page; use bbox [] when localization is uncertain. "
-        f"Extract every visible field from this schema: {', '.join(fields)}.{document_number}{archive_code}{signing_authority}{signature_search}{cover} "
+        f"Extract every visible field from this schema: {', '.join(fields)}.{subject}{document_number}{archive_code}{signing_authority}{signature_search}{cover} "
         "Do not invent fields. Use {\"fields\": {}} when nothing is found."
     )
 

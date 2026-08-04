@@ -270,6 +270,8 @@ def test_cover_prompt_and_parser_share_the_policy_allowlist():
 
 def test_administrative_prompt_requires_complete_signing_authority_line():
     prompt = request_body(b"image", MINIMAX, expected_fields=ADMIN_FIELDS)["messages"][0]["content"][0]["text"]
+    assert "exact subject/title line or lines in the document header" in prompt
+    assert "never summarize it or use the opening paragraph or body text" in prompt
     assert all(prefix in prompt for prefix in ("TM.", "Q.", "KT.", "TL.", "TUQ."))
     assert "KT. BỘ TRƯỞNG" in prompt
     assert "do not reduce it to KT. alone" in prompt
@@ -291,6 +293,7 @@ def test_administrative_prompt_requires_complete_signing_authority_line():
 
 
 def test_provider_request_policies_are_isolated():
+    assert MINIMAX.prompt_version == QWEN.prompt_version == "10"
     minimax = request_body(b"image", MINIMAX)
     qwen = request_body(b"image", QWEN)
     assert [part["type"] for part in minimax["messages"][0]["content"]] == ["text", "image_url"]

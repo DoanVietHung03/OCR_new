@@ -5,7 +5,7 @@ PROFILE = ProfileSpec(
     label="Qwen3-VL 8B (Ollama)",
     model="qwen3-vl:8b",
     env_prefix="QWEN",
-    prompt_version="9",
+    prompt_version="10",
     message_order=("instruction", "image", "prompt"),
     thinking_mode=True,
 )
