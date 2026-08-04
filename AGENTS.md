@@ -148,6 +148,10 @@ revision conflict, and Continue in the browser gate.
 - The frontend may expose server-defined Provider Profile IDs, labels, exact safe
   configured model, capabilities, and safe readiness. The browser must never
   receive or submit arbitrary provider URLs, keys, headers, or models.
+- Sizing Scenario requires one server-defined Provider Profile and the backend
+  filters calculator operations by that profile. An all-profile overview may show
+  operational totals, but incompatible measurement fingerprints never open
+  comparison or capacity gates.
 - `OCR_ENABLED_PROFILES` is the runtime allowlist and `OCR_DEFAULT_PROFILE` is
   used only for new/identity-less legacy jobs. New jobs snapshot the exact
   profile policy fingerprint; start/continue/worker must reject drift or an

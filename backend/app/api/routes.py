@@ -965,6 +965,8 @@ async def sizing_overview(
     ]
     summary = merge_aggregates([live_summary, *rollups])
     sample_count = summary["sample_count"]
+    fingerprints = {str(item.get("measurement_fingerprint") or "") for item in operations}
+    compatible_measurements = len(fingerprints) == 1 and "" not in fingerprints
     daily: dict[str, int] = {}
     for item in operations:
         if item.get("usage_status") not in {"complete", "inconsistent"} or not item.get("usage"):
@@ -1001,8 +1003,14 @@ async def sizing_overview(
         "unit_sample_count": len(unit_keys[unit]),
         "gates": {
             name: {
-                "minimum_jobs": minimum, "available": sample_count >= minimum,
-                "reason": "available" if sample_count >= minimum else "measurement_foundation_pending" if name == "preview" and not operations else "insufficient_sample",
+                "minimum_jobs": minimum,
+                "available": sample_count >= minimum and (name == "preview" or compatible_measurements),
+                "reason": (
+                    "available" if sample_count >= minimum and (name == "preview" or compatible_measurements)
+                    else "incompatible_measurements" if name != "preview" and sample_count >= minimum
+                    else "measurement_foundation_pending" if name == "preview" and not operations
+                    else "insufficient_sample"
+                ),
             }
             for name, minimum in {"preview": 1, "comparison": 2, "trend": 5, "capacity": 20}.items()
         },
@@ -1115,7 +1123,8 @@ async def put_sizing_catalog(payload: SizingCatalogRequest):
 async def sizing_calculate(payload: SizingCalculateRequest):
     operations = [
         item for item in sizing_measurements.operations()
-        if item.get("processing_mode") == payload.processing_mode
+        if item.get("provider_profile_id") == payload.provider_profile_id
+        and item.get("processing_mode") == payload.processing_mode
     ]
     job_ids = {item.get("job_id") for item in operations if item.get("job_id")}
     summary = aggregate(operations, sample_count=len(job_ids), price_profiles=sizing_catalog.read()["price_profiles"])

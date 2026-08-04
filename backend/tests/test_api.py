@@ -175,6 +175,7 @@ def test_sizing_local_workflow_catalog_drilldown_calculate_snapshot_and_retentio
     assert client.get("/api/sizing/jobs", params={"provider_profile_id": "other"}).json()["items"] == []
     assert client.get(f"/api/sizing/jobs/{job['id']}/operations").json()["items"][0]["usage_status"] == "complete"
     calculated = client.post("/api/sizing/calculate", json={
+        "provider_profile_id": "minimax",
         "monthly_jobs": 100, "operating_days": 20, "operating_hours": 8,
         "processing_mode": "administrative_document",
     })
@@ -197,6 +198,46 @@ def test_sizing_local_workflow_catalog_drilldown_calculate_snapshot_and_retentio
         "plan_token": retention["plan_token"], "checksum": retention["checksum"],
     })
     assert applied.json()["deleted_operations"] == 1
+
+
+def test_sizing_provider_filter_keeps_capacity_samples_isolated(tmp_path, monkeypatch):
+    import app.api.routes as routes
+
+    store = use_store(tmp_path, monkeypatch)
+    for provider, model, fingerprint, tokens in (
+        ("minimax", "MiniMax-M3", "minimax-fingerprint", 10),
+        ("ollama_qwen3_vl_8b", "qwen3-vl:8b", "qwen-fingerprint", 100),
+    ):
+        job = store.create({"file_count": 1, "provider_profile_id": provider, "model": model})
+        target = routes.sizing_measurements.begin({
+            "job_id": job["id"], "provider_profile_id": provider, "model": model,
+            "task": "metadata", "processing_mode": "administrative_document",
+            "measurement_fingerprint": fingerprint,
+        }, operation_id=f"op-{provider}", attempt=1, request_bytes=10)
+        routes.sizing_measurements.finish(
+            target, status="success", response_bytes=5, duration_ms=20,
+            usage_status="complete", usage={
+                "prompt_tokens": tokens, "completion_tokens": 0,
+                "reported_total_tokens": tokens, "canonical_total_tokens": tokens,
+                "cached_tokens": None, "reasoning_tokens": None,
+            },
+        )
+
+    mixed = client.get("/api/sizing/overview").json()
+    assert mixed["sample_count"] == 2
+    assert mixed["gates"]["comparison"] == {
+        "minimum_jobs": 2, "available": False, "reason": "incompatible_measurements",
+    }
+
+    filtered = client.get("/api/sizing/overview", params={"provider_profile_id": "minimax"}).json()
+    assert (filtered["sample_count"], filtered["total_tokens"]) == (1, 10)
+    calculated = client.post("/api/sizing/calculate", json={
+        "provider_profile_id": "minimax", "monthly_jobs": 100,
+        "operating_days": 20, "operating_hours": 8,
+        "processing_mode": "administrative_document",
+    })
+    assert calculated.status_code == 200
+    assert calculated.json()["estimated_monthly_tokens"] == 1000
 
 
 def test_segmentation_request_rejects_nested_unknown_fields(tmp_path, monkeypatch, pdf_bytes):

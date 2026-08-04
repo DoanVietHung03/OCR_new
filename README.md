@@ -213,9 +213,10 @@ có IP đó; không mở thêm cổng backend/frontend trực tiếp trong deplo
 Đây là hành vi có chủ ý khi provider chưa trả đủ usage hoặc chưa đạt sample và
 coverage gate. Hệ thống không thay dữ liệu thiếu bằng số `0` hay dự báo giả.
 
-Trong tab Scenario, chọn Provider Profile và exact model do backend công bố từ
-registry server, chọn nguồn tỷ giá rồi chọn
-`Lấy giá và tỷ giá`. Hệ thống chỉ đọc các nguồn chính thức đã cho phép, hiển thị
+Trong tab Scenario, chọn Provider Profile để calculator chỉ dùng measurement của
+provider đó; exact model được backend resolve từ registry server. Trong form Price
+Profile, chọn provider/model và nguồn tỷ giá rồi chọn `Lấy giá và tỷ giá`. Hệ thống
+chỉ đọc các nguồn chính thức đã cho phép, hiển thị
 nguồn/thời điểm để người dùng kiểm tra và chỉ lưu Price Profile sau khi xác nhận.
 Model chưa có bộ đọc giá chính thức tiếp tục hiển thị `Unavailable`.
 Mặc định file mẫu dùng Provider Profile `minimax`; có thể bật đồng thời Qwen bằng

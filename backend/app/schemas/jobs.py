@@ -620,6 +620,7 @@ class PriceSuggestionResponse(BaseModel):
 
 
 class SizingCalculateRequest(RequestModel):
+    provider_profile_id: str = Field(min_length=1, max_length=128)
     monthly_jobs: float = Field(gt=0)
     operating_days: float = Field(gt=0, le=31)
     operating_hours: float = Field(gt=0, le=24)

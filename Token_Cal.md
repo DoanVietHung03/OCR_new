@@ -470,10 +470,13 @@ ngoại tệ từ VND, làm nổi bật bank selling rate nhưng user phải ch�
 
 ## 8. Workload, capacity và SLA
 
-Mỗi scenario chọn một Processing Mode.
+Mỗi scenario chọn đúng một Provider Profile và một Processing Mode. Calculator
+chỉ dùng operation của profile đã chọn; sample khác `measurement_fingerprint`
+không được mở comparison/capacity gate.
 
 Input chung:
 
+- Provider Profile;
 - volume/tháng;
 - operating days/tháng;
 - hours/ngày;

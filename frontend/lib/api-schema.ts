@@ -2174,6 +2174,8 @@ export interface components {
         };
         /** SizingCalculateRequest */
         SizingCalculateRequest: {
+            /** Provider Profile Id */
+            provider_profile_id: string;
             /** Monthly Jobs */
             monthly_jobs: number;
             /** Operating Days */

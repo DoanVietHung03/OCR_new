@@ -518,6 +518,9 @@ sắm khi evidence chưa đủ:
 - bộ lọc Provider Profile, task, Processing Mode, UTC start/end, unit, số job và
   timezone áp dụng cho cùng tập dữ liệu KPI, biểu đồ và bảng; Provider Profile
   là dropdown gồm cấu hình hiện hành và identity lịch sử chỉ để lọc;
+- Scenario bắt buộc chọn một Provider Profile; calculator chỉ dùng measurement
+  của profile đó. Chế độ `Tất cả` chỉ xem tổng quan và không mở comparison/capacity
+  gate khi fingerprint không tương thích;
 - giải thích input/output token, bytes, latency, service time, throughput,
   percentile, coverage, billing certainty và capacity;
 - giải thích measurement fingerprint, benchmark fingerprint và vì sao sample
@@ -553,7 +556,7 @@ currency ước tính, đồng thời hiện coverage và sensitivity ±1%.
 Provider/model được chọn từ dropdown; các ô giá/tỷ giá để trống trước khi nhập
 hoặc lấy gợi ý. Version mới thay version cũ cùng provider/model, và số lượng lịch
 sử không tính profile hiện dùng.
-Trong Scenario, `hệ số tải đỉnh = 1,5` nghĩa là tải cao điểm bằng 1,5 lần tải
+Trong Scenario, chọn Provider Profile trước; `hệ số tải đỉnh = 1,5` nghĩa là tải cao điểm bằng 1,5 lần tải
 trung bình; `dự phòng = 0,25` nghĩa là cộng thêm 25% năng lực. Tooltip giữ phần
 giải thích này khỏi làm form dài. Chỉ lưu snapshot sau khi Preview đã được tính.
 Không suy model từ tên Provider Profile, không tự xác nhận và không biến lỗi

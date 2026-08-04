@@ -124,12 +124,12 @@ export default function SizingPage() {
     available: "Available", measured: "Measured", calculated: "Calculated", assumed: "Assumed", unavailable: "Unavailable",
     insufficient_sample: "Insufficient sample", measurement_foundation_pending: "Measurement data pending", success: "Success",
     complete: "Complete", missing: "Missing", error: "Error", timeout: "Timeout", connect_failure: "Connection failure",
-    invalid_json: "Invalid JSON", preview: "Preview", comparison: "Comparison", trend: "Trend", capacity: "Capacity",
+    invalid_json: "Invalid JSON", incompatible_measurements: "Select one compatible Provider Profile", preview: "Preview", comparison: "Comparison", trend: "Trend", capacity: "Capacity",
   }[value] || value) : ({
     available: "Khả dụng", measured: "Đã đo", calculated: "Đã tính", assumed: "Giả định", unavailable: "Không khả dụng",
     insufficient_sample: "Chưa đủ mẫu", measurement_foundation_pending: "Chưa có dữ liệu đo", success: "Thành công",
     complete: "Đầy đủ", missing: "Thiếu", error: "Lỗi", timeout: "Hết thời gian", connect_failure: "Lỗi kết nối",
-    invalid_json: "JSON không hợp lệ", attempt: "Lần gọi", page: "Trang", document: "Tài liệu", job: "Công việc", system: "Hệ thống",
+    invalid_json: "JSON không hợp lệ", incompatible_measurements: "Hãy chọn một Provider Profile tương thích", attempt: "Lần gọi", page: "Trang", document: "Tài liệu", job: "Công việc", system: "Hệ thống",
     preview: "Xem trước", comparison: "So sánh", trend: "Xu hướng", capacity: "Năng lực",
   }[value] || value);
   const [view, setView] = useState<View>("overview");
@@ -143,7 +143,7 @@ export default function SizingPage() {
   const [jobLimit, setJobLimit] = useState(25);
   const [timezone, setTimezone] = useState("UTC");
   const [error, setError] = useState("");
-  const [scenario, setScenario] = useState({ monthly_jobs: 100, operating_days: 20, operating_hours: 8, processing_mode: "administrative_document" as "administrative_document" | "dossier_cover" | "combined_dossier", peak_factor: 1.5, reserve: .25, minimum_success_rate: .95, artifact_retention_days: 30, average_pages_per_job: 1, average_documents_per_dossier: 1, average_pages_per_document: 1 });
+  const [scenario, setScenario] = useState({ provider_profile_id: "", monthly_jobs: 100, operating_days: 20, operating_hours: 8, processing_mode: "administrative_document" as "administrative_document" | "dossier_cover" | "combined_dossier", peak_factor: 1.5, reserve: .25, minimum_success_rate: .95, artifact_retention_days: 30, average_pages_per_job: 1, average_documents_per_dossier: 1, average_pages_per_document: 1 });
   const [result, setResult] = useState<Awaited<ReturnType<typeof calculateSizing>> | null>(null);
   const [price, setPrice] = useState(blankPrice);
   const [priceSuggestion, setPriceSuggestion] = useState<PriceSuggestion | null>(null);
@@ -365,6 +365,7 @@ export default function SizingPage() {
     </section>}
 
     {view === "calculator" && <div className="sizing-stack"><form className="panel sizing-card" onSubmit={calculate}><h2>{t.scenarioPreview}</h2><div className="form-grid sizing-form-grid">
+      <label>{t.provider}<select required value={scenario.provider_profile_id} onChange={(event) => setScenario({ ...scenario, provider_profile_id: event.target.value })}><option value="">{t.chooseProvider}</option>{providerOptions.map((value) => <option key={value} value={value}>{providerLabel(value)}</option>)}</select></label>
       <label>{t.monthly}<input type="number" min="1" value={scenario.monthly_jobs} onChange={(event) => setScenario({ ...scenario, monthly_jobs: Number(event.target.value) })} /></label>
       <label>{t.days}<input type="number" min="1" max="31" value={scenario.operating_days} onChange={(event) => setScenario({ ...scenario, operating_days: Number(event.target.value) })} /></label>
       <label>{t.hours}<input type="number" min="1" max="24" value={scenario.operating_hours} onChange={(event) => setScenario({ ...scenario, operating_hours: Number(event.target.value) })} /></label>

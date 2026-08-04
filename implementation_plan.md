@@ -471,6 +471,9 @@ Gate backend:
 - `GET /api/provider-profiles` trả exact safe model từ `OCR_MODEL`; Overview và
   Scenario dùng danh sách này cho dropdown. Không trả URL, key, header hoặc nội
   dung `.env`.
+- Scenario bắt buộc chọn một Provider Profile; calculator backend chỉ dùng
+  operation của profile đó. Overview `All` vẫn được xem tổng lượng vận hành,
+  nhưng comparison/capacity gate đóng khi measurement fingerprint không đồng nhất.
 - Price Profile active mới nhất hiển thị ngay dưới form; profile cũ/archived nằm
   trong lịch sử thu gọn. Save thành công refresh Overview. Thời điểm fetch/lưu
   được ghi tự động; user có thể xác nhận tỷ giá thực tế/hợp đồng bằng manual
@@ -498,6 +501,12 @@ và `/sizing` drill-down/chart/export. Gate `1/2/5/20` vẫn hiển thị
 `unavailable`/`insufficient` trung thực. Chưa đóng toàn bộ `X17`: một PDF thật,
 bốn fixture, backup/restart, tối thiểu 20 compatible jobs và cluster scale-out
 thuộc `X17F`/live evidence trong [`incomlpeted.md`](incomlpeted.md).
+
+Follow-up multi-provider ngày 2026-08-04 bắt buộc Scenario chọn một Provider
+Profile, lọc calculator backend theo profile đó và chặn comparison/capacity khi
+Overview chứa fingerprint không tương thích. Full backend `78 passed`, typecheck,
+production build, OpenAPI/compile/diff pass; focused browser test pass trong 5,2
+giây nhưng Windows runner vẫn timeout ở teardown.
 
 ### BE-X18
 

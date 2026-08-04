@@ -419,6 +419,9 @@ khi đóng.
 - Dùng generated types và backend-owned calculation. Browser chỉ gửi filter,
   scenario/profile IDs/assumptions; local calculation khi nhập mang nhãn
   `Preview`, không trở thành report chính thức.
+- Scenario có Provider Profile dropdown từ registry và bắt buộc chọn đúng một
+  profile trước khi tính. Overview `All` không được mở comparison/capacity gate
+  nếu tập dữ liệu chứa measurement fingerprint không tương thích.
 - Dùng đúng một `echarts` dependency, direct dynamic import chỉ tại route này,
   tree-shaken components/renderer/ARIA. Không React wrapper. Comparison chart
   có tooltip/legend/series toggle và table HTML fallback; không dùng `dataZoom`
@@ -489,6 +492,10 @@ catalogs/calculator backend-owned, snapshot, retention Preview → Confirm và
 CSV/JSON/PNG/print export. UI gate `1/2/5/20` không dựng chart, zero hay verdict
 giả khi thiếu dữ liệu. Preview trên PDF/provider thật và full capacity screening
 vẫn mở tại `X17F`.
+
+Follow-up multi-provider ngày 2026-08-04 thêm Provider Profile bắt buộc cho
+Scenario; focused browser xác nhận Qwen3-VL được gửi trong calculator payload và
+pass trong 5,2 giây. Windows runner vẫn timeout ở teardown sau khi báo test pass.
 
 Biểu đồ comparison chỉ giữ stacked bar `Prompt` + `Completion` theo job. Đã bỏ
 đường `Total trend`, scatter gắn nhãn sai `Tokens / attempts` và distribution

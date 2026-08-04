@@ -5574,6 +5574,12 @@
       },
       "SizingCalculateRequest": {
         "properties": {
+          "provider_profile_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Provider Profile Id"
+          },
           "monthly_jobs": {
             "type": "number",
             "exclusiveMinimum": 0.0,
@@ -5666,6 +5672,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "provider_profile_id",
           "monthly_jobs",
           "operating_days",
           "operating_hours",
